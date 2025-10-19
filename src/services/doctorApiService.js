@@ -142,9 +142,13 @@ export class DoctorAPIService {
   }
 
   // Bulk reschedule appointments
-  static async bulkRescheduleAppointments(payload) {
+  // New API: POST /api/doctor/{doctorId}/appointments/bulk-reschedule
+  static async bulkRescheduleAppointments(doctorId, payload) {
     try {
-      const response = await api.post('/api/doctor/appointments/bulk-reschedule', payload);
+      if (!doctorId) {
+        throw new Error('doctorId is required for bulk reschedule');
+      }
+      const response = await api.post(`/api/doctor/${doctorId}/appointments/bulk-reschedule`, payload);
       return response.data;
     } catch (error) {
       console.log('Error bulk rescheduling appointments:', error.message);
@@ -155,10 +159,13 @@ export class DoctorAPIService {
   // Cancel workspace day appointments
   static async cancelWorkspaceDayAppointments(workspaceId, payload) {
     try {
+      console.log('[doctorApiService] cancelWorkspaceDayAppointments -> workspaceId:', workspaceId);
+      console.log('[doctorApiService] cancelWorkspaceDayAppointments payload:', JSON.stringify(payload, null, 2));
       const response = await api.post(API_ENDPOINTS.DOCTOR.CANCEL_WORKSPACE_DAY(workspaceId), payload);
+      console.log('[doctorApiService] cancelWorkspaceDayAppointments response:', JSON.stringify(response.data, null, 2));
       return response.data;
     } catch (error) {
-      console.log('Error canceling workspace day appointments:', error.message);
+      console.log('Error canceling workspace day appointments:', error.message, error.response?.data || 'no response data');
       throw error;
     }
   }

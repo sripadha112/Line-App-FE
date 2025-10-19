@@ -71,14 +71,18 @@ export default function BulkReschedule({ route, navigation }) {
   };
 
   const getNewDate = () => {
+    // Use local date components to avoid UTC shifts caused by toISOString()
+    const pad = (n) => (n < 10 ? '0' + n : '' + n);
+    const formatLocal = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+
     const today = new Date();
     switch (rescheduleData.dateOption) {
       case 'today':
-        return today.toISOString().split('T')[0];
+        return formatLocal(today);
       case 'tomorrow':
         const tomorrow = new Date(today);
         tomorrow.setDate(tomorrow.getDate() + 1);
-        return tomorrow.toISOString().split('T')[0];
+        return formatLocal(tomorrow);
       case 'custom':
         return rescheduleData.customDateText;
       default:
@@ -126,26 +130,24 @@ export default function BulkReschedule({ route, navigation }) {
         return;
       }
       
+      // Build payload per new API contract
       const payload = {
         workspaceId: workspaceId,
+        extendHours: rescheduleData.extendHours ? parseInt(rescheduleData.extendHours) : 0,
+        extendMinutes: rescheduleData.extendMinutes ? parseInt(rescheduleData.extendMinutes) : 0,
+        // API expects empty string when no new date is provided (not null)
+        newDate: getNewDate() || '',
         reason: rescheduleData.reason.trim(),
       };
 
-      // Add time extensions if provided
-      if (rescheduleData.extendHours) {
-        payload.extendHours = parseInt(rescheduleData.extendHours);
-      }
-      if (rescheduleData.extendMinutes) {
-        payload.extendMinutes = parseInt(rescheduleData.extendMinutes);
-      }
+      // Debug: log payload and doctorId before calling API
+      try {
+        console.log('[bulk-reschedule] calling API with doctorId:', doctorId);
+        console.log('[bulk-reschedule] payload:', JSON.stringify(payload, null, 2));
+      } catch (e) {}
 
-      // Add new date if specified
-      const newDate = getNewDate();
-      if (newDate) {
-        payload.newDate = newDate;
-      }
-
-      const response = await DoctorAPIService.bulkRescheduleAppointments(payload);
+      // Call service with doctorId (route param)
+      const response = await DoctorAPIService.bulkRescheduleAppointments(doctorId, payload);
       
       // Show success message
       Alert.alert(

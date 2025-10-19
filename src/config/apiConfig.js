@@ -24,7 +24,8 @@ export const API_ENDPOINTS = {
     APPOINTMENTS_HISTORY: (doctorId) => `/api/doctor/${doctorId}/appointments/history`,
     RESCHEDULE_APPOINTMENTS: (doctorId) => `/api/doctor/${doctorId}/appointments/reschedule`,
     CANCEL_DAY: (doctorId) => `/api/doctor/${doctorId}/appointments/cancel-day`,
-    CANCEL_WORKSPACE_DAY: (workspaceId) => `/api/doctors/workplaces/${workspaceId}/appointments/cancel-day`,
+  // Updated to match API: /api/doctor/workspaces/{workspaceId}/appointments/cancel-day
+  CANCEL_WORKSPACE_DAY: (workspaceId) => `/api/doctor/workspaces/${workspaceId}/appointments/cancel-day`,
     // New endpoints
     APPOINTMENTS_WITH_USERS: (doctorId, date) => `/api/doctor/${doctorId}/appointments/date/${date}/users`,
     BULK_UPDATE_STATUS: (doctorId, date) => `/api/doctor/${doctorId}/appointments/date/${date}/bulk-status`,

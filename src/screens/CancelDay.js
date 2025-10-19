@@ -67,18 +67,22 @@ export default function CancelDay({ route, navigation }) {
   };
 
   const getCancelDate = () => {
+    // Use local date components to avoid UTC related shifts
+    const pad = (n) => (n < 10 ? '0' + n : '' + n);
+    const formatLocal = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+
     const today = new Date();
     switch (cancelDayData.dateOption) {
       case 'today':
-        return today.toISOString().split('T')[0];
+        return formatLocal(today);
       case 'tomorrow':
         const tomorrow = new Date(today);
         tomorrow.setDate(tomorrow.getDate() + 1);
-        return tomorrow.toISOString().split('T')[0];
+        return formatLocal(tomorrow);
       case 'custom':
         return cancelDayData.customDateText;
       default:
-        return today.toISOString().split('T')[0];
+        return formatLocal(today);
     }
   };
 
@@ -104,6 +108,11 @@ export default function CancelDay({ route, navigation }) {
         date: cancelDate,
         reason: cancelDayData.reason
       };
+
+      try {
+        console.log('[cancel-day] calling cancelWorkspaceDayAppointments with workspaceId:', selectedWorkplace.id);
+        console.log('[cancel-day] payload:', JSON.stringify(payload, null, 2));
+      } catch (e) {}
 
       const response = await DoctorAPIService.cancelWorkspaceDayAppointments(selectedWorkplace.id, payload);
       

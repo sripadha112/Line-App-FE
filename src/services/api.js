@@ -21,6 +21,24 @@ api.interceptors.request.use((cfg) => {
     if (cfg.url && cfg.url.includes('add-workplaces') && cfg.data) {
       // console.log('[api] request body:', JSON.stringify(cfg.data, null, 2));
     }
+
+    // Debug: log payload for bulk-reschedule to inspect exact shape sent
+    if (cfg.url && cfg.url.includes('bulk-reschedule') && cfg.data) {
+      try {
+        console.log('[api] bulk-reschedule request body:', JSON.stringify(cfg.data, null, 2));
+      } catch (e) {
+        console.log('[api] bulk-reschedule request body (unserializable)');
+      }
+    }
+
+    // Debug: log payload for cancel-day requests
+    if (cfg.url && cfg.url.includes('cancel-day') && cfg.data) {
+      try {
+        console.log('[api] cancel-day request body:', JSON.stringify(cfg.data, null, 2));
+      } catch (e) {
+        console.log('[api] cancel-day request body (unserializable)');
+      }
+    }
   } catch (e) {}
   return cfg;
 }, (err) => {
