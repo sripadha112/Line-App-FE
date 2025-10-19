@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "sample_expo_app",
-    "slug": "sample_expo_app",
+    "name": "Line-App",
+    "slug": "line-app",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -24,6 +24,9 @@
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    }
+    },
+    "plugins": [
+      "expo-secure-store"
+    ]
   }
 }
