@@ -498,10 +498,18 @@ export class UserAPIService {
     }
   }
 
-  // Fetch available slots
-  static async fetchAvailableSlots(doctorId, workplaceId) {
+  // Fetch available slots (deprecated - use getAvailableSlots instead)
+  static async fetchAvailableSlots(doctorId, workplaceId, date = null) {
     try {
-      const response = await api.get(`${API_ENDPOINTS.USER.AVAILABLE_SLOTS}?doctorId=${doctorId}&workplaceId=${workplaceId}`);
+      let url = `${API_ENDPOINTS.USER.AVAILABLE_SLOTS}?doctorId=${doctorId}&workplaceId=${workplaceId}`;
+      if (date) {
+        url += `&date=${date}`;
+        console.log('📅 Using specific date for slots:', date);
+      } else {
+        console.log('📅 Using default date range (next 3 days)');
+      }
+      
+      const response = await api.get(url);
       return response.data;
     } catch (error) {
       console.log('Error fetching available slots:', error.message);
@@ -578,7 +586,13 @@ export class UserAPIService {
       queryParams.append('doctorId', doctorId);
       queryParams.append('workplaceId', workplaceId);
       
-      if (params.date) queryParams.append('date', params.date);
+      // Add date parameter if provided (format: YYYY-MM-DD)
+      if (params.date) {
+        queryParams.append('date', params.date);
+        console.log('📅 Using specific date for slots:', params.date);
+      } else {
+        console.log('📅 Using default date range (next 3 days)');
+      }
       
       const url = `${API_ENDPOINTS.USER.AVAILABLE_SLOTS}?${queryParams.toString()}`;
       
@@ -634,7 +648,14 @@ export class SlotsAPIService {
       queryParams.append('workplaceId', workplaceId);
       
       if (params.doctorId) queryParams.append('doctorId', params.doctorId);
-      if (params.date) queryParams.append('date', params.date);
+      
+      // Add date parameter if provided (format: YYYY-MM-DD)
+      if (params.date) {
+        queryParams.append('date', params.date);
+        console.log('📅 Using specific date for slots:', params.date);
+      } else {
+        console.log('📅 Using default date range (next 3 days)');
+      }
       
       const url = `${API_ENDPOINTS.USER.AVAILABLE_SLOTS}?${queryParams.toString()}`;
       

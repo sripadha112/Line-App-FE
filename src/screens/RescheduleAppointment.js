@@ -12,6 +12,7 @@ import {
 import { UserAPIService, SlotsAPIService } from '../services/doctorApiService';
 import TopBar from '../components/TopBar';
 import BottomNavigation from '../components/BottomNavigation';
+import DatePicker from '../components/DatePicker';
 
 // Helper function to format time slot in "09:00AM - 09:30AM" format
 const formatTimeSlot = (startTime, endTime) => {
@@ -76,6 +77,7 @@ export default function RescheduleAppointment({ route, navigation }) {
   const [showSlotSelection, setShowSlotSelection] = useState(false);
   const [loading, setLoading] = useState(true);
   const [rescheduling, setRescheduling] = useState(false);
+  const [customSelectedDate, setCustomSelectedDate] = useState(null); // Date selected from calendar picker
 
   useEffect(() => {
     if (appointmentId) {
@@ -147,7 +149,7 @@ export default function RescheduleAppointment({ route, navigation }) {
     return null;
   };
 
-  const fetchAvailableSlots = async (workplaceId, doctorId) => {
+  const fetchAvailableSlots = async (workplaceId, doctorId, selectedDateForSlots = null) => {
     try {
       if (!doctorId) {
         console.error('Doctor ID not provided');
@@ -156,7 +158,13 @@ export default function RescheduleAppointment({ route, navigation }) {
       }
       
       console.log('🔍 Fetching slots for doctorId:', doctorId, 'workplaceId:', workplaceId);
-      const slotsData = await SlotsAPIService.getAvailableSlots(workplaceId, { doctorId });
+      
+      const params = { doctorId };
+      if (selectedDateForSlots) {
+        params.date = selectedDateForSlots;
+      }
+      
+      const slotsData = await SlotsAPIService.getAvailableSlots(workplaceId, params);
       
       // console.log('📅 Received slots data:', slotsData);
       
@@ -217,8 +225,11 @@ export default function RescheduleAppointment({ route, navigation }) {
       setAllSlotsData(processedSlotsByDate);
       setAvailableDates(dates);
       
-      // Set first available date as selected
-      if (dates.length > 0) {
+      // Set appropriate selected date
+      if (selectedDateForSlots && processedSlotsByDate[selectedDateForSlots]) {
+        setSelectedDate(selectedDateForSlots);
+        setCurrentDateSlots(processedSlotsByDate[selectedDateForSlots] || []);
+      } else if (dates.length > 0) {
         setSelectedDate(dates[0]);
         setCurrentDateSlots(processedSlotsByDate[dates[0]] || []);
       } else {
@@ -268,6 +279,31 @@ export default function RescheduleAppointment({ route, navigation }) {
   const getCurrentDateIndex = () => {
     if (!selectedDate || availableDates.length === 0) return 0;
     return availableDates.indexOf(selectedDate) + 1;
+  };
+
+  const handleDatePickerSelect = async (date) => {
+    if (!appointment) return;
+    
+    try {
+      setLoading(true);
+      setCustomSelectedDate(date);
+      
+      // Clear current slot selection when date changes
+      setSelectedSlot(null);
+      
+      if (date) {
+        // Load slots for specific date
+        await fetchAvailableSlots(appointment.workplaceId, appointment.doctorId, date);
+      } else {
+        // Load default slots (next 3 days)
+        await fetchAvailableSlots(appointment.workplaceId, appointment.doctorId, null);
+      }
+    } catch (error) {
+      console.error('Error loading slots for selected date:', error);
+      Alert.alert('Error', 'Failed to load slots for selected date. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const proceedWithReschedule = () => {
@@ -522,37 +558,106 @@ export default function RescheduleAppointment({ route, navigation }) {
         <View style={styles.slotsSection}>
           <Text style={styles.sectionTitle}>Select New Time Slot</Text>
           
-          {availableDates.length === 0 ? (
+          {/* Date Picker Section */}
+          <View style={styles.datePickerSection}>
+            <Text style={styles.datePickerLabel}>Select New Appointment Date:</Text>
+            <DatePicker
+              selectedDate={customSelectedDate}
+              onDateSelect={handleDatePickerSelect}
+              title="Select New Appointment Date"
+              buttonTitle={customSelectedDate ? null : "Select specific date or use default (next 3 days)"}
+              minDate={new Date().toISOString().split('T')[0]}
+              maxDate={new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]} // 30 days from now
+            />
+            {customSelectedDate && (
+              <Text style={styles.selectedDateInfo}>
+                📅 Showing slots for: {new Date(customSelectedDate).toLocaleDateString('en-US', {
+                  weekday: 'long',
+                  year: 'numeric',
+                  month: 'long',
+                  day: 'numeric'
+                })}
+              </Text>
+            )}
+            {!customSelectedDate && (
+              <Text style={styles.defaultDateInfo}>
+                📅 Showing available slots for the next 3 days
+              </Text>
+            )}
+          </View>
+          
+          {loading ? (
+            <View style={styles.loadingContainer}>
+              <Text style={styles.loadingText}>Loading slots...</Text>
+            </View>
+          ) : availableDates.length === 0 ? (
             <View style={styles.noSlotsContainer}>
               <Text style={styles.noSlotsIcon}>⚠️</Text>
               <Text style={styles.noSlotsTitle}>No Available Slots</Text>
               <Text style={styles.noSlotsSubtitle}>
-                There are currently no available slots for rescheduling at this workplace.
-                Please try again later or contact support.
+                {customSelectedDate 
+                  ? `No slots available for ${new Date(customSelectedDate).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}. Please select a different date.`
+                  : 'There are currently no available slots for rescheduling at this workplace. Please try again later or contact support.'
+                }
               </Text>
             </View>
           ) : (
             <>
-              {/* Date Navigation */}
-              <View style={styles.dateNavigation}>
-                <TouchableOpacity 
-                  style={[
-                    styles.dateNavButton,
-                    availableDates.indexOf(selectedDate) === 0 && styles.disabledButton
-                  ]}
-                  onPress={goToPreviousDate}
-                  disabled={availableDates.indexOf(selectedDate) === 0}
-                >
-                  <Text style={[
-                    styles.dateNavButtonText,
-                    availableDates.indexOf(selectedDate) === 0 && styles.disabledButtonText
-                  ]}>
-                    ← Previous
-                  </Text>
-                </TouchableOpacity>
-                
-                <View style={styles.dateInfo}>
-                  <Text style={styles.currentDate}>
+              {/* Date Navigation - Only show if not using custom date picker */}
+              {!customSelectedDate && availableDates.length > 1 && (
+                <View style={styles.dateNavigation}>
+                  <TouchableOpacity 
+                    style={[
+                      styles.dateNavButton,
+                      availableDates.indexOf(selectedDate) === 0 && styles.disabledButton
+                    ]}
+                    onPress={goToPreviousDate}
+                    disabled={availableDates.indexOf(selectedDate) === 0}
+                  >
+                    <Text style={[
+                      styles.dateNavButtonText,
+                      availableDates.indexOf(selectedDate) === 0 && styles.disabledButtonText
+                    ]}>
+                      ← Previous
+                    </Text>
+                  </TouchableOpacity>
+                  
+                  <View style={styles.dateInfo}>
+                    <Text style={styles.currentDate}>
+                      {selectedDate && new Date(selectedDate).toLocaleDateString('en-US', {
+                        weekday: 'long',
+                        year: 'numeric',
+                        month: 'long', 
+                        day: 'numeric'
+                      })}
+                    </Text>
+                    <Text style={styles.dateCounter}>
+                      {getCurrentDateIndex()} of {availableDates.length}
+                    </Text>
+                  </View>
+                  
+                  <TouchableOpacity 
+                    style={[
+                      styles.dateNavButton,
+                      availableDates.indexOf(selectedDate) === availableDates.length - 1 && styles.disabledButton
+                    ]}
+                    onPress={goToNextDate}
+                    disabled={availableDates.indexOf(selectedDate) === availableDates.length - 1}
+                  >
+                    <Text style={[
+                      styles.dateNavButtonText,
+                      availableDates.indexOf(selectedDate) === availableDates.length - 1 && styles.disabledButtonText
+                    ]}>
+                      Next →
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+
+              {/* Current Date Display for Custom Selected Date */}
+              {customSelectedDate && (
+                <View style={styles.customDateDisplay}>
+                  <Text style={styles.customDateText}>
                     {selectedDate && new Date(selectedDate).toLocaleDateString('en-US', {
                       weekday: 'long',
                       year: 'numeric',
@@ -560,27 +665,8 @@ export default function RescheduleAppointment({ route, navigation }) {
                       day: 'numeric'
                     })}
                   </Text>
-                  <Text style={styles.dateCounter}>
-                    {getCurrentDateIndex()} of {availableDates.length}
-                  </Text>
                 </View>
-                
-                <TouchableOpacity 
-                  style={[
-                    styles.dateNavButton,
-                    availableDates.indexOf(selectedDate) === availableDates.length - 1 && styles.disabledButton
-                  ]}
-                  onPress={goToNextDate}
-                  disabled={availableDates.indexOf(selectedDate) === availableDates.length - 1}
-                >
-                  <Text style={[
-                    styles.dateNavButtonText,
-                    availableDates.indexOf(selectedDate) === availableDates.length - 1 && styles.disabledButtonText
-                  ]}>
-                    Next →
-                  </Text>
-                </TouchableOpacity>
-              </View>
+              )}
 
               {/* Slots for Selected Date */}
               <View style={styles.slotsGrid}>
@@ -1141,5 +1227,45 @@ const styles = StyleSheet.create({
   loadingText: {
     fontSize: 16,
     color: '#7f8c8d',
+  },
+  datePickerSection: {
+    backgroundColor: '#f8f9fa',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: '#e9ecef',
+  },
+  datePickerLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#2c3e50',
+    marginBottom: 8,
+  },
+  selectedDateInfo: {
+    fontSize: 14,
+    color: '#27ae60',
+    fontWeight: '500',
+    marginTop: 8,
+    textAlign: 'center',
+  },
+  defaultDateInfo: {
+    fontSize: 14,
+    color: '#7f8c8d',
+    fontStyle: 'italic',
+    marginTop: 8,
+    textAlign: 'center',
+  },
+  customDateDisplay: {
+    backgroundColor: '#e8f4f8',
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 15,
+    alignItems: 'center',
+  },
+  customDateText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#2980b9',
   },
 });
