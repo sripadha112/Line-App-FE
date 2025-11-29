@@ -1,6 +1,16 @@
 import axios from 'axios';
 import * as SecureStore from 'expo-secure-store';
+import { Alert } from 'react-native';
 import API_BASE_URL from '../config';
+
+// Navigation ref for programmatic navigation
+let navigationRef = null;
+let isRedirecting = false; // Flag to prevent multiple redirections
+
+// Function to set navigation reference
+export function setNavigationRef(ref) {
+  navigationRef = ref;
+}
 
 // Helpful debug log so developers can see what base URL was picked at runtime.
 try {
@@ -61,28 +71,53 @@ api.interceptors.response.use((res) => {
 
     // Handle token invalidation
     if (err.response?.status === 401) {
-      const errorMessage = err.response?.data?.error;
-      if (errorMessage === 'Token has been invalidated' || errorMessage === 'Invalid token' || errorMessage === 'Token expired') {
-        console.log('[api] Token invalidated, clearing stored credentials');
+      console.log('[api] 401 Unauthorized - Token expired or invalid');
+      
+      // Clear stored authentication data
+      try {
+        await SecureStore.deleteItemAsync('accessToken');
+        await SecureStore.deleteItemAsync('userId');
+        await SecureStore.deleteItemAsync('fullName');
+        await SecureStore.deleteItemAsync('userRole');
+        await SecureStore.deleteItemAsync('role');
         
-        // Clear stored authentication data
-        try {
-          await SecureStore.deleteItemAsync('accessToken');
-          await SecureStore.deleteItemAsync('userId');
-          await SecureStore.deleteItemAsync('fullName');
-          await SecureStore.deleteItemAsync('userRole');
-          await SecureStore.deleteItemAsync('role');
+        // Remove auth header
+        delete api.defaults.headers.common['Authorization'];
+        
+        console.log('[api] Cleared stored credentials due to 401 error');
+        
+        // Navigate to Auth screen if navigation ref is available (with debounce)
+        if (navigationRef && navigationRef.reset && !isRedirecting) {
+          isRedirecting = true;
+          console.log('[api] Redirecting to login due to expired token');
           
-          // Remove auth header
-          delete api.defaults.headers.common['Authorization'];
-          
-          console.log('[api] Cleared stored credentials due to token invalidation');
-          
-          // Add a flag to the error to indicate auth was cleared
-          err.authCleared = true;
-        } catch (clearError) {
-          console.log('[api] Error clearing credentials:', clearError);
+          // Show alert and redirect to login
+          Alert.alert(
+            'Session Expired',
+            'Your session has expired. Please log in again.',
+            [
+              {
+                text: 'OK',
+                onPress: () => {
+                  navigationRef.reset({
+                    index: 0,
+                    routes: [{ name: 'Auth' }],
+                  });
+                  // Reset flag after navigation
+                  setTimeout(() => {
+                    isRedirecting = false;
+                  }, 2000);
+                }
+              }
+            ],
+            { cancelable: false }
+          );
         }
+        
+        // Add a flag to the error to indicate auth was cleared
+        err.authCleared = true;
+      } catch (clearError) {
+        console.log('[api] Error clearing credentials:', clearError);
       }
     }
   } catch (e) {}

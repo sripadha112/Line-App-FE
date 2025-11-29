@@ -18,14 +18,17 @@ const CANCELLATION_REASONS = [
   'Schedule conflict',
   'Feeling better',
   'Doctor unavailable',
+  'Medical emergency',
   'Travel issues',
   'Work commitment',
   'Family emergency',
+  'Patient no-show',
+  'Technical issues',
   'Other'
 ];
 
 export default function CancelAppointment({ route, navigation }) {
-  const { userId, appointmentId } = route.params;
+  const { userId, appointmentId, fromDoctorView } = route.params;
   
   const [allAppointments, setAllAppointments] = useState([]);
   const [appointment, setAppointment] = useState(null);

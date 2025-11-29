@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -8,11 +8,34 @@ import {
   Alert,
   Modal,
   TextInput,
+  FlatList,
 } from 'react-native';
-import { UserAPIService, SlotsAPIService } from '../services/doctorApiService';
+import { UserAPIService, SlotsAPIService, DoctorAPIService } from '../services/doctorApiService';
 import TopBar from '../components/TopBar';
 import BottomNavigation from '../components/BottomNavigation';
 import DatePicker from '../components/DatePicker';
+
+const RESCHEDULE_REASONS = [
+  'Schedule conflict',
+  'Personal emergency', 
+  'Work commitment',
+  'Transportation issues',
+  'Doctor requested',
+  'Medical reasons',
+  'Family emergency',
+  'Other'
+];
+
+const REVISIT_REASONS = [
+  'Follow-up consultation',
+  'Medication review',
+  'Test results discussion',
+  'Treatment progress check',
+  'Routine check-up',
+  'Doctor recommended',
+  'Symptom monitoring',
+  'Other'
+];
 
 // Helper function to format time slot in "09:00AM - 09:30AM" format
 const formatTimeSlot = (startTime, endTime) => {
@@ -63,7 +86,14 @@ const formatTimeSlot = (startTime, endTime) => {
 };
 
 export default function RescheduleAppointment({ route, navigation }) {
-  const { userId, appointmentId, fromDoctorView } = route.params;
+  const { userId: routeUserId, appointmentId, fromDoctorView, fromRevisit, patientData, appointment: routeAppointment } = route.params;
+  
+  // For revisit mode, extract userId from appointment object, otherwise use routeUserId
+  const userId = fromRevisit 
+    ? (routeAppointment?.userId || routeAppointment?.patientId || routeUserId)
+    : routeUserId;
+    
+  console.log('🔍 RescheduleAppointment params:', { userId, appointmentId, fromRevisit, hasRouteAppointment: !!routeAppointment });
   
   const [allAppointments, setAllAppointments] = useState([]);
   const [appointment, setAppointment] = useState(null);
@@ -72,17 +102,30 @@ export default function RescheduleAppointment({ route, navigation }) {
   const [selectedDate, setSelectedDate] = useState(null); // Currently selected date
   const [currentDateSlots, setCurrentDateSlots] = useState([]); // Slots for current selected date
   const [selectedSlot, setSelectedSlot] = useState(null);
-  const [reason, setReason] = useState('');
+  const [selectedReason, setSelectedReason] = useState('');
+  const [customReason, setCustomReason] = useState('');
   const [showReasonModal, setShowReasonModal] = useState(false);
   const [showSlotSelection, setShowSlotSelection] = useState(false);
   const [loading, setLoading] = useState(true);
   const [rescheduling, setRescheduling] = useState(false);
   const [customSelectedDate, setCustomSelectedDate] = useState(null); // Date selected from calendar picker
 
+  // Refs for auto-focus and scroll
+  const modalScrollRef = useRef(null);
+  const customReasonInputRef = useRef(null);
+
   useEffect(() => {
     if (appointmentId) {
       fetchAppointmentDetails();
+    } else if (fromRevisit) {
+      // In revisit mode, go directly to slot selection with the passed appointment
+      if (routeAppointment) {
+        setAppointment(routeAppointment);
+        setShowSlotSelection(true);
+        fetchAvailableSlots(routeAppointment.workplaceId, routeAppointment.doctorId);
+      }
     } else {
+      // Normal mode: fetch all appointments to select from
       fetchAllAppointments();
     }
   }, []);
@@ -192,27 +235,29 @@ export default function RescheduleAppointment({ route, navigation }) {
         if (slotDate >= new Date(now.getFullYear(), now.getMonth(), now.getDate())) {
           const dateSlots = [];
           
-          timeSlots.forEach((timeSlot, index) => {
-            // Skip current appointment slot
-            if (timeSlot === currentAppointmentSlot) return;
-            
-            dateSlots.push({
-              id: `${date}-${index}`,
-              date: date,
-              slotTime: timeSlot,
-              dateTime: `${date}T${convertTo24Hour(timeSlot)}`,
-              isAvailable: true,
-              workplaceId: slotsData.workplaceId,
-              doctorId: slotsData.doctorId,
-              doctorName: slotsData.doctorName,
-              workplaceName: slotsData.workplaceName
+          // Process timeSlots (could be empty array)
+          if (timeSlots && timeSlots.length > 0) {
+            timeSlots.forEach((timeSlot, index) => {
+              // Skip current appointment slot
+              if (timeSlot === currentAppointmentSlot) return;
+              
+              dateSlots.push({
+                id: `${date}-${index}`,
+                date: date,
+                slotTime: timeSlot,
+                dateTime: `${date}T${convertTo24Hour(timeSlot)}`,
+                isAvailable: true,
+                workplaceId: slotsData.workplaceId,
+                doctorId: slotsData.doctorId,
+                doctorName: slotsData.doctorName,
+                workplaceName: slotsData.workplaceName
+              });
             });
-          });
-          
-          if (dateSlots.length > 0) {
-            processedSlotsByDate[date] = dateSlots;
-            dates.push(date);
           }
+          
+          // Include date even if no slots available
+          processedSlotsByDate[date] = dateSlots;
+          dates.push(date);
         }
       });
       
@@ -226,7 +271,7 @@ export default function RescheduleAppointment({ route, navigation }) {
       setAvailableDates(dates);
       
       // Set appropriate selected date
-      if (selectedDateForSlots && processedSlotsByDate[selectedDateForSlots]) {
+      if (selectedDateForSlots && dates.includes(selectedDateForSlots)) {
         setSelectedDate(selectedDateForSlots);
         setCurrentDateSlots(processedSlotsByDate[selectedDateForSlots] || []);
       } else if (dates.length > 0) {
@@ -307,26 +352,68 @@ export default function RescheduleAppointment({ route, navigation }) {
   };
 
   const proceedWithReschedule = () => {
+    console.log('🔄 proceedWithReschedule called - fromRevisit:', fromRevisit);
     if (!selectedSlot) {
       Alert.alert('Error', 'Please select a new time slot');
       return;
     }
-    setShowReasonModal(true);
+
+    if (fromRevisit) {
+      console.log('📅 Showing revisit confirmation popup for:', selectedSlot.slotTime);
+      // For revisit appointments, show simple confirmation instead of reason modal
+      Alert.alert(
+        'Confirm Next Visit',
+        `Reschedule current appointment to ${selectedDate && new Date(selectedDate).toLocaleDateString('en-US', {
+          weekday: 'long',
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric'
+        })} at ${selectedSlot.slotTime} as a revisit appointment?\n\nThis will be marked as a revisit booked by doctor.`,
+        [
+          {
+            text: 'Cancel',
+            style: 'cancel'
+          },
+          {
+            text: 'Confirm',
+            onPress: () => handleFinalSubmission('Revisit booked by doctor') // Use default reason for revisits
+          }
+        ]
+      );
+    } else {
+      // For regular reschedules, show reason modal
+      setShowReasonModal(true);
+    }
   };
 
-  const confirmReschedule = async () => {
-    if (!reason.trim()) {
-      Alert.alert('Error', 'Please provide a reason for rescheduling');
-      return;
+  const handleReasonSelection = (reason) => {
+    setSelectedReason(reason);
+    if (reason !== 'Other') {
+      setCustomReason('');
+    } else {
+      // Auto-focus and scroll to text input when "Other" is selected
+      setTimeout(() => {
+        if (customReasonInputRef.current) {
+          customReasonInputRef.current.focus();
+          // Scroll to the bottom to ensure the text input is visible
+          if (modalScrollRef.current) {
+            modalScrollRef.current.scrollToEnd({ animated: true });
+          }
+        }
+      }, 100);
     }
+  };
 
+  const handleFinalSubmission = async (reason) => {
     try {
       setRescheduling(true);
       
       // Debug logging
+      const finalReason = reason;
+      
       console.log('🔍 Selected slot data:', selectedSlot);
       console.log('📅 Selected date:', selectedDate);
-      console.log('📝 Reason:', reason.trim());
+      console.log('📝 Reason:', finalReason);
       
       // Validate required data
       if (!selectedSlot || !selectedDate) {
@@ -340,40 +427,96 @@ export default function RescheduleAppointment({ route, navigation }) {
       
       console.log('⏰ Slot time from selectedSlot:', selectedSlot.slotTime);
       
-      // Call reschedule API with new format
+      let result;
+      
+      // Both revisits and regular reschedules use the same data structure
       const rescheduleData = {
         appointmentId: appointmentId,
-        reason: reason.trim(),
+        reason: fromRevisit ? 'Revisit booked by doctor' : finalReason,
         newAppointmentDate: selectedDate,
         newTimeSlot: selectedSlot.slotTime  // Use slotTime directly (already formatted)
       };
       
       console.log('📤 Sending reschedule data:', rescheduleData);
       
-      const result = await UserAPIService.rescheduleAppointment(appointmentId, rescheduleData);
+      result = await UserAPIService.rescheduleAppointment(appointmentId, rescheduleData);
+
+      // If this is a revisit and reschedule was successful, complete the original appointment
+      if (fromRevisit && result && appointmentId) {
+        try {
+          console.log('📤 Auto-completing original appointment:', appointmentId);
+          await DoctorAPIService.completeAppointment(appointmentId);
+          console.log('✅ Original appointment completed successfully');
+        } catch (completeError) {
+          console.error('❌ Error completing original appointment:', completeError);
+          // Continue with success message - reschedule was successful, completion can be done manually
+        }
+      }
 
       Alert.alert(
         'Success',
-        result.message || 'Your appointment has been rescheduled successfully!',
+        result.message || (fromRevisit 
+          ? 'Appointment rescheduled as revisit successfully! Original appointment has been completed.'
+          : 'Your appointment has been rescheduled successfully!'),
         [
           {
             text: 'OK',
             onPress: () => {
               setShowReasonModal(false);
-              navigation.goBack();
+              if (fromRevisit && appointment) {
+                // Reset navigation stack and navigate to AllBookings page
+                navigation.reset({
+                  index: 1,
+                  routes: [
+                    { name: 'DoctorHome' }, // Home screen as base
+                    { 
+                      name: 'AllBookings', 
+                      params: {
+                        doctorId: appointment.doctorId,
+                        workplaceId: appointment.workplaceId,
+                        workplaceName: appointment.workplaceName || 'Workplace',
+                        refresh: true
+                      }
+                    }
+                  ]
+                });
+              } else {
+                // Regular reschedule - go back to previous screen
+                navigation.goBack();
+              }
             }
           }
         ]
       );
     } catch (error) {
-      console.error('Error rescheduling appointment:', error);
+      console.error(fromRevisit ? 'Error rescheduling revisit appointment:' : 'Error rescheduling appointment:', error);
       Alert.alert(
         'Error',
-        error.message || 'Failed to reschedule appointment. Please try again.'
+        error.message || (fromRevisit 
+          ? 'Failed to reschedule appointment as revisit. Please try again.'
+          : 'Failed to reschedule appointment. Please try again.')
       );
     } finally {
       setRescheduling(false);
     }
+  };
+
+  const confirmReschedule = async () => {
+    if (!selectedReason) {
+      Alert.alert('Error', fromRevisit 
+        ? 'Please select a reason for booking the next visit'
+        : 'Please select a reason for rescheduling'
+      );
+      return;
+    }
+
+    if (selectedReason === 'Other' && !customReason.trim()) {
+      Alert.alert('Error', 'Please specify your reason for rescheduling');
+      return;
+    }
+
+    const finalReason = selectedReason === 'Other' ? customReason.trim() : selectedReason;
+    await handleFinalSubmission(finalReason);
   };
 
   const formatSlotDateTime = (slot) => {
@@ -470,8 +613,16 @@ export default function RescheduleAppointment({ route, navigation }) {
           paddingBottom: 20
         }
       ]}>
-        <ScrollView style={styles.content}>
-          <Text style={styles.pageTitle}>🔄 Select Appointment to Reschedule</Text>
+        <View style={styles.content}>
+          <Text style={styles.pageTitle}>
+            {fromRevisit ? '� Book Next Visit' : '�🔄 Select Appointment to Reschedule'}
+          </Text>
+          
+          {!loading && allAppointments.length > 0 && (
+            <Text style={styles.appointmentsSubtitle}>
+              📋 Your Appointments (Scroll to see more)
+            </Text>
+          )}
           
           {loading ? (
             <View style={styles.loadingContainer}>
@@ -484,11 +635,11 @@ export default function RescheduleAppointment({ route, navigation }) {
               <Text style={styles.emptySubtitle}>You don't have any booked appointments that can be rescheduled.</Text>
             </View>
           ) : (
-            <ScrollView style={styles.appointmentsContainer} showsVerticalScrollIndicator={true}>
+            <View style={styles.appointmentsWrapper}>
               {allAppointments.map(renderAppointmentCard)}
-            </ScrollView>
+            </View>
           )}
-        </ScrollView>
+        </View>
       </View>
     );
   }
@@ -518,7 +669,9 @@ export default function RescheduleAppointment({ route, navigation }) {
       }
     ]}>
       <ScrollView style={styles.content}>
-        <Text style={styles.pageTitle}>🔄 Reschedule Appointment</Text>
+        <Text style={styles.pageTitle}>
+          {fromRevisit ? '� Book Next Visit' : '�🔄 Reschedule Appointment'}
+        </Text>
         
         {/* Current Appointment Details */}
         <View style={styles.currentAppointmentCard}>
@@ -669,39 +822,66 @@ export default function RescheduleAppointment({ route, navigation }) {
               )}
 
               {/* Slots for Selected Date */}
-              <View style={styles.slotsGrid}>
-                {currentDateSlots.map((slot) => (
-                  <TouchableOpacity
-                    key={slot.id}
-                    style={[
-                      styles.slotCard,
-                      selectedSlot?.id === slot.id && styles.selectedSlotCard
-                    ]}
-                    onPress={() => handleSlotSelection(slot)}
-                  >
-                    <Text style={[
-                      styles.slotTime,
-                      selectedSlot?.id === slot.id && styles.selectedSlotTime
-                    ]}>
-                      {slot.slotTime}
-                    </Text>
-                    <View style={[
-                      styles.availabilityBadge,
-                      slot.isAvailable ? styles.availableBadge : styles.unavailableBadge
-                    ]}>
-                      <Text style={styles.availabilityText}>
-                        {slot.isAvailable ? 'Available' : 'Unavailable'}
+              <Text style={styles.slotsTitle}>📅 Available Time Slots</Text>
+              <View style={styles.slotsContainer}>
+                <ScrollView 
+                  style={styles.slotsScrollView}
+                  showsVerticalScrollIndicator={true}
+                  nestedScrollEnabled={true}
+                >
+                  {currentDateSlots.length === 0 ? (
+                    <View style={styles.noSlotsContainer}>
+                      <Text style={styles.noSlotsIcon}>🚫</Text>
+                      <Text style={styles.noSlotsTitle}>No Available Slots</Text>
+                      <Text style={styles.noSlotsMessage}>
+                        There are no available slots for {selectedDate && new Date(selectedDate).toLocaleDateString('en-US', {
+                          weekday: 'long',
+                          month: 'long',
+                          day: 'numeric',
+                          year: 'numeric'
+                        })}.
+                      </Text>
+                      <Text style={styles.noSlotsSubMessage}>
+                        Please check another day using the date navigation above.
                       </Text>
                     </View>
-                  </TouchableOpacity>
-                ))}
+                  ) : (
+                    <View style={styles.slotsGrid}>
+                      {currentDateSlots.map((slot) => (
+                        <TouchableOpacity
+                          key={slot.id}
+                          style={[
+                            styles.slotCard,
+                            selectedSlot?.id === slot.id && styles.selectedSlotCard
+                          ]}
+                          onPress={() => handleSlotSelection(slot)}
+                        >
+                          <Text style={[
+                            styles.slotTime,
+                            selectedSlot?.id === slot.id && styles.selectedSlotTime
+                          ]}>
+                            {slot.slotTime}
+                          </Text>
+                          <View style={[
+                            styles.availabilityBadge,
+                            slot.isAvailable ? styles.availableBadge : styles.unavailableBadge
+                          ]}>
+                            <Text style={styles.availabilityText}>
+                              {slot.isAvailable ? 'Available' : 'Unavailable'}
+                            </Text>
+                          </View>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  )}
+                </ScrollView>
               </View>
             </>
           )}
         </View>
         
         {/* Action Buttons */}
-        {availableDates.length > 0 && (
+        {availableDates.length > 0 && currentDateSlots.length > 0 && (
           <View style={styles.actionButtons}>
             <TouchableOpacity
               style={[
@@ -712,7 +892,7 @@ export default function RescheduleAppointment({ route, navigation }) {
               disabled={!selectedSlot}
             >
               <Text style={styles.rescheduleButtonText}>
-                🔄 Reschedule Appointment
+                {fromRevisit ? '� Book Next Visit' : '�🔄 Reschedule Appointment'}
               </Text>
             </TouchableOpacity>
             
@@ -737,18 +917,56 @@ export default function RescheduleAppointment({ route, navigation }) {
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>Reason for Rescheduling</Text>
             <Text style={styles.modalSubtitle}>
-              Please provide a reason for rescheduling your appointment
+              {fromRevisit 
+                ? 'Please select a reason for booking the next visit'
+                : 'Please select a reason for rescheduling your appointment'
+              }
             </Text>
             
-            <TextInput
-              style={styles.reasonInput}
-              placeholder="Enter reason for rescheduling..."
-              multiline={true}
-              numberOfLines={4}
-              value={reason}
-              onChangeText={setReason}
-              textAlignVertical="top"
-            />
+            <ScrollView 
+              ref={modalScrollRef}
+              style={styles.reasonsList} 
+              showsVerticalScrollIndicator={false}
+            >
+              {(fromRevisit ? REVISIT_REASONS : RESCHEDULE_REASONS).map((reason, index) => (
+                <TouchableOpacity
+                  key={index}
+                  style={[
+                    styles.reasonOption,
+                    selectedReason === reason && styles.selectedReasonOption
+                  ]}
+                  onPress={() => handleReasonSelection(reason)}
+                >
+                  <View style={styles.reasonOptionContent}>
+                    <View style={[
+                      styles.radioButton,
+                      selectedReason === reason && styles.selectedRadioButton
+                    ]}>
+                      {selectedReason === reason && <View style={styles.radioButtonInner} />}
+                    </View>
+                    <Text style={[
+                      styles.reasonText,
+                      selectedReason === reason && styles.selectedReasonText
+                    ]}>
+                      {reason}
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+              ))}
+              
+              {selectedReason === 'Other' && (
+                <TextInput
+                  ref={customReasonInputRef}
+                  style={styles.customReasonInput}
+                  placeholder="Please specify your reason..."
+                  multiline={true}
+                  numberOfLines={3}
+                  value={customReason}
+                  onChangeText={setCustomReason}
+                  textAlignVertical="top"
+                />
+              )}
+            </ScrollView>
             
             <View style={styles.modalButtons}>
               <TouchableOpacity
@@ -762,13 +980,13 @@ export default function RescheduleAppointment({ route, navigation }) {
               <TouchableOpacity
                 style={[
                   styles.modalConfirmButton,
-                  rescheduling && styles.disabledButton
+                  (rescheduling || !selectedReason) && styles.disabledButton
                 ]}
                 onPress={confirmReschedule}
-                disabled={rescheduling}
+                disabled={rescheduling || !selectedReason}
               >
                 <Text style={styles.modalConfirmText}>
-                  {rescheduling ? 'Rescheduling...' : 'Confirm Reschedule'}
+                  {rescheduling ? 'Processing...' : 'Confirm'}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -776,8 +994,8 @@ export default function RescheduleAppointment({ route, navigation }) {
         </View>
       </Modal>
       
-      {/* Only show bottom navigation if not accessed from doctor's view */}
-      {!fromDoctorView && (
+      {/* Only show bottom navigation if not accessed from doctor's view or revisit */}
+      {!fromDoctorView && !fromRevisit && (
         <BottomNavigation 
           activeTab="appointments"
           userType="user"
@@ -923,6 +1141,7 @@ const styles = StyleSheet.create({
   },
   disabledButton: {
     backgroundColor: '#bdc3c7',
+    opacity: 0.6,
   },
   disabledButtonText: {
     color: '#7f8c8d',
@@ -982,24 +1201,77 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     paddingLeft: 4,
   },
+  slotsTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#2c3e50',
+    marginBottom: 8,
+    marginTop: 12,
+  },
+  slotsContainer: {
+    height: 450,
+    marginBottom: 5,
+    backgroundColor: '#f8f9fa',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#e9ecef',
+    overflow: 'hidden',
+  },
+  noSlotsContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 40,
+  },
+  noSlotsIcon: {
+    fontSize: 48,
+    marginBottom: 16,
+  },
+  noSlotsTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#e74c3c',
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  noSlotsMessage: {
+    fontSize: 14,
+    color: '#7f8c8d',
+    textAlign: 'center',
+    marginBottom: 8,
+    lineHeight: 20,
+  },
+  noSlotsSubMessage: {
+    fontSize: 12,
+    color: '#95a5a6',
+    textAlign: 'center',
+    fontStyle: 'italic',
+  },
+  slotsScrollView: {
+    flex: 1,
+    padding: 4,
+  },
   slotsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    justifyContent: 'space-between',
+    justifyContent: 'flex-start',
+    paddingHorizontal: 2,
+    gap: 4,
   },
   slotCard: {
     backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 12,
-    marginBottom: 12,
-    elevation: 2,
+    borderRadius: 8,
+    padding: 8,
+    marginBottom: 8,
+    elevation: 1,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
-    shadowRadius: 3,
-    borderWidth: 2,
+    shadowRadius: 2,
+    borderWidth: 1.5,
     borderColor: 'transparent',
-    width: '48%', // Two slots per row with some spacing
+    width: '32%', // Three slots per row for more compact view
     alignItems: 'center',
   },
   selectedSlotCard: {
@@ -1013,19 +1285,19 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   slotTime: {
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: '600',
     color: '#2c3e50',
     textAlign: 'center',
-    marginBottom: 6,
+    marginBottom: 4,
   },
   selectedSlotTime: {
     color: '#3498db',
   },
   availabilityBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
+    paddingHorizontal: 6,
+    paddingVertical: 3,
+    borderRadius: 8,
   },
   availableBadge: {
     backgroundColor: '#27ae60',
@@ -1035,7 +1307,7 @@ const styles = StyleSheet.create({
   },
   availabilityText: {
     color: '#fff',
-    fontSize: 10,
+    fontSize: 8,
     fontWeight: '600',
     textTransform: 'uppercase',
   },
@@ -1055,33 +1327,32 @@ const styles = StyleSheet.create({
     color: '#2980b9',
   },
   actionButtons: {
-    marginBottom: 20,
+    marginBottom: 15,
   },
   rescheduleButton: {
     backgroundColor: '#e74c3c',
-    borderRadius: 12,
-    padding: 16,
+    borderRadius: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
     alignItems: 'center',
-    marginBottom: 12,
-  },
-  disabledButton: {
-    backgroundColor: '#bdc3c7',
+    marginBottom: 8,
   },
   rescheduleButtonText: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '600',
     color: '#fff',
   },
   cancelButton: {
     backgroundColor: '#e74c3c',
-    borderRadius: 12,
-    marginTop: 10,
-    marginBottom: 30,
-    padding: 16,
+    borderRadius: 8,
+    marginTop: 8,
+    marginBottom: 20,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
     alignItems: 'center',
   },
   cancelButtonText: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '600',
     color: '#fff',
   },
@@ -1126,20 +1397,83 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     backgroundColor: '#f8f9fa',
   },
+  reasonsList: {
+    maxHeight: 300,
+    marginBottom: 20,
+  },
+  reasonOption: {
+    backgroundColor: '#f8f9fa',
+    borderRadius: 8,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: '#e9ecef',
+  },
+  selectedReasonOption: {
+    backgroundColor: '#e3f2fd',
+    borderColor: '#2196f3',
+  },
+  reasonOptionContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+  },
+  radioButton: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    borderWidth: 2,
+    borderColor: '#bdc3c7',
+    marginRight: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  selectedRadioButton: {
+    borderColor: '#2196f3',
+  },
+  radioButtonInner: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: '#2196f3',
+  },
+  reasonText: {
+    fontSize: 16,
+    color: '#2c3e50',
+    flex: 1,
+  },
+  selectedReasonText: {
+    color: '#1976d2',
+    fontWeight: '600',
+  },
+  customReasonInput: {
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 16,
+    minHeight: 80,
+    marginTop: 10,
+    backgroundColor: '#fff',
+    textAlignVertical: 'top',
+  },
   modalButtons: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    marginTop: 16,
+    gap: 10,
   },
   modalCancelButton: {
     flex: 1,
     backgroundColor: '#ecf0f1',
     borderRadius: 8,
-    padding: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
     alignItems: 'center',
-    marginRight: 8,
+    justifyContent: 'center',
+    minHeight: 40,
   },
   modalCancelText: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '600',
     color: '#2c3e50',
   },
@@ -1147,17 +1481,25 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#3498db',
     borderRadius: 8,
-    padding: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
     alignItems: 'center',
-    marginLeft: 8,
+    justifyContent: 'center',
+    minHeight: 40,
   },
   modalConfirmText: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '600',
     color: '#fff',
   },
-  appointmentsContainer: {
-    maxHeight: 500,
+  appointmentsSubtitle: {
+    fontSize: 16,
+    color: '#7f8c8d',
+    marginBottom: 16,
+    marginTop: 8,
+    textAlign: 'center',
+  },
+  appointmentsWrapper: {
     marginBottom: 20,
   },
   appointmentCard: {
@@ -1188,15 +1530,15 @@ const styles = StyleSheet.create({
   },
   rescheduleButton: {
     backgroundColor: '#f39c12',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 8,
     alignItems: 'center',
     width: '100%',
   },
   rescheduleButtonText: {
     color: '#fff',
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '600',
   },
   emptyContainer: {

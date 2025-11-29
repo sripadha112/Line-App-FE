@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -15,6 +15,19 @@ import {
 import { DoctorAPIService } from '../services/doctorApiService';
 import TopBar from '../components/TopBar';
 import BottomNavigation from '../components/BottomNavigation';
+import DatePicker from '../components/DatePicker';
+
+const BULK_RESCHEDULE_REASONS = [
+  'Schedule change',
+  'Equipment maintenance',
+  'Emergency situation',
+  'Facility unavailable',
+  'Doctor delay',
+  'Administrative requirement',
+  'Weather conditions',
+  'Technical issues',
+  'Other'
+];
 
 export default function BulkReschedule({ route, navigation }) {
   const { doctorId } = route.params;
@@ -27,11 +40,16 @@ export default function BulkReschedule({ route, navigation }) {
   const [rescheduleData, setRescheduleData] = useState({
     extendHours: '',
     extendMinutes: '',
-    reason: '',
+    selectedReason: '',
+    customReason: '',
     dateOption: 'none', // 'none', 'today', 'tomorrow', 'custom'
     customDateText: '',
   });
   const [submitting, setSubmitting] = useState(false);
+
+  // Refs for auto-focus and scroll
+  const modalScrollRef = useRef(null);
+  const customReasonInputRef = useRef(null);
 
   useEffect(() => {
     fetchWorkplaces();
@@ -64,7 +82,8 @@ export default function BulkReschedule({ route, navigation }) {
     setRescheduleData({
       extendHours: '',
       extendMinutes: '',
-      reason: '',
+      selectedReason: '',
+      customReason: '',
       dateOption: 'none',
       customDateText: '',
     });
@@ -90,6 +109,44 @@ export default function BulkReschedule({ route, navigation }) {
     }
   };
 
+  const handleReasonSelection = (reason) => {
+    setRescheduleData(prev => ({ 
+      ...prev, 
+      selectedReason: reason,
+      customReason: reason !== 'Other' ? '' : prev.customReason
+    }));
+
+    // Auto-focus and scroll to text input when "Other" is selected
+    if (reason === 'Other') {
+      setTimeout(() => {
+        if (customReasonInputRef.current) {
+          customReasonInputRef.current.focus();
+          // Scroll to the bottom of the modal to ensure the text input is visible
+          if (modalScrollRef.current) {
+            modalScrollRef.current.scrollToEnd({ animated: true });
+          }
+        }
+      }, 100); // Small delay to ensure the input is rendered
+    }
+  };
+
+  const handleDateSelect = (selectedDate) => {
+    // Ensure the selected date is not in the past
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const selected = new Date(selectedDate);
+    
+    if (selected >= today) {
+      setRescheduleData(prev => ({
+        ...prev,
+        customDateText: selectedDate,
+        dateOption: 'custom'
+      }));
+    } else {
+      Alert.alert('Invalid Date', 'Please select a future date');
+    }
+  };
+
   const handleBulkReschedule = async () => {
     if (!selectedWorkplace) return;
 
@@ -103,20 +160,17 @@ export default function BulkReschedule({ route, navigation }) {
     }
 
     if (rescheduleData.dateOption === 'custom' && !rescheduleData.customDateText.trim()) {
-      Alert.alert('Validation Error', 'Please enter a custom date');
+      Alert.alert('Validation Error', 'Please select a custom date');
       return;
     }
 
-    if (rescheduleData.dateOption === 'custom') {
-      const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
-      if (!dateRegex.test(rescheduleData.customDateText)) {
-        Alert.alert('Validation Error', 'Please enter date in YYYY-MM-DD format');
-        return;
-      }
+    if (!rescheduleData.selectedReason) {
+      Alert.alert('Validation Error', 'Please select a reason for rescheduling');
+      return;
     }
 
-    if (!rescheduleData.reason.trim()) {
-      Alert.alert('Validation Error', 'Please provide a reason for rescheduling');
+    if (rescheduleData.selectedReason === 'Other' && !rescheduleData.customReason.trim()) {
+      Alert.alert('Validation Error', 'Please specify your reason for rescheduling');
       return;
     }
 
@@ -137,7 +191,7 @@ export default function BulkReschedule({ route, navigation }) {
         extendMinutes: rescheduleData.extendMinutes ? parseInt(rescheduleData.extendMinutes) : 0,
         // API expects empty string when no new date is provided (not null)
         newDate: getNewDate() || '',
-        reason: rescheduleData.reason.trim(),
+        reason: rescheduleData.selectedReason === 'Other' ? rescheduleData.customReason.trim() : rescheduleData.selectedReason,
       };
 
       // Debug: log payload and doctorId before calling API
@@ -244,7 +298,11 @@ export default function BulkReschedule({ route, navigation }) {
       >
         <View style={styles.modalBackdrop}>
           <View style={styles.modalContainer}>
-            <ScrollView style={styles.modalContent}>
+            <ScrollView 
+              ref={modalScrollRef}
+              style={styles.modalContent}
+              showsVerticalScrollIndicator={false}
+            >
               <Text style={styles.modalTitle}>
                 Reschedule All Appointments
               </Text>
@@ -296,31 +354,68 @@ export default function BulkReschedule({ route, navigation }) {
               {/* Custom Date Input */}
               {rescheduleData.dateOption === 'custom' && (
                 <View style={styles.inputGroup}>
-                  <Text style={styles.inputLabel}>Enter Custom Date:</Text>
-                  <Text style={styles.formatHint}>Format: YYYY-MM-DD (e.g., 2025-10-16)</Text>
-                  <TextInput
-                    style={styles.input}
-                    value={rescheduleData.customDateText}
-                    onChangeText={(text) => setRescheduleData(prev => ({ 
-                      ...prev, 
-                      customDateText: text 
-                    }))}
-                    placeholder="2025-10-16"
-                    placeholderTextColor="#999"
+                  <Text style={styles.inputLabel}>Select Custom Date:</Text>
+                  <DatePicker
+                    selectedDate={rescheduleData.customDateText}
+                    onDateSelect={handleDateSelect}
+                    minDate={new Date().toISOString().split('T')[0]}
+                    title="Select Reschedule Date"
+                    buttonTitle={rescheduleData.customDateText ? 
+                      new Date(rescheduleData.customDateText).toLocaleDateString('en-US', {
+                        weekday: 'short',
+                        year: 'numeric',
+                        month: 'short',
+                        day: 'numeric'
+                      }) : 'Select Date'
+                    }
                   />
                 </View>
               )}
 
-              {/* Reason Section */}
+              {/* Reason Selection */}
               <Text style={styles.sectionTitle}>Reason *</Text>
-              <TextInput
-                style={styles.reasonInput}
-                value={rescheduleData.reason}
-                onChangeText={(text) => setRescheduleData(prev => ({ ...prev, reason: text }))}
-                placeholder="Enter reason for rescheduling..."
-                multiline
-                numberOfLines={3}
-              />
+              <Text style={styles.subLabel}>Please select a reason for bulk rescheduling</Text>
+              
+              <View style={styles.reasonsList}>
+                {BULK_RESCHEDULE_REASONS.map((reason, index) => (
+                  <TouchableOpacity
+                    key={index}
+                    style={[
+                      styles.reasonOption,
+                      rescheduleData.selectedReason === reason && styles.selectedReasonOption
+                    ]}
+                    onPress={() => handleReasonSelection(reason)}
+                  >
+                    <View style={styles.reasonOptionContent}>
+                      <View style={[
+                        styles.radioButton,
+                        rescheduleData.selectedReason === reason && styles.selectedRadioButton
+                      ]}>
+                        {rescheduleData.selectedReason === reason && <View style={styles.radioButtonInner} />}
+                      </View>
+                      <Text style={[
+                        styles.reasonText,
+                        rescheduleData.selectedReason === reason && styles.selectedReasonText
+                      ]}>
+                        {reason}
+                      </Text>
+                    </View>
+                  </TouchableOpacity>
+                ))}
+                
+                {rescheduleData.selectedReason === 'Other' && (
+                  <TextInput
+                    ref={customReasonInputRef}
+                    style={styles.customReasonInput}
+                    placeholder="Please specify your reason..."
+                    multiline={true}
+                    numberOfLines={3}
+                    value={rescheduleData.customReason}
+                    onChangeText={(text) => setRescheduleData(prev => ({ ...prev, customReason: text }))}
+                    textAlignVertical="top"
+                  />
+                )}
+              </View>
 
               {/* Action Buttons */}
               <View style={styles.modalActions}>
@@ -340,7 +435,7 @@ export default function BulkReschedule({ route, navigation }) {
                   {submitting ? (
                     <ActivityIndicator size="small" color="#fff" />
                   ) : (
-                    <Text style={styles.submitButtonText}>Reschedule All</Text>
+                    <Text style={styles.submitButtonText}>Confirm</Text>
                   )}
                 </TouchableOpacity>
               </View>
@@ -579,29 +674,35 @@ const styles = StyleSheet.create({
   modalActions: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginTop: 5,
-    marginBottom: 40,
+    marginTop: 20,
+    marginBottom: 10,
+    gap: 12,
+    paddingBottom: 40,
   },
   cancelButton: {
     flex: 1,
-    backgroundColor: '#95a5a6',
-    paddingVertical: 12,
-    borderRadius: 8,
-    marginRight: 8,
+    backgroundColor: '#ecf0f1',
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    borderRadius: 10,
     alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 48,
   },
   cancelButtonText: {
-    color: '#fff',
+    color: '#2c3e50',
     fontWeight: '600',
     fontSize: 16,
   },
   submitButton: {
     flex: 1,
     backgroundColor: '#f39c12',
-    paddingVertical: 12,
-    borderRadius: 8,
-    marginLeft: 8,
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    borderRadius: 10,
     alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 48,
   },
   submitButtonDisabled: {
     opacity: 0.7,
@@ -610,5 +711,69 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontWeight: '600',
     fontSize: 16,
+  },
+  subLabel: {
+    fontSize: 14,
+    color: '#7f8c8d',
+    marginBottom: 12,
+    marginTop: 5,
+  },
+  reasonsList: {
+    marginBottom: 10,
+  },
+  reasonOption: {
+    backgroundColor: '#f8f9fa',
+    borderRadius: 8,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: '#e9ecef',
+  },
+  selectedReasonOption: {
+    backgroundColor: '#e3f2fd',
+    borderColor: '#2196f3',
+  },
+  reasonOptionContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+  },
+  radioButton: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    borderWidth: 2,
+    borderColor: '#bdc3c7',
+    marginRight: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  selectedRadioButton: {
+    borderColor: '#2196f3',
+  },
+  radioButtonInner: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: '#2196f3',
+  },
+  reasonText: {
+    fontSize: 16,
+    color: '#2c3e50',
+    flex: 1,
+  },
+  selectedReasonText: {
+    color: '#1976d2',
+    fontWeight: '600',
+  },
+  customReasonInput: {
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 16,
+    minHeight: 80,
+    marginTop: 10,
+    backgroundColor: '#fff',
+    textAlignVertical: 'top',
   },
 });

@@ -1,4 +1,4 @@
-import React, {useEffect, useState} from 'react';
+import React, {useEffect, useState, useRef} from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert, Modal, TextInput, ScrollView, RefreshControl, ActivityIndicator } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import * as SecureStore from 'expo-secure-store';
@@ -17,6 +17,18 @@ import api from '../services/api';
 // Time options for dropdowns
 const HOUR_OPTIONS = Array.from({ length: 12 }, (_, i) => i + 1); // 1-12 for 12-hour format
 const MINUTE_OPTIONS = Array.from({ length: 60 }, (_, i) => i); // 0-59 for minutes
+
+// Predefined cancellation reasons for doctors
+const DOCTOR_CANCEL_REASONS = [
+  'Patient rescheduled',
+  'Doctor emergency',
+  'Medical emergency elsewhere',
+  'Equipment unavailable',
+  'Patient no-show',
+  'Administrative error',
+  'Health concerns',
+  'Other'
+];
 
 export default function DoctorHome({ navigation }) {
   const [appointments, setAppointments] = useState([]);
@@ -39,7 +51,10 @@ export default function DoctorHome({ navigation }) {
   const [doctorProfile, setDoctorProfile] = useState(null);
   const [editMode, setEditMode] = useState(false);
   const [shiftMinutes, setShiftMinutes] = useState('');
-  const [cancelReason, setCancelReason] = useState('');
+  const [selectedCancelReason, setSelectedCancelReason] = useState('');
+  const [customCancelReason, setCustomCancelReason] = useState('');
+  const [cancelReasonModalVisible, setCancelReasonModalVisible] = useState(false);
+  const [appointmentToCancel, setAppointmentToCancel] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
   const [activeTab, setActiveTab] = useState('appointments');
   const [selectedUser, setSelectedUser] = useState(null);
@@ -48,6 +63,10 @@ export default function DoctorHome({ navigation }) {
   const [historyToDate, setHistoryToDate] = useState(null);
   const [loading, setLoading] = useState(false);
   const [todayStats, setTodayStats] = useState({ total: 0, completed: 0, upcoming: 0 });
+  
+  // Refs for cancel reason modal
+  const cancelModalScrollRef = useRef(null);
+  const customCancelReasonInputRef = useRef(null);
   
   // Profile related states
   const [detailedProfile, setDetailedProfile] = useState(null);
@@ -1114,51 +1133,93 @@ export default function DoctorHome({ navigation }) {
   };
 
   const handleCancelDay = async () => {
-    if (!cancelReason.trim()) {
-      Alert.alert('Error', 'Please provide a reason for cancellation');
+    // This function should probably use the separate CancelDay screen instead of inline reason
+    // But for now, let's make it work with a simple text input
+    Alert.prompt(
+      'Cancel Day',
+      'Please provide a reason for cancelling all appointments today:',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { 
+          text: 'Confirm', 
+          onPress: async (reason) => {
+            if (!reason || !reason.trim()) {
+              Alert.alert('Error', 'Please provide a reason for cancellation');
+              return;
+            }
+
+            try {
+              const today = new Date();
+              const dateStr = format(today, 'yyyy-MM-dd');
+              
+              const res = await api.post(`/api/doctor/${doctorId}/appointments/cancel-day`, {
+                date: dateStr,
+                reason: reason.trim()
+              });
+              
+              Alert.alert('Success', `${res.data.cancelledCount} appointments cancelled successfully`);
+              setCancelDayModalVisible(false);
+              fetchTodayAppointments(doctorId);
+            } catch (e) {
+              Alert.alert('Error', 'Failed to cancel appointments: ' + (e.response?.data?.error || e.message));
+            }
+          }
+        }
+      ],
+      'plain-text'
+    );
+  };
+
+  const handleCancelAppointment = async (appointmentId, userId) => {
+    // Store appointment details for cancellation
+    setAppointmentToCancel({ appointmentId, userId });
+    setSelectedCancelReason('');
+    setCustomCancelReason('');
+    setCancelReasonModalVisible(true);
+  };
+
+  const handleCancelReasonSelection = (reason) => {
+    setSelectedCancelReason(reason);
+    if (reason !== 'Other') {
+      setCustomCancelReason('');
+    } else {
+      // Auto-focus and scroll to text input when "Other" is selected
+      setTimeout(() => {
+        if (customCancelReasonInputRef.current) {
+          customCancelReasonInputRef.current.focus();
+          // Scroll to the bottom to ensure the text input is visible
+          if (cancelModalScrollRef.current) {
+            cancelModalScrollRef.current.scrollToEnd({ animated: true });
+          }
+        }
+      }, 100);
+    }
+  };
+
+  const confirmCancelAppointment = async () => {
+    if (!selectedCancelReason) {
+      Alert.alert('Error', 'Please select a reason for cancellation');
+      return;
+    }
+
+    if (selectedCancelReason === 'Other' && !customCancelReason.trim()) {
+      Alert.alert('Error', 'Please specify your reason for cancellation');
       return;
     }
 
     try {
-      const today = new Date();
-      const dateStr = format(today, 'yyyy-MM-dd');
+      const finalReason = selectedCancelReason === 'Other' ? customCancelReason.trim() : selectedCancelReason;
       
-      const res = await api.post(`/api/doctor/${doctorId}/appointments/cancel-day`, {
-        date: dateStr,
-        reason: cancelReason
-      });
+      // You can include the reason in the API call if your backend supports it
+      await api.delete(`/api/user/${appointmentToCancel.userId}/appointments/${appointmentToCancel.appointmentId}`);
       
-      Alert.alert('Success', `${res.data.cancelledCount} appointments cancelled successfully`);
-      setCancelDayModalVisible(false);
-      setCancelReason('');
+      Alert.alert('Success', 'Appointment cancelled successfully');
+      setCancelReasonModalVisible(false);
       fetchTodayAppointments(doctorId);
+      fetchUpcomingAppointments(doctorId);
     } catch (e) {
-      Alert.alert('Error', 'Failed to cancel day: ' + (e.response?.data?.error || e.message));
+      Alert.alert('Error', 'Failed to cancel appointment: ' + (e.response?.data?.error || e.message));
     }
-  };
-
-  const handleCancelAppointment = async (appointmentId, userId) => {
-    Alert.alert(
-      'Cancel Appointment',
-      'Are you sure you want to cancel this appointment?',
-      [
-        { text: 'No', style: 'cancel' },
-        {
-          text: 'Yes',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await api.delete(`/api/user/${userId}/appointments/${appointmentId}`);
-              Alert.alert('Success', 'Appointment cancelled successfully');
-              fetchTodayAppointments(doctorId);
-              fetchUpcomingAppointments(doctorId);
-            } catch (e) {
-              Alert.alert('Error', 'Failed to cancel appointment: ' + (e.response?.data?.error || e.message));
-            }
-          }
-        }
-      ]
-    );
   };
 
   const handleRescheduleAppointment = async (appointment, newMinutes) => {
@@ -1719,6 +1780,90 @@ export default function DoctorHome({ navigation }) {
       </ScrollView>
       )}
 
+      {/* Cancel Reason Modal */}
+      <Modal
+        visible={cancelReasonModalVisible}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setCancelReasonModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <ScrollView 
+              ref={cancelModalScrollRef}
+              showsVerticalScrollIndicator={false}
+              style={{ flex: 1 }}
+            >
+              <Text style={styles.modalTitle}>Reason for Cancellation</Text>
+              <Text style={styles.modalSubtitle}>
+                Please select a reason for cancelling this appointment
+              </Text>
+              
+              <View style={styles.reasonsList}>
+              {DOCTOR_CANCEL_REASONS.map((reason, index) => (
+                <TouchableOpacity
+                  key={index}
+                  style={[
+                    styles.reasonOption,
+                    selectedCancelReason === reason && styles.selectedReasonOption
+                  ]}
+                  onPress={() => handleCancelReasonSelection(reason)}
+                >
+                  <View style={styles.reasonOptionContent}>
+                    <View style={[
+                      styles.radioButton,
+                      selectedCancelReason === reason && styles.selectedRadioButton
+                    ]}>
+                      {selectedCancelReason === reason && <View style={styles.radioButtonInner} />}
+                    </View>
+                    <Text style={[
+                      styles.reasonText,
+                      selectedCancelReason === reason && styles.selectedReasonText
+                    ]}>
+                      {reason}
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+              ))}
+              
+              {selectedCancelReason === 'Other' && (
+                <TextInput
+                  ref={customCancelReasonInputRef}
+                  style={styles.customReasonInput}
+                  placeholder="Please specify your reason..."
+                  multiline={true}
+                  numberOfLines={3}
+                  value={customCancelReason}
+                  onChangeText={setCustomCancelReason}
+                  textAlignVertical="top"
+                />
+              )}
+              </View>
+            </ScrollView>
+            
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={styles.modalCancelButton}
+                onPress={() => setCancelReasonModalVisible(false)}
+              >
+                <Text style={styles.modalCancelText}>Cancel</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity
+                style={[
+                  styles.modalConfirmButton,
+                  !selectedCancelReason && styles.disabledButton
+                ]}
+                onPress={confirmCancelAppointment}
+                disabled={!selectedCancelReason}
+              >
+                <Text style={styles.modalConfirmText}>Confirm</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
       <BottomNavigation 
         activeTab={activeTab}
         onTabChange={(tab) => {
@@ -1760,23 +1905,16 @@ export default function DoctorHome({ navigation }) {
         <View style={styles.modalOverlay}>
           <View style={styles.actionModal}>
             <Text style={styles.modalTitle}>❌ Cancel Entire Day</Text>
-            <Text style={styles.modalSubtitle}>Reason for cancellation:</Text>
-            <TextInput
-              style={styles.modalInput}
-              placeholder="Enter reason (e.g., Emergency, Illness)"
-              value={cancelReason}
-              onChangeText={setCancelReason}
-              multiline
-            />
+            <Text style={styles.modalSubtitle}>This will cancel all appointments for today.</Text>
+            <Text style={styles.modalSubtitle}>Are you sure you want to proceed?</Text>
             <View style={styles.modalButtons}>
               <TouchableOpacity style={styles.cancelButton} onPress={() => {
                 setCancelDayModalVisible(false);
-                setCancelReason('');
               }}>
                 <Text style={styles.cancelButtonText}>Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity style={[styles.confirmButton, styles.dangerButton]} onPress={handleCancelDay}>
-                <Text style={styles.confirmButtonText}>Cancel Day</Text>
+                <Text style={styles.confirmButtonText}>Confirm</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -3466,42 +3604,45 @@ const styles = StyleSheet.create({
   },
   modalButtons: {
     flexDirection: 'row',
-    marginTop: 20,
-    marginHorizontal: 16,
-    marginBottom: 16,
+    paddingTop: 20,
+    paddingHorizontal: 20,
+    paddingBottom: 20,
     gap: 12,
   },
   cancelButton: {
     flex: 1,
+    backgroundColor: '#95a5a6',
     paddingVertical: 14,
-    paddingHorizontal: 20,
-    borderRadius: 8,
-    backgroundColor: '#f8f9fa',
-    borderWidth: 1,
-    borderColor: '#dee2e6',
+    borderRadius: 10,
     alignItems: 'center',
-    justifyContent: 'center',
-    elevation: 1,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
+    minHeight: 48,
   },
   confirmButton: {
     flex: 1,
-    padding: 16,
-    borderRadius: 12,
     backgroundColor: '#3498db',
+    paddingVertical: 14,
+    borderRadius: 10,
     alignItems: 'center',
+    minHeight: 48,
   },
   dangerButton: {
     backgroundColor: '#e74c3c',
   },
+  modalConfirmButton: {
+    flex: 1,
+    backgroundColor: '#3498db',
+    paddingVertical: 14,
+    borderRadius: 10,
+    alignItems: 'center',
+    minHeight: 48,
+  },
+  disabledButton: {
+    backgroundColor: '#bdc3c7',
+  },
   cancelButtonText: {
+    color: '#fff',
     fontSize: 16,
     fontWeight: '600',
-    color: '#6c757d',
-    textAlign: 'center',
   },
   confirmButtonText: {
     fontSize: 16,
@@ -4875,5 +5016,65 @@ const styles = StyleSheet.create({
   workplacesScrollView: {
     maxHeight: 400,
     paddingHorizontal: 16,
+  },
+  
+  // Cancel Reason Modal Styles
+  reasonsList: {
+    marginBottom: 20,
+  },
+  reasonOption: {
+    backgroundColor: '#f8f9fa',
+    borderRadius: 8,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: '#e9ecef',
+  },
+  selectedReasonOption: {
+    backgroundColor: '#e3f2fd',
+    borderColor: '#2196f3',
+  },
+  reasonOptionContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+  },
+  radioButton: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    borderWidth: 2,
+    borderColor: '#bdc3c7',
+    marginRight: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  selectedRadioButton: {
+    borderColor: '#2196f3',
+  },
+  radioButtonInner: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: '#2196f3',
+  },
+  reasonText: {
+    fontSize: 16,
+    color: '#2c3e50',
+    flex: 1,
+  },
+  selectedReasonText: {
+    color: '#1976d2',
+    fontWeight: '600',
+  },
+  customReasonInput: {
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 16,
+    minHeight: 80,
+    marginTop: 10,
+    backgroundColor: '#fff',
+    textAlignVertical: 'top',
   },
 });

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -15,6 +15,19 @@ import {
 import { DoctorAPIService } from '../services/doctorApiService';
 import TopBar from '../components/TopBar';
 import BottomNavigation from '../components/BottomNavigation';
+import DatePicker from '../components/DatePicker';
+
+const CANCEL_DAY_REASONS = [
+  'Personal emergency',
+  'Medical emergency', 
+  'Family emergency',
+  'Equipment failure',
+  'Facility unavailable',
+  'Doctor illness',
+  'Weather conditions',
+  'Administrative issues',
+  'Other'
+];
 
 export default function CancelDay({ route, navigation }) {
   const { doctorId } = route.params;
@@ -27,9 +40,14 @@ export default function CancelDay({ route, navigation }) {
   const [cancelDayData, setCancelDayData] = useState({
     dateOption: 'today', // 'today', 'tomorrow', 'custom'
     customDateText: '',
-    reason: '',
+    selectedReason: '',
+    customReason: '',
   });
   const [submitting, setSubmitting] = useState(false);
+
+  // Refs for auto-focus and scroll
+  const modalScrollRef = useRef(null);
+  const customReasonInputRef = useRef(null);
 
   useEffect(() => {
     fetchWorkplaces();
@@ -62,7 +80,8 @@ export default function CancelDay({ route, navigation }) {
     setCancelDayData({
       dateOption: 'today',
       customDateText: '',
-      reason: '',
+      selectedReason: '',
+      customReason: '',
     });
   };
 
@@ -86,6 +105,35 @@ export default function CancelDay({ route, navigation }) {
     }
   };
 
+  const handleReasonSelection = (reason) => {
+    setCancelDayData(prev => ({ 
+      ...prev, 
+      selectedReason: reason,
+      customReason: reason !== 'Other' ? '' : prev.customReason
+    }));
+
+    // Auto-focus and scroll to text input when "Other" is selected
+    if (reason === 'Other') {
+      setTimeout(() => {
+        if (customReasonInputRef.current) {
+          customReasonInputRef.current.focus();
+          // Scroll to the bottom to ensure the text input is visible
+          if (modalScrollRef.current) {
+            modalScrollRef.current.scrollToEnd({ animated: true });
+          }
+        }
+      }, 100);
+    }
+  };
+
+  const handleDateSelect = (selectedDate) => {
+    setCancelDayData(prev => ({
+      ...prev,
+      customDateText: selectedDate,
+      dateOption: 'custom'
+    }));
+  };
+
   const handleCancelDay = async () => {
     if (!selectedWorkplace) return;
 
@@ -95,18 +143,24 @@ export default function CancelDay({ route, navigation }) {
       return;
     }
 
-    if (!cancelDayData.reason.trim()) {
-      Alert.alert('Validation Error', 'Please provide a reason for cancellation');
+    if (!cancelDayData.selectedReason) {
+      Alert.alert('Validation Error', 'Please select a reason for cancellation');
+      return;
+    }
+
+    if (cancelDayData.selectedReason === 'Other' && !cancelDayData.customReason.trim()) {
+      Alert.alert('Validation Error', 'Please specify your reason for cancellation');
       return;
     }
 
     try {
       setSubmitting(true);
 
+      const finalReason = cancelDayData.selectedReason === 'Other' ? cancelDayData.customReason.trim() : cancelDayData.selectedReason;
       const cancelDate = getCancelDate();
       const payload = {
         date: cancelDate,
-        reason: cancelDayData.reason
+        reason: finalReason
       };
 
       try {
@@ -211,7 +265,11 @@ export default function CancelDay({ route, navigation }) {
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalContainer}>
-            <ScrollView style={styles.modalScrollView} showsVerticalScrollIndicator={false}>
+            <ScrollView 
+              ref={modalScrollRef}
+              style={styles.modalScrollView} 
+              showsVerticalScrollIndicator={false}
+            >
               <Text style={styles.modalTitle}>Cancel Day Appointments</Text>
               <Text style={styles.modalSubtitle}>
                 {selectedWorkplace?.workplaceName}
@@ -228,31 +286,73 @@ export default function CancelDay({ route, navigation }) {
               {/* Custom Date Input */}
               {cancelDayData.dateOption === 'custom' && (
                 <View style={styles.inputGroup}>
-                  <Text style={styles.inputLabel}>Enter Date (YYYY-MM-DD):</Text>
-                  <TextInput
-                    style={styles.input}
-                    placeholder="2024-01-15"
-                    value={cancelDayData.customDateText}
-                    onChangeText={(text) => setCancelDayData(prev => ({ ...prev, customDateText: text }))}
+                  <Text style={styles.inputLabel}>Select Date to Cancel:</Text>
+                  <DatePicker
+                    selectedDate={cancelDayData.customDateText}
+                    onDateSelect={handleDateSelect}
+                    minDate={new Date().toISOString().split('T')[0]}
+                    title="Select Cancellation Date"
+                    buttonTitle={cancelDayData.customDateText ? 
+                      new Date(cancelDayData.customDateText).toLocaleDateString('en-US', {
+                        weekday: 'short',
+                        year: 'numeric',
+                        month: 'short',
+                        day: 'numeric'
+                      }) : 'Select Date'
+                    }
                   />
                 </View>
               )}
 
-              {/* Reason Input */}
+              {/* Reason Selection */}
               <View style={styles.inputGroup}>
                 <Text style={styles.inputLabel}>Reason for Cancellation *</Text>
-                <TextInput
-                  style={[styles.input, styles.textArea]}
-                  placeholder="Please provide a reason for canceling all appointments..."
-                  value={cancelDayData.reason}
-                  onChangeText={(text) => setCancelDayData(prev => ({ ...prev, reason: text }))}
-                  multiline={true}
-                  numberOfLines={3}
-                />
+                <Text style={styles.subLabel}>Please select a reason for canceling all appointments</Text>
+                
+                <View style={styles.reasonsList}>
+                  {CANCEL_DAY_REASONS.map((reason, index) => (
+                    <TouchableOpacity
+                      key={index}
+                      style={[
+                        styles.reasonOption,
+                        cancelDayData.selectedReason === reason && styles.selectedReasonOption
+                      ]}
+                      onPress={() => handleReasonSelection(reason)}
+                    >
+                      <View style={styles.reasonOptionContent}>
+                        <View style={[
+                          styles.radioButton,
+                          cancelDayData.selectedReason === reason && styles.selectedRadioButton
+                        ]}>
+                          {cancelDayData.selectedReason === reason && <View style={styles.radioButtonInner} />}
+                        </View>
+                        <Text style={[
+                          styles.reasonText,
+                          cancelDayData.selectedReason === reason && styles.selectedReasonText
+                        ]}>
+                          {reason}
+                        </Text>
+                      </View>
+                    </TouchableOpacity>
+                  ))}
+                  
+                  {cancelDayData.selectedReason === 'Other' && (
+                    <TextInput
+                      ref={customReasonInputRef}
+                      style={styles.customReasonInput}
+                      placeholder="Please specify your reason..."
+                      multiline={true}
+                      numberOfLines={3}
+                      value={cancelDayData.customReason}
+                      onChangeText={(text) => setCancelDayData(prev => ({ ...prev, customReason: text }))}
+                      textAlignVertical="top"
+                    />
+                  )}
+                </View>
               </View>
 
               {/* Buttons */}
-              <View style={styles.buttonRow}>
+              <View style={styles.modalButtons}>
                 <TouchableOpacity
                   style={styles.modalCancelButton}
                   onPress={() => setCancelDayModalVisible(false)}
@@ -269,7 +369,7 @@ export default function CancelDay({ route, navigation }) {
                   {submitting ? (
                     <ActivityIndicator size="small" color="#fff" />
                   ) : (
-                    <Text style={styles.submitButtonText}>Cancel Day</Text>
+                    <Text style={styles.submitButtonText}>Confirm</Text>
                   )}
                 </TouchableOpacity>
               </View>
@@ -455,18 +555,20 @@ const styles = StyleSheet.create({
     height: 80,
     textAlignVertical: 'top',
   },
-  buttonRow: {
+  modalButtons: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 20,
+    paddingTop: 20,
+    paddingHorizontal: 20,
+    paddingBottom: 20,
     gap: 12,
   },
   modalCancelButton: {
     flex: 1,
     backgroundColor: '#95a5a6',
     paddingVertical: 14,
-    borderRadius: 8,
+    borderRadius: 10,
     alignItems: 'center',
+    minHeight: 48,
   },
   modalCancelButtonText: {
     color: '#fff',
@@ -477,8 +579,9 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#e74c3c',
     paddingVertical: 14,
-    borderRadius: 8,
+    borderRadius: 10,
     alignItems: 'center',
+    minHeight: 48,
   },
   submitButtonDisabled: {
     backgroundColor: '#bdc3c7',
@@ -487,5 +590,68 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',
+  },
+  subLabel: {
+    fontSize: 14,
+    color: '#7f8c8d',
+    marginBottom: 12,
+  },
+  reasonsList: {
+    marginBottom: 10,
+  },
+  reasonOption: {
+    backgroundColor: '#f8f9fa',
+    borderRadius: 8,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: '#e9ecef',
+  },
+  selectedReasonOption: {
+    backgroundColor: '#e3f2fd',
+    borderColor: '#2196f3',
+  },
+  reasonOptionContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+  },
+  radioButton: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    borderWidth: 2,
+    borderColor: '#bdc3c7',
+    marginRight: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  selectedRadioButton: {
+    borderColor: '#2196f3',
+  },
+  radioButtonInner: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: '#2196f3',
+  },
+  reasonText: {
+    fontSize: 16,
+    color: '#2c3e50',
+    flex: 1,
+  },
+  selectedReasonText: {
+    color: '#1976d2',
+    fontWeight: '600',
+  },
+  customReasonInput: {
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 16,
+    minHeight: 80,
+    marginTop: 10,
+    backgroundColor: '#fff',
+    textAlignVertical: 'top',
   },
 });

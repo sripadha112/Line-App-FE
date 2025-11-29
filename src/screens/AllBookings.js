@@ -16,13 +16,13 @@ import TopBar from '../components/TopBar';
 import BottomNavigation from '../components/BottomNavigation';
 
 export default function AllBookings({ route, navigation }) {
-  const { doctorId, workplaceId, workplaceName } = route.params;
+  const { doctorId, workplaceId, workplaceName, refresh } = route.params;
   
   const [appointmentsByDate, setAppointmentsByDate] = useState([]);
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [collapsedSections, setCollapsedSections] = useState({});
-  const [todaySectionCollapsed, setTodaySectionCollapsed] = useState(true); // Default collapsed like upcoming appointments
+  const [todaySectionCollapsed, setTodaySectionCollapsed] = useState(!refresh); // Expand if coming from refresh (revisit booking)
 
   useEffect(() => {
     fetchAppointments();

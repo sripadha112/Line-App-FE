@@ -42,7 +42,7 @@ import AppointmentHistory from './src/screens/AppointmentHistory';
 import BulkReschedule from './src/screens/BulkReschedule';
 import CancelDay from './src/screens/CancelDay';
 import * as SecureStore from 'expo-secure-store';
-import { setAuthHeaderFromStore, overrideApiBaseUrl } from './src/services/api';
+import { setAuthHeaderFromStore, overrideApiBaseUrl, setNavigationRef } from './src/services/api';
 import API_BASE_URL from './src/config';
 import { ActivityIndicator, View, Modal, Text, TextInput, Button, TouchableOpacity, StyleSheet, Alert } from 'react-native';
 
@@ -53,12 +53,19 @@ export default function App() {
   const [debugVisible, setDebugVisible] = useState(false);
   const [manualUrl, setManualUrl] = useState('');
   const [resolvedBase, setResolvedBase] = useState(API_BASE_URL || '');
+  const navigationRef = React.useRef();
 
   useEffect(() => {
     (async () => {
       const token = await SecureStore.getItemAsync('accessToken');
       const role = await SecureStore.getItemAsync('role');
       await setAuthHeaderFromStore();
+      
+      // Set navigation reference for API service
+      if (navigationRef.current) {
+        setNavigationRef(navigationRef.current);
+      }
+      
       if (token && role) {
         setInitialRoute(role === 'DOCTOR' ? 'DoctorHome' : 'UserHome');
       } else {
@@ -90,7 +97,13 @@ export default function App() {
 
   return (
     <SafeAreaProvider>
-      <NavigationContainer>
+      <NavigationContainer 
+        ref={navigationRef}
+        onReady={() => {
+          // Set navigation reference when container is ready
+          setNavigationRef(navigationRef.current);
+        }}
+      >
       <Stack.Navigator initialRouteName={initialRoute}>
         <Stack.Screen name="Auth" component={AuthScreen} options={{headerShown:false}} />
         <Stack.Screen name="OtpVerify" component={OtpVerifyScreen} options={{title:'Verify OTP'}} />

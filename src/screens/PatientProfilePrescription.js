@@ -211,6 +211,23 @@ export default function PatientProfilePrescription({ route, navigation }) {
     );
   };
 
+  const handleBookNextVisit = () => {
+    console.log('🔄 Navigating to RescheduleAppointment with revisit context');
+    console.log('📋 Appointment data:', appointment);
+    console.log('🆔 UserId extracted:', appointment.userId || appointment.patientId);
+    
+    // Navigate to reschedule page with revisit context
+    navigation.navigate('RescheduleAppointment', {
+      appointment: appointment,
+      appointmentId: appointment.appointmentId,
+      userId: appointment.userId || appointment.patientId,
+      fromRevisit: true, // Flag to indicate this is for booking a revisit
+      patientData: userProfile // Pass patient data for context
+    });
+  };
+
+
+
   const renderEditableField = (label, fieldName, value, multiline = false, sectionName = null) => {
     const displayValue = getFieldValue(fieldName);
     const isFieldActive = sectionName && activeFields[fieldName];
@@ -669,18 +686,30 @@ export default function PatientProfilePrescription({ route, navigation }) {
           />
         </View>
 
-        {/* Save Button */}
-        <TouchableOpacity
-          style={[styles.saveCompleteButton, saving && styles.buttonDisabled]}
-          onPress={handleSaveAndComplete}
-          disabled={saving}
-        >
-          {saving ? (
-            <ActivityIndicator size="small" color="#fff" />
-          ) : (
-            <Text style={styles.saveCompleteButtonText}>Save & Complete Appointment</Text>
-          )}
-        </TouchableOpacity>
+        {/* Action Buttons */}
+        <View style={styles.actionButtonsContainer}>
+          {/* Book Next Visit Button */}
+          <TouchableOpacity
+            style={[styles.bookVisitButton, saving && styles.buttonDisabled]}
+            onPress={handleBookNextVisit}
+            disabled={saving}
+          >
+            <Text style={styles.bookVisitButtonText}>📅 Book Next Visit</Text>
+          </TouchableOpacity>
+
+          {/* Save & Complete Button */}
+          <TouchableOpacity
+            style={[styles.saveCompleteButton, saving && styles.buttonDisabled]}
+            onPress={handleSaveAndComplete}
+            disabled={saving}
+          >
+            {saving ? (
+              <ActivityIndicator size="small" color="#fff" />
+            ) : (
+              <Text style={styles.saveCompleteButtonText}>💾 Save & Complete Appointment</Text>
+            )}
+          </TouchableOpacity>
+        </View>
       </ScrollView>
 
       {/* Dropdown Modal */}
@@ -977,19 +1006,34 @@ const styles = StyleSheet.create({
     textAlignVertical: 'top',
     backgroundColor: '#fff',
   },
+  actionButtonsContainer: {
+    marginTop: 20,
+    marginBottom: 40,
+  },
+  bookVisitButton: {
+    backgroundColor: '#3498db',
+    borderRadius: 10,
+    paddingVertical: 14,
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  bookVisitButtonText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#fff',
+  },
+
   saveCompleteButton: {
     backgroundColor: '#27ae60',
-    borderRadius: 12,
-    paddingVertical: 16,
+    borderRadius: 10,
+    paddingVertical: 14,
     alignItems: 'center',
-    marginTop: 10,
-    marginBottom: 40,
   },
   buttonDisabled: {
     backgroundColor: '#bdc3c7',
   },
   saveCompleteButtonText: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '600',
     color: '#fff',
   },
