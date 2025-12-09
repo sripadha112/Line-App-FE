@@ -13,6 +13,7 @@ import { UserAPIService, DoctorAPIService, SlotsAPIService } from '../services/d
 import TopBar from '../components/TopBar';
 import BottomNavigation from '../components/BottomNavigation';
 import DatePicker from '../components/DatePicker';
+import CalendarPromptService from '../services/calendarPromptService';
 
 export default function BookAppointment({ route, navigation }) {
   const { userId } = route.params;
@@ -298,33 +299,48 @@ export default function BookAppointment({ route, navigation }) {
     try {
       setLoading(true);
       
+      // First, show calendar prompt
+      const appointmentDetails = {
+        doctorName: selectedWorkplace.doctorName,
+        workplaceName: selectedWorkplace.workplaceName,
+        date: new Date(selectedDate).toLocaleDateString(),
+        timeSlot: slot.slotTime
+      };
+
+      const calendarChoice = await CalendarPromptService.promptForBooking(appointmentDetails);
+      
       // Prepare appointment data according to API specification
       const appointmentData = {
         doctorId: selectedWorkplace.doctorId,
         workplaceId: selectedWorkplace.workplaceId,
-        requestedTime: new Date(selectedDate).toISOString(), // Convert selected date to ISO format
+        requestedTime: new Date(selectedDate).toISOString(),
         slot: slot.slotTime,
         notes: 'Booked via mobile app'
       };
 
-      console.log('📝 Booking appointment with data:', appointmentData);
-      console.log('📅 Selected date:', selectedDate);
-      console.log('🕐 Selected slot:', slot.slotTime);
+      // Add calendar data if user chose to integrate
+      if (calendarChoice.addToCalendar && calendarChoice.calendarData) {
+        Object.assign(appointmentData, calendarChoice.calendarData);
+      }
+
+      console.log('� Booking appointment with data:', appointmentData);
 
       const result = await UserAPIService.bookAppointment(userId, appointmentData);
       
       console.log('✅ Booking successful:', result);
       
-      Alert.alert(
-        '🎉 Appointment Booked Successfully!',
-        `Your appointment is confirmed at ${result.workplaceName || selectedWorkplace.workplaceName} on ${result.slot || appointmentData.slot}.\n\nDoctor: ${selectedWorkplace.doctorName}`,
-        [
-          {
-            text: 'OK',
-            onPress: () => navigation.goBack()
-          }
-        ]
-      );
+      // Show success message
+      CalendarPromptService.showSuccessMessage('book', {
+        success: true,
+        calendarIntegrated: result.calendarIntegrated || calendarChoice.addToCalendar,
+        message: `Your appointment is confirmed at ${result.workplaceName || selectedWorkplace.workplaceName} on ${result.slot || appointmentData.slot}.\n\nDoctor: ${selectedWorkplace.doctorName}`
+      });
+
+      // Navigate back after a short delay
+      setTimeout(() => {
+        navigation.goBack();
+      }, 1500);
+
     } catch (error) {
       Alert.alert('Error', 'Failed to book appointment. Please try again.');
       console.error('Booking error:', error);
@@ -799,6 +815,7 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontWeight: '600',
   },
+
   recentSection: {
     marginTop: 20,
   },

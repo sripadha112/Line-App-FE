@@ -1,6 +1,7 @@
 import { API_ENDPOINTS } from '../config/apiConfig';
 import api from './api';
 import { format, startOfDay, endOfDay, addDays } from 'date-fns';
+import calendarService from './calendarService';
 
 export class DoctorAPIService {
   // Fetch today's appointments
@@ -517,52 +518,158 @@ export class UserAPIService {
     }
   }
 
-  // Book appointment
+  // Book appointment with calendar integration
   static async bookAppointment(userId, appointmentData) {
     try {
       if (!userId) {
         throw new Error('userId is required for booking appointment');
       }
+
+      // Get calendar integration data
+      const calendarHeaders = await calendarService.getCalendarHeaders();
+      const calendarData = await calendarService.getCalendarData();
+      
+      // Prepare final appointment data
+      const finalAppointmentData = {
+        ...appointmentData,
+        ...calendarData,
+        userId: userId
+      };
       
       console.log('📤 Sending booking request to:', API_ENDPOINTS.USER.BOOK_APPOINTMENT(userId));
-      console.log('📦 Request body:', JSON.stringify(appointmentData, null, 2));
+      console.log('📦 Request body:', JSON.stringify(finalAppointmentData, null, 2));
+      console.log('📅 Calendar headers:', calendarHeaders);
       
-      const response = await api.post(API_ENDPOINTS.USER.BOOK_APPOINTMENT(userId), appointmentData);
+      const response = await api.post(
+        API_ENDPOINTS.USER.BOOK_APPOINTMENT(userId), 
+        finalAppointmentData,
+        { headers: calendarHeaders }
+      );
       
       console.log('📥 Booking response:', response.data);
       
-      return response.data;
+      // Check if calendar event was created
+      const result = response.data;
+      const calendarIntegrated = result.calendarEventCreated || false;
+      
+      return {
+        ...result,
+        success: true,
+        calendarIntegrated,
+        message: calendarIntegrated 
+          ? 'Appointment booked and added to your calendar!'
+          : 'Appointment booked successfully!'
+      };
     } catch (error) {
       console.log('❌ Error booking appointment:', error.message);
       if (error.response) {
         console.log('❌ Response error data:', error.response.data);
         console.log('❌ Response status:', error.response.status);
       }
+      
+      // Handle calendar token expiry
+      if (error.message.includes('token') || error.message.includes('unauthorized')) {
+        await calendarService.clearTokens();
+      }
+      
       throw error;
     }
   }
 
-  // Reschedule appointment
+  // Reschedule appointment with calendar integration
   static async rescheduleAppointment(appointmentId, rescheduleData) {
     try {
       console.log('📤 Rescheduling appointment:', appointmentId);
       console.log('📦 Reschedule data:', rescheduleData);
+
+      // Get calendar integration data
+      const calendarHeaders = await calendarService.getCalendarHeaders();
+      const calendarData = await calendarService.getCalendarData();
       
-      // Add appointmentId to the request body
+      // Add appointmentId to the request body along with calendar data
       const requestData = {
         appointmentId: appointmentId,
-        ...rescheduleData
+        ...rescheduleData,
+        ...calendarData
       };
       
       console.log('📤 Final request data:', requestData);
+      console.log('📅 Calendar headers:', calendarHeaders);
       
-      const response = await api.put(API_ENDPOINTS.USER.RESCHEDULE_APPOINTMENT, requestData);
+      const response = await api.put(
+        API_ENDPOINTS.USER.RESCHEDULE_APPOINTMENT, 
+        requestData,
+        { headers: calendarHeaders }
+      );
       
       console.log('📥 Reschedule response:', response.data);
-      return response.data;
+      
+      // Check if calendar event was updated
+      const result = response.data;
+      const calendarUpdated = result.calendarEventUpdated || false;
+      
+      return {
+        ...result,
+        success: true,
+        calendarEventUpdated: calendarUpdated,
+        message: calendarUpdated
+          ? 'Appointment rescheduled and calendar updated!'
+          : 'Appointment rescheduled successfully!'
+      };
     } catch (error) {
       console.log('Error rescheduling appointment:', error.message);
       console.log('Error response:', error.response?.data);
+      
+      // Handle calendar token expiry
+      if (error.message.includes('token') || error.message.includes('unauthorized')) {
+        await calendarService.clearTokens();
+      }
+      
+      throw error;
+    }
+  }
+
+  // Cancel appointment with calendar integration
+  static async cancelAppointment(appointmentId) {
+    try {
+      console.log('📤 Cancelling appointment:', appointmentId);
+
+      // Get calendar integration data
+      const calendarHeaders = await calendarService.getCalendarHeaders();
+      
+      console.log('📅 Calendar headers:', calendarHeaders);
+      
+      const response = await api.delete(
+        API_ENDPOINTS.USER.CANCEL_APPOINTMENT(appointmentId),
+        { headers: calendarHeaders }
+      );
+      
+      console.log('📥 Cancel response:', response.data);
+      
+      // Check if calendar event was deleted
+      const result = response.data;
+      const calendarEventDeleted = result.calendarEventDeleted || false;
+      
+      return {
+        ...result,
+        success: true,
+        calendarEventDeleted,
+        message: calendarEventDeleted
+          ? 'Appointment cancelled and removed from your calendar!'
+          : 'Appointment cancelled successfully!'
+      };
+    } catch (error) {
+      console.log('❌ Error cancelling appointment:', error.message);
+      if (error.response) {
+        console.log('❌ Response error data:', error.response.data);
+        console.log('❌ Response status:', error.response.status);
+      }
+      
+      // Handle calendar token expiry
+      if (error.message.includes('token') || error.message.includes('unauthorized')) {
+        await calendarService.clearTokens();
+      }
+      
       throw error;
     }
   }

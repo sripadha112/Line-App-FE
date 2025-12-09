@@ -14,6 +14,7 @@ import { UserAPIService, SlotsAPIService, DoctorAPIService } from '../services/d
 import TopBar from '../components/TopBar';
 import BottomNavigation from '../components/BottomNavigation';
 import DatePicker from '../components/DatePicker';
+import CalendarPromptService from '../services/calendarPromptService';
 
 const RESCHEDULE_REASONS = [
   'Schedule conflict',
@@ -415,6 +416,21 @@ export default function RescheduleAppointment({ route, navigation }) {
       console.log('📅 Selected date:', selectedDate);
       console.log('📝 Reason:', finalReason);
       
+      // Show calendar prompt for rescheduling (unless it's a revisit)
+      let calendarChoice = { updateCalendar: false };
+      if (!fromRevisit) {
+        const appointmentDetails = {
+          doctorName: appointment.doctorName || 'Doctor',
+          workplaceName: appointment.workplaceName,
+          oldDate: new Date(appointment.appointmentDate || appointment.requestedTime).toLocaleDateString(),
+          oldTime: appointment.slot,
+          newDate: new Date(selectedDate).toLocaleDateString(),
+          newTime: selectedSlot.slotTime
+        };
+
+        calendarChoice = await CalendarPromptService.promptForReschedule(appointmentDetails);
+      }
+      
       // Validate required data
       if (!selectedSlot || !selectedDate) {
         throw new Error('Missing required data: selectedSlot or selectedDate');
@@ -453,41 +469,43 @@ export default function RescheduleAppointment({ route, navigation }) {
         }
       }
 
-      Alert.alert(
-        'Success',
-        result.message || (fromRevisit 
-          ? 'Appointment rescheduled as revisit successfully! Original appointment has been completed.'
-          : 'Your appointment has been rescheduled successfully!'),
-        [
-          {
-            text: 'OK',
-            onPress: () => {
-              setShowReasonModal(false);
-              if (fromRevisit && appointment) {
-                // Reset navigation stack and navigate to AllBookings page
-                navigation.reset({
-                  index: 1,
-                  routes: [
-                    { name: 'DoctorHome' }, // Home screen as base
-                    { 
-                      name: 'AllBookings', 
-                      params: {
-                        doctorId: appointment.doctorId,
-                        workplaceId: appointment.workplaceId,
-                        workplaceName: appointment.workplaceName || 'Workplace',
-                        refresh: true
-                      }
-                    }
-                  ]
-                });
-              } else {
-                // Regular reschedule - go back to previous screen
-                navigation.goBack();
+      // Show success message with calendar integration status
+      const successMessage = result.message || (fromRevisit 
+        ? 'Appointment rescheduled as revisit successfully! Original appointment has been completed.'
+        : 'Your appointment has been rescheduled successfully!');
+
+      CalendarPromptService.showSuccessMessage('reschedule', {
+        success: true,
+        calendarIntegrated: result.calendarEventUpdated || calendarChoice.updateCalendar,
+        message: successMessage
+      });
+
+      // Navigate back after a short delay
+      setTimeout(() => {
+        setShowReasonModal(false);
+        if (fromRevisit && appointment) {
+          // Reset navigation stack and navigate to AllBookings page
+          navigation.reset({
+            index: 1,
+            routes: [
+              { name: 'DoctorHome' },
+              { 
+                name: 'AllBookings', 
+                params: {
+                  doctorId: appointment.doctorId,
+                  workplaceId: appointment.workplaceId,
+                  workplaceName: appointment.workplaceName || 'Workplace',
+                  refresh: true
+                }
               }
-            }
-          }
-        ]
-      );
+            ]
+          });
+        } else {
+          // Regular reschedule - go back to previous screen
+          navigation.goBack();
+        }
+      }, 1500);
+
     } catch (error) {
       console.error(fromRevisit ? 'Error rescheduling revisit appointment:' : 'Error rescheduling appointment:', error);
       Alert.alert(
@@ -1072,6 +1090,7 @@ const styles = StyleSheet.create({
     borderLeftWidth: 4,
     borderLeftColor: '#f39c12',
   },
+
   sectionTitle: {
     fontSize: 18,
     fontWeight: '600',

@@ -12,6 +12,7 @@ import {
 import { UserAPIService } from '../services/doctorApiService';
 import TopBar from '../components/TopBar';
 import BottomNavigation from '../components/BottomNavigation';
+import CalendarPromptService from '../services/calendarPromptService';
 
 const CANCELLATION_REASONS = [
   'Personal emergency',
@@ -139,25 +140,32 @@ export default function CancelAppointment({ route, navigation }) {
     try {
       setCancelling(true);
       
-      // Call cancel appointment API
-      await UserAPIService.cancelAppointment(appointmentId, {
-        reason: finalReason,
-        cancelledBy: 'user'
+      // Show calendar prompt for cancellation
+      const appointmentDetails = {
+        doctorName: appointment.doctorName || 'Doctor',
+        workplaceName: appointment.workplaceName,
+        date: new Date(appointment.appointmentDate || appointment.requestedTime).toLocaleDateString(),
+        timeSlot: appointment.slot
+      };
+
+      const calendarChoice = await CalendarPromptService.promptForCancellation(appointmentDetails);
+      
+      // Call cancel appointment API with calendar integration
+      const result = await UserAPIService.cancelAppointment(appointmentId);
+
+      // Show success message
+      CalendarPromptService.showSuccessMessage('cancel', {
+        success: true,
+        calendarIntegrated: result.calendarEventDeleted || calendarChoice.removeFromCalendar,
+        message: result.message || 'Your appointment has been cancelled successfully. If applicable, any refund will be processed according to our policy.'
       });
 
-      Alert.alert(
-        'Appointment Cancelled',
-        'Your appointment has been cancelled successfully. If applicable, any refund will be processed according to our policy.',
-        [
-          {
-            text: 'OK',
-            onPress: () => {
-              setShowConfirmModal(false);
-              navigation.goBack();
-            }
-          }
-        ]
-      );
+      // Navigate back after a short delay
+      setTimeout(() => {
+        setShowConfirmModal(false);
+        navigation.goBack();
+      }, 1500);
+
     } catch (error) {
       console.error('Error cancelling appointment:', error);
       Alert.alert(
@@ -542,6 +550,7 @@ const styles = StyleSheet.create({
     borderLeftWidth: 4,
     borderLeftColor: '#e74c3c',
   },
+
   sectionTitle: {
     fontSize: 18,
     fontWeight: '600',
