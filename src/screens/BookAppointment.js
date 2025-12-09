@@ -139,7 +139,7 @@ export default function BookAppointment({ route, navigation }) {
         }
       });
       
-      console.log('🏥 Flattened workplaces:', allWorkplaces);
+      // console.log('🏥 Flattened workplaces:', allWorkplaces);
       
       // Check if no workplaces found even though doctors exist
       if (allWorkplaces.length === 0) {
@@ -171,6 +171,10 @@ export default function BookAppointment({ route, navigation }) {
   const selectWorkplace = async (workplace) => {
     try {
       setLoading(true);
+      console.log('🏥 Selected workplace:', workplace);
+      console.log('👤 Doctor name:', workplace.doctorName);
+      console.log('🏢 Workplace name:', workplace.workplaceName);
+      
       setSelectedWorkplace(workplace);
       
       // Load initial slots (default behavior - next 3 days)
@@ -194,7 +198,7 @@ export default function BookAppointment({ route, navigation }) {
       
       const slotsData = await UserAPIService.getAvailableSlots(workplace.doctorId, workplace.workplaceId, params);
       
-      console.log('📅 Received slots data for booking:', slotsData);
+      // console.log('📅 Received slots data for booking:', slotsData);
       
       // Check if we received the structured response
       if (!slotsData.slotsByDate) {
@@ -238,8 +242,8 @@ export default function BookAppointment({ route, navigation }) {
       // Sort dates chronologically
       dates.sort();
       
-      console.log('🎯 Processed slots by date for booking:', processedSlotsByDate);
-      console.log('📅 Available dates for booking:', dates);
+      // console.log('🎯 Processed slots by date for booking:', processedSlotsByDate);
+      // console.log('📅 Available dates for booking:', dates);
       
       setAllSlotsData(processedSlotsByDate);
       setAvailableDates(dates);
@@ -269,9 +273,13 @@ export default function BookAppointment({ route, navigation }) {
       day: 'numeric'
     }) : 'Selected Date';
 
+    // Fallback values in case of undefined
+    const doctorName = selectedWorkplace?.doctorName || 'Doctor';
+    const workplaceName = selectedWorkplace?.workplaceName || selectedWorkplace?.clinicName || 'Clinic';
+
     Alert.alert(
       'Confirm Appointment',
-      `Are you sure you want to book this appointment?\n\nDoctor: Dr. ${selectedWorkplace?.doctorName}\nClinic: ${selectedWorkplace?.clinicName}\nDate: ${appointmentDate}\nTime: ${slot.slotTime}`,
+      `Are you sure you want to book this appointment?\n\nDoctor: Dr. ${doctorName}\nClinic: ${workplaceName}\nDate: ${appointmentDate}\nTime: ${slot.slotTime}`,
       [
         {
           text: 'Cancel',
@@ -309,7 +317,7 @@ export default function BookAppointment({ route, navigation }) {
       
       Alert.alert(
         '🎉 Appointment Booked Successfully!',
-        `Your appointment is confirmed at ${result.workplaceName || selectedWorkplace.clinicName} on ${result.slot || appointmentData.slot}.\n\nDoctor: ${selectedWorkplace.doctorName}`,
+        `Your appointment is confirmed at ${result.workplaceName || selectedWorkplace.workplaceName} on ${result.slot || appointmentData.slot}.\n\nDoctor: ${selectedWorkplace.doctorName}`,
         [
           {
             text: 'OK',
@@ -431,7 +439,7 @@ export default function BookAppointment({ route, navigation }) {
   const renderSlot = ({ item: slot }) => (
     <TouchableOpacity 
       style={styles.slotCard} 
-      onPress={() => bookAppointment(slot)}
+      onPress={() => confirmAndBookAppointment(slot)}
     >
       <Text style={styles.slotTime}>{slot.slotTime}</Text>
       <Text style={styles.slotStatus}>Available</Text>
@@ -586,7 +594,7 @@ export default function BookAppointment({ route, navigation }) {
             
             <Text style={styles.sectionTitle}>📅 Available Slots</Text>
             <Text style={styles.doctorInfo}>
-              {selectedWorkplace?.doctorName} - {selectedWorkplace?.clinicName}
+              {selectedWorkplace?.doctorName} - {selectedWorkplace?.workplaceName}
             </Text>
             
             {/* Date Picker Section */}

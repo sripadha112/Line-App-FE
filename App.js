@@ -41,6 +41,7 @@ import PatientProfilePrescription from './src/screens/PatientProfilePrescription
 import AppointmentHistory from './src/screens/AppointmentHistory';
 import BulkReschedule from './src/screens/BulkReschedule';
 import CancelDay from './src/screens/CancelDay';
+import QuickBookingQR from './src/screens/QuickBookingQR';
 import * as SecureStore from 'expo-secure-store';
 import { setAuthHeaderFromStore, overrideApiBaseUrl, setNavigationRef } from './src/services/api';
 import API_BASE_URL from './src/config';
@@ -138,6 +139,7 @@ export default function App() {
         <Stack.Screen name="AppointmentHistory" component={AppointmentHistory} options={{headerShown:false}} />
         <Stack.Screen name="BulkReschedule" component={BulkReschedule} options={{headerShown:false}} />
         <Stack.Screen name="CancelDay" component={CancelDay} options={{headerShown:false}} />
+        <Stack.Screen name="QuickBookingQR" component={QuickBookingQR} options={{headerShown:false}} />
       </Stack.Navigator>
 
       {/* Debug overlay: toggleable modal to override/test API base URL on device */}

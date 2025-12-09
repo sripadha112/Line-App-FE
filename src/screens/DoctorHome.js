@@ -100,6 +100,8 @@ export default function DoctorHome({ navigation }) {
     isPrimary: false
   });
 
+
+
   // Add a ref to track if we're already handling auth error
   const authErrorHandling = React.useRef(false);
 
@@ -361,6 +363,10 @@ export default function DoctorHome({ navigation }) {
       workplaceId: workplace.id,
       workplaceName: workplace.workplaceName 
     });
+  };
+
+  const handleQuickBookingQR = () => {
+    navigation.navigate('QuickBookingQR', { doctorId });
   };
 
   const fetchUserDetails = async (userId) => {
@@ -1761,6 +1767,12 @@ export default function DoctorHome({ navigation }) {
               color="#27ae60"
             /> */}
             <Card 
+              title="Quick Booking QR" 
+              subtitle="Generate QR codes"
+              onPress={handleQuickBookingQR}
+              color="#16a085"
+            />
+            <Card 
               title="Reschedule" 
               subtitle="Bulk time shift"
               onPress={() => navigation.navigate('BulkReschedule', { doctorId })}
@@ -3159,6 +3171,8 @@ export default function DoctorHome({ navigation }) {
           </View>
         </TouchableOpacity>
       </Modal>
+
+
     </View>
   );
 }
@@ -5077,4 +5091,5 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     textAlignVertical: 'top',
   },
+
 });
