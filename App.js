@@ -42,10 +42,13 @@ import AppointmentHistory from './src/screens/AppointmentHistory';
 import BulkReschedule from './src/screens/BulkReschedule';
 import CancelDay from './src/screens/CancelDay';
 import QuickBookingQR from './src/screens/QuickBookingQR';
+import FCMTestScreen from './src/screens/FCMTestScreen';
 import * as SecureStore from 'expo-secure-store';
 import { setAuthHeaderFromStore, overrideApiBaseUrl, setNavigationRef } from './src/services/api';
 import API_BASE_URL from './src/config';
 import { ActivityIndicator, View, Modal, Text, TextInput, Button, TouchableOpacity, StyleSheet, Alert } from 'react-native';
+import fcmService from './src/services/fcmService';
+import UserNotificationService from './src/services/userNotificationService';
 
 const Stack = createNativeStackNavigator();
 
@@ -65,6 +68,19 @@ export default function App() {
       // Set navigation reference for API service
       if (navigationRef.current) {
         setNavigationRef(navigationRef.current);
+      }
+      
+      // Initialize User Notification Service (only for users, not doctors)
+      try {
+        console.log('🔔 [App] Initializing User Notification Service...');
+        const notificationResult = await UserNotificationService.registerUserForNotifications();
+        if (notificationResult.success) {
+          console.log('✅ [App] User notifications initialized successfully');
+        } else {
+          console.log('ℹ️ [App] User notifications:', notificationResult.message);
+        }
+      } catch (error) {
+        console.error('❌ [App] Notification initialization error:', error);
       }
       
       if (token && role) {
@@ -140,6 +156,7 @@ export default function App() {
         <Stack.Screen name="BulkReschedule" component={BulkReschedule} options={{headerShown:false}} />
         <Stack.Screen name="CancelDay" component={CancelDay} options={{headerShown:false}} />
         <Stack.Screen name="QuickBookingQR" component={QuickBookingQR} options={{headerShown:false}} />
+        <Stack.Screen name="FCMTest" component={FCMTestScreen} options={{headerShown:false}} />
       </Stack.Navigator>
 
       {/* Debug overlay: toggleable modal to override/test API base URL on device */}

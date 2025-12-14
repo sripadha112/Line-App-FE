@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Alert, KeyboardAvoidingView, Platform } from 'react-native';
 import api from '../services/api';
 import { API_ENDPOINTS } from '../config/apiConfig';
@@ -7,9 +7,15 @@ import * as SecureStore from 'expo-secure-store';
 export default function UserRegistrationScreen({ navigation, route }) {
   const { mobile, otp } = route.params || {};
   
-  // Add error handling for missing parameters
-  if (!mobile || !otp) {
-    navigation.replace('Auth');
+  // Add error handling for missing parameters using useEffect
+  useEffect(() => {
+    if (!mobile) {
+      navigation.replace('Auth');
+    }
+  }, [mobile, navigation]);
+
+  // Early return if mobile is missing (prevents rendering until navigation completes)
+  if (!mobile) {
     return null;
   }
 
@@ -63,10 +69,16 @@ export default function UserRegistrationScreen({ navigation, route }) {
       
       console.log('✅ User registration successful:', data);
       
-      // Store user info for future use
+      // Store user info for future use including token and mobile
+      const token = data.token || data.accessToken;
+      if (token) {
+        await SecureStore.setItemAsync('accessToken', token);
+        api.defaults.headers.common['Authorization'] = 'Bearer ' + token;
+      }
       await SecureStore.setItemAsync('userId', String(data.userId || data.id));
       await SecureStore.setItemAsync('fullName', formData.fullName);
       await SecureStore.setItemAsync('role', 'USER');
+      await SecureStore.setItemAsync('mobile', mobile);
       
       Alert.alert(
         'Registration Successful!', 

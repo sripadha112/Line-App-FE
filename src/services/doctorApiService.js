@@ -637,6 +637,30 @@ export class UserAPIService {
       throw error;
     }
   }
+
+  // Cancel appointment (User cancels their own appointment)
+  static async cancelAppointment(appointmentId, cancellationData = {}) {
+    try {
+      console.log('📤 User cancelling appointment:', appointmentId);
+      console.log('📝 Cancellation data:', cancellationData);
+      
+      // Use the same API endpoint as doctor cancellation since they work the same way
+      const response = await api.put(`/api/doctors/appointments/${appointmentId}/cancel`, {
+        ...cancellationData,
+        cancelledAt: new Date().toISOString()
+      });
+      
+      console.log('📥 User cancel response:', response.data);
+      return response.data;
+    } catch (error) {
+      console.log('❌ Error cancelling user appointment:', error.message);
+      if (error.response) {
+        console.log('❌ Response status:', error.response.status);
+        console.log('❌ Response data:', error.response.data);
+      }
+      throw error;
+    }
+  }
 }
 
 export class SlotsAPIService {

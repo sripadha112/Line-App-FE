@@ -42,9 +42,9 @@ export default function QuickBookingQR({ route, navigation }) {
 
   const fetchDoctorProfile = async () => {
     try {
-      console.log('📤 Fetching doctor profile for ID:', doctorId);
+      // console.log('📤 Fetching doctor profile for ID:', doctorId);
       const response = await api.get(`/api/doctor/${doctorId}`);
-      console.log('👨‍⚕️ Doctor profile response:', response.data);
+      // console.log('👨‍⚕️ Doctor profile response:', response.data);
       setDoctorProfile(response.data);
     } catch (error) {
       console.log('❌ Error fetching doctor profile:', error.message);
@@ -60,7 +60,8 @@ export default function QuickBookingQR({ route, navigation }) {
 
   // Generate enhanced URL with all parameters
   const generateBookingURL = (workplace) => {
-    const baseURL = 'http://localhost:8000/';
+    // const baseURL = 'http://localhost:8000/';
+    const baseURL = 'https://sripadha112.github.io/QuickBooking/';
     const params = new URLSearchParams();
     
     // Required parameters
@@ -227,7 +228,8 @@ export default function QuickBookingQR({ route, navigation }) {
                   </View>
                 </ViewShot>
 
-                <View style={styles.qrInfoSection}>
+                {/* this section contails info about qr code */}
+                {/* <View style={styles.qrInfoSection}>
                   <Text style={styles.qrUrlTitle}>Booking URL:</Text>
                   <Text style={styles.qrUrl}>
                     {generateBookingURL(selectedWorkplace)}
@@ -259,7 +261,7 @@ export default function QuickBookingQR({ route, navigation }) {
                   <Text style={styles.instructions}>
                     • Print and display at your clinic reception
                   </Text>
-                </View>
+                </View> */}
 
                 <View style={styles.buttonContainer}>
                   <TouchableOpacity 

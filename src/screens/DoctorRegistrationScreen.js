@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Alert, KeyboardAvoidingView, Platform, Modal } from 'react-native';
 import api from '../services/api';
 import { API_ENDPOINTS } from '../config/apiConfig';
@@ -48,9 +48,15 @@ const MINUTE_OPTIONS = Array.from({ length: 60 }, (_, i) => i);
 export default function DoctorRegistrationScreen({ navigation, route }) {
   const { mobile, otp } = route.params || {};
   
-  // Add error handling for missing parameters
-  if (!mobile || !otp) {
-    navigation.replace('Auth');
+  // Add error handling for missing parameters using useEffect
+  useEffect(() => {
+    if (!mobile) {
+      navigation.replace('Auth');
+    }
+  }, [mobile, navigation]);
+
+  // Early return if mobile is missing (prevents rendering until navigation completes)
+  if (!mobile) {
     return null;
   }
 
@@ -270,10 +276,25 @@ export default function DoctorRegistrationScreen({ navigation, route }) {
       
       console.log('✅ Doctor registration successful:', data);
       
-      // Store user info for future use
+      // Store user info for future use including token and mobile
+      const token = data.token || data.accessToken;
+      console.log('🔑 Token from registration:', token ? 'Token received' : 'No token in response');
+      
+      if (token) {
+        await SecureStore.setItemAsync('accessToken', token);
+        api.defaults.headers.common['Authorization'] = 'Bearer ' + token;
+        console.log('✅ Token stored and headers set');
+      } else {
+        // If no token from registration, need to login after registration
+        console.log('⚠️ No token from registration, will need to re-authenticate');
+      }
+      
       await SecureStore.setItemAsync('userId', String(data.doctorId || data.id));
       await SecureStore.setItemAsync('fullName', formData.fullName);
       await SecureStore.setItemAsync('role', 'DOCTOR');
+      await SecureStore.setItemAsync('mobile', mobile);
+      
+      console.log('💾 All user data stored to SecureStore');
       
       Alert.alert(
         'Registration Successful!', 
@@ -281,15 +302,37 @@ export default function DoctorRegistrationScreen({ navigation, route }) {
         [
           {
             text: 'Continue',
-            onPress: () => {
-              // Navigate to doctor home
-              navigation.reset({ 
-                index: 0, 
-                routes: [{ 
-                  name: 'DoctorHome', 
-                  params: { userId: data.doctorId || data.id } 
-                }] 
-              });
+            onPress: async () => {
+              // If we have a token, go directly to DoctorHome
+              const token = data.token || data.accessToken;
+              if (token) {
+                console.log('✅ Navigating to DoctorHome with token');
+                navigation.reset({ 
+                  index: 0, 
+                  routes: [{ 
+                    name: 'DoctorHome', 
+                    params: { userId: data.doctorId || data.id } 
+                  }] 
+                });
+              } else {
+                // No token, need to authenticate - redirect to auth screen
+                console.log('⚠️ No token, redirecting to Auth screen for login');
+                Alert.alert(
+                  'Please Login',
+                  'Registration complete! Please login with your mobile number.',
+                  [
+                    {
+                      text: 'OK',
+                      onPress: () => {
+                        navigation.reset({
+                          index: 0,
+                          routes: [{ name: 'Auth' }]
+                        });
+                      }
+                    }
+                  ]
+                );
+              }
             }
           }
         ]

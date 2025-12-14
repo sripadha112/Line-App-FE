@@ -63,6 +63,7 @@ export default function DoctorHome({ navigation }) {
   const [historyToDate, setHistoryToDate] = useState(null);
   const [loading, setLoading] = useState(false);
   const [todayStats, setTodayStats] = useState({ total: 0, completed: 0, upcoming: 0 });
+  const [isAdmin, setIsAdmin] = useState(false);
   
   // Refs for cancel reason modal
   const cancelModalScrollRef = useRef(null);
@@ -137,8 +138,26 @@ export default function DoctorHome({ navigation }) {
     return false; // Not an auth error
   };
 
+  // Check if current user is admin
+  const checkAdminAccess = async () => {
+    try {
+      const ADMIN_MOBILE = '8790672731';
+      const userMobile = await SecureStore.getItemAsync('mobile');
+      
+      if (userMobile === ADMIN_MOBILE) {
+        setIsAdmin(true);
+      } else {
+        setIsAdmin(false);
+      }
+    } catch (error) {
+      console.error('Error checking admin access:', error);
+      setIsAdmin(false);
+    }
+  };
+
   useEffect(()=> {
     loadData();
+    checkAdminAccess(); // Check admin access on mount
   }, []);
 
   // Auto-refresh when screen comes into focus (after returning from other screens)
@@ -367,6 +386,10 @@ export default function DoctorHome({ navigation }) {
 
   const handleQuickBookingQR = () => {
     navigation.navigate('QuickBookingQR', { doctorId });
+  };
+
+  const handleFCMTest = () => {
+    navigation.navigate('FCMTest');
   };
 
   const fetchUserDetails = async (userId) => {
@@ -1772,6 +1795,14 @@ export default function DoctorHome({ navigation }) {
               onPress={handleQuickBookingQR}
               color="#16a085"
             />
+            {isAdmin && (
+              <Card 
+                title="🔔 FCM Test" 
+                subtitle="Test notifications"
+                onPress={handleFCMTest}
+                color="#8e44ad"
+              />
+            )}
             <Card 
               title="Reschedule" 
               subtitle="Bulk time shift"

@@ -2,13 +2,13 @@ import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 
 export default function RoleSelectionScreen({ navigation, route }) {
-  const { mobile, otp } = route.params || {};
+  const { mobile } = route.params || {};
 
   const handleRoleSelect = (role) => {
     if (role === 'DOCTOR') {
-      navigation.navigate('DoctorRegistration', { mobile, otp });
+      navigation.navigate('DoctorRegistration', { mobile });
     } else {
-      navigation.navigate('UserRegistration', { mobile, otp });
+      navigation.navigate('UserRegistration', { mobile });
     }
   };
 

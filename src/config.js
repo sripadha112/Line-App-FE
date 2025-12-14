@@ -25,4 +25,6 @@ const detectedHost = getDevHost();
 // Otherwise fall back to the Android emulator host (10.0.2.2). You can also hard-code your PC IP.
 export const API_BASE_URL = detectedHost ? `http://${detectedHost}:${DEFAULT_PORT}` : 'http://10.0.2.2:8080';
 
+// export const API_BASE_URL = 'https://line-application-latest.onrender.com';
+
 export default API_BASE_URL;

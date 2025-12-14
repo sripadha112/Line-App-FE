@@ -3,6 +3,7 @@ export const API_ENDPOINTS = {
   // Authentication
   AUTH: {
     LOGOUT: '/api/auth/logout',
+    VERIFY_MOBILE: '/api/auth/verify-mobile',  // POST - Direct mobile verification (MVP)
   },
 
   // Registration endpoints
