@@ -3,6 +3,7 @@ import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ScrollView,
 import api from '../services/api';
 import * as SecureStore from 'expo-secure-store';
 import { API_ENDPOINTS } from '../config/apiConfig';
+import UserNotificationService from '../services/userNotificationService';
 
 export default function AuthScreen({navigation}) {
   // const [mobile, setMobile] = useState('');
@@ -199,7 +200,7 @@ export default function AuthScreen({navigation}) {
     // Check if it starts with 6, 7, 8, or 9
     const firstDigit = cleanNumber[0];
     if (!['6', '7', '8', '9'].includes(firstDigit)) {
-      return { isValid: false, message: 'Mobile number must start with 6, 7, 8, or 9' };
+      return { isValid: false, message: 'Please enter a valid Mobile Number' };
     }
     
     return { isValid: true, message: '' };
@@ -255,6 +256,18 @@ export default function AuthScreen({navigation}) {
         await SecureStore.setItemAsync('mobile', mobile);
         
         api.defaults.headers.common['Authorization'] = 'Bearer ' + token;
+        
+        // Register FCM token for push notifications after successful login (only for users)
+        if (data.role === 'USER') {
+          console.log('🔔 Registering FCM token after user login...');
+          try {
+            const fcmResult = await UserNotificationService.forceRegisterFcmToken();
+            console.log('📱 FCM registration result:', fcmResult);
+          } catch (fcmError) {
+            console.warn('⚠️ FCM registration warning (non-blocking):', fcmError);
+            // Don't fail login if FCM fails
+          }
+        }
         
         if (data.role === 'DOCTOR') {
           navigation.reset({ 
@@ -363,11 +376,11 @@ export default function AuthScreen({navigation}) {
           </TouchableOpacity>
           
           {/* MVP Notice */}
-          <View style={styles.mvpNotice}>
+          {/* <View style={styles.mvpNotice}>
             <Text style={styles.mvpNoticeText}>
               🚀 MVP Mode: Direct mobile verification (OTP temporarily disabled)
             </Text>
-          </View>
+          </View> */}
         </View>
       </ScrollView>
     </KeyboardAvoidingView>

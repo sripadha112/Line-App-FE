@@ -1,5 +1,5 @@
 import React, {useEffect, useState, useRef} from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert, Modal, TextInput, ScrollView, RefreshControl, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert, Modal, TextInput, ScrollView, RefreshControl, ActivityIndicator, Linking } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import * as SecureStore from 'expo-secure-store';
 import { format } from 'date-fns';
@@ -30,7 +30,8 @@ const DOCTOR_CANCEL_REASONS = [
   'Other'
 ];
 
-export default function DoctorHome({ navigation }) {
+export default function DoctorHome({ navigation, route }) {
+  const initialTab = route?.params?.initialTab || 'appointments';
   const [appointments, setAppointments] = useState([]);
   const [historyAppointments, setHistoryAppointments] = useState([]);
   const [upcomingAppointments, setUpcomingAppointments] = useState([]);
@@ -56,7 +57,7 @@ export default function DoctorHome({ navigation }) {
   const [cancelReasonModalVisible, setCancelReasonModalVisible] = useState(false);
   const [appointmentToCancel, setAppointmentToCancel] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
-  const [activeTab, setActiveTab] = useState('appointments');
+  const [activeTab, setActiveTab] = useState(initialTab);
   const [selectedUser, setSelectedUser] = useState(null);
   const [selectedAppointment, setSelectedAppointment] = useState(null);
   const [historyFromDate, setHistoryFromDate] = useState(null);
@@ -159,6 +160,13 @@ export default function DoctorHome({ navigation }) {
     loadData();
     checkAdminAccess(); // Check admin access on mount
   }, []);
+
+  // Update activeTab when navigating with initialTab param
+  useEffect(() => {
+    if (route?.params?.initialTab) {
+      setActiveTab(route.params.initialTab);
+    }
+  }, [route?.params?.initialTab]);
 
   // Auto-refresh when screen comes into focus (after returning from other screens)
   useFocusEffect(
@@ -351,7 +359,8 @@ export default function DoctorHome({ navigation }) {
 
   const updateAppointmentStatus = async (appointmentId, status) => {
     try {
-      await api.put(`/api/appointments/${appointmentId}/status`, { status });
+      // Use the new endpoint that sends FCM notifications to users
+      await api.put(`/api/doctors/appointments/${appointmentId}/status`, { status });
       // Refresh the appointments
       if (selectedWorkplace?.id) {
         await fetchAppointmentsByWorkplace(selectedWorkplace.id);
@@ -390,6 +399,34 @@ export default function DoctorHome({ navigation }) {
 
   const handleFCMTest = () => {
     navigation.navigate('FCMTest');
+  };
+
+  const contactDevelopers = () => {
+    const email = 'santhoshsripadha101@gmail.com';
+    const subject = 'Feedback from Line App Doctor';
+    const body = `Hello Line App Developers,
+
+I am writing to provide feedback about the Line App from a doctor's perspective.
+
+App Version: 1.0
+User Type: Doctor
+Mobile: ${name || 'N/A'}
+Doctor ID: ${doctorId || 'N/A'}
+
+My feedback/issue:
+[Please describe your feedback or issue here]
+
+Thank you for your time and for creating this helpful platform for connecting with patients!
+
+Best regards,
+Dr. ${name || 'Line App Doctor'}`;
+
+    const mailto = `mailto:${email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    
+    Linking.openURL(mailto).catch(err => {
+      Alert.alert('Error', 'Could not open email app. Please ensure you have an email app installed.');
+      console.error('Error opening email:', err);
+    });
   };
 
   const fetchUserDetails = async (userId) => {
@@ -1814,6 +1851,12 @@ export default function DoctorHome({ navigation }) {
               subtitle="Cancel workspace day"
               onPress={() => navigation.navigate('CancelDay', { doctorId })}
               color="#e74c3c"
+            />
+            <Card 
+              title="Contact Developers" 
+              subtitle="Send feedback or report issues"
+              onPress={contactDevelopers}
+              color="#3498db"
             />
           </View>
         </View>

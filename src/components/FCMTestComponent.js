@@ -226,6 +226,48 @@ const FCMTestComponent = () => {
         </TouchableOpacity>
 
         <TouchableOpacity 
+          style={[styles.button, { backgroundColor: '#9C27B0' }]} 
+          onPress={async () => {
+            try {
+              Alert.alert('Running Diagnostics', 'Checking notification system...');
+              const result = await fcmService.testLocalNotification();
+              
+              if (result.diagnostics) {
+                const d = result.diagnostics;
+                const issues = d.summary?.issues?.join('\n• ') || 'None';
+                
+                Alert.alert(
+                  result.success ? '✅ Notification Sent' : '❌ Notification Failed',
+                  `DEVICE:\n` +
+                  `• Physical Device: ${d.device?.isDevice ? 'Yes' : 'NO (Emulator)'}\n` +
+                  `• Platform: ${d.device?.platform} ${d.device?.version}\n\n` +
+                  `PERMISSIONS:\n` +
+                  `• Status: ${d.permissions?.status}\n` +
+                  `• Granted: ${d.permissions?.granted ? 'Yes' : 'NO'}\n\n` +
+                  `CHANNELS (Android):\n` +
+                  `• Count: ${d.channels?.count || 0}\n` +
+                  `• List: ${d.channels?.list?.map(c => c.id).join(', ') || 'None'}\n\n` +
+                  `TEST RESULT:\n` +
+                  `• Success: ${result.success ? 'Yes' : 'No'}\n` +
+                  `• ID: ${result.notificationId || 'N/A'}\n` +
+                  `• Error: ${result.error || 'None'}\n\n` +
+                  `ISSUES:\n• ${issues}`,
+                  [{ text: 'OK' }]
+                );
+              } else if (result.success) {
+                Alert.alert('Success', `Notification ID: ${result.notificationId}`);
+              } else {
+                Alert.alert('Error', `Failed: ${result.error}`);
+              }
+            } catch (error) {
+              Alert.alert('Error', `Diagnostic error: ${error.message}`);
+            }
+          }}
+        >
+          <Text style={styles.buttonText}>📱 Test LOCAL + Diagnostics</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity 
           style={[styles.button, styles.appointmentButton]} 
           onPress={async () => {
             try {

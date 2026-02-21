@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   StyleSheet,
   Alert,
+  RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
@@ -21,6 +22,7 @@ export default function UserProfile({ route, navigation }) {
   const [userDetails, setUserDetails] = useState(null);
   const [appointmentsData, setAppointmentsData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [userFullName, setUserFullName] = useState('');
   
   // State for expandable sections
@@ -42,6 +44,13 @@ export default function UserProfile({ route, navigation }) {
       fetchUserData();
     }, [])
   );
+
+  // Pull-to-refresh handler
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await fetchUserData();
+    setRefreshing(false);
+  };
 
   const loadUserName = async () => {
     try {
@@ -187,7 +196,12 @@ export default function UserProfile({ route, navigation }) {
     <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
       <StatusBar style="dark" backgroundColor="#f8f9fa" />
       <View style={styles.container}>
-        <ScrollView style={styles.content}>
+        <ScrollView 
+          style={styles.content}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          }
+        >
         {/* Profile Header */}
         <View style={styles.profileHeader}>
           <View style={styles.avatarContainer}>

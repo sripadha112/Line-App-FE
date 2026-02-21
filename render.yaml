@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: line-app
+    env: static
+    buildCommand: npm run build
+    staticPublishPath: ./web-build
+    headers:
+      - path: /*
+        name: Cache-Control
+        value: public, max-age=0, must-revalidate
+      - path: /static/*
+        name: Cache-Control
+        value: public, max-age=31536000, immutable
+      - path: /service-worker.js
+        name: Cache-Control
+        value: no-cache

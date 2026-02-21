@@ -385,7 +385,7 @@ export default function CancelDay({ route, navigation }) {
           if (tab === 'appointments') {
             navigation.navigate('DoctorHome');
           } else if (tab === 'profile') {
-            // Already handled by BottomNavigation component
+            navigation.navigate('DoctorHome', { initialTab: 'profile' });
           }
         }}
       />

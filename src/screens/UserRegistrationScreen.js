@@ -3,6 +3,7 @@ import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Alert,
 import api from '../services/api';
 import { API_ENDPOINTS } from '../config/apiConfig';
 import * as SecureStore from 'expo-secure-store';
+import UserNotificationService from '../services/userNotificationService';
 
 export default function UserRegistrationScreen({ navigation, route }) {
   const { mobile, otp } = route.params || {};
@@ -79,6 +80,16 @@ export default function UserRegistrationScreen({ navigation, route }) {
       await SecureStore.setItemAsync('fullName', formData.fullName);
       await SecureStore.setItemAsync('role', 'USER');
       await SecureStore.setItemAsync('mobile', mobile);
+      
+      // Register FCM token for push notifications after successful registration
+      console.log('🔔 Registering FCM token after user registration...');
+      try {
+        const fcmResult = await UserNotificationService.forceRegisterFcmToken();
+        console.log('📱 FCM registration result:', fcmResult);
+      } catch (fcmError) {
+        console.warn('⚠️ FCM registration warning (non-blocking):', fcmError);
+        // Don't fail registration if FCM fails
+      }
       
       Alert.alert(
         'Registration Successful!', 

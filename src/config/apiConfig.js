@@ -48,6 +48,9 @@ export const API_ENDPOINTS = {
     CANCEL_APPOINTMENT: (appointmentId) => `/api/user/appointments/${appointmentId}/cancel`,
     RESCHEDULE_APPOINTMENT: '/api/user/appointments/reschedule', // PUT with appointmentId
     PUSH_TO_END: (userId, appointmentId) => `/api/user/${userId}/appointments/${appointmentId}/push-to-end`,
+    // FCM Token registration
+    FCM_TOKEN: (userId) => `/api/user/${userId}/fcm-token`,  // POST - Register FCM token
+    NOTIFICATIONS_TOGGLE: (userId) => `/api/user/${userId}/notifications/toggle`, // PUT - Toggle notifications
   },
 
   // Slots endpoints

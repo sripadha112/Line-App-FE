@@ -7,6 +7,7 @@ import {
   StyleSheet,
   RefreshControl,
   Alert,
+  Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
@@ -15,6 +16,7 @@ import * as SecureStore from 'expo-secure-store';
 import { UserAPIService } from '../services/doctorApiService';
 import BottomNavigation from '../components/BottomNavigation';
 import ActiveBookings from '../components/user/ActiveBookings';
+import UserNotificationService from '../services/userNotificationService';
 
 export default function UserHome({ route, navigation }) {
   // Safely extract userId with fallback to SecureStore
@@ -61,6 +63,20 @@ export default function UserHome({ route, navigation }) {
       
       if (currentUserId) {
         await fetchUserProfile(currentUserId);
+        
+        // Ensure FCM token is registered for push notifications
+        // This handles cases where user already had the app but FCM wasn't registered
+        console.log('🔔 [UserHome] Ensuring FCM token is registered...');
+        try {
+          const fcmResult = await UserNotificationService.forceRegisterFcmToken();
+          if (fcmResult.success) {
+            console.log('✅ [UserHome] FCM token registration confirmed');
+          } else {
+            console.log('ℹ️ [UserHome] FCM registration:', fcmResult.message);
+          }
+        } catch (fcmError) {
+          console.warn('⚠️ [UserHome] FCM registration warning:', fcmError);
+        }
       }
     } catch (error) {
       console.error('Error initializing user:', error);
@@ -93,6 +109,8 @@ export default function UserHome({ route, navigation }) {
   const onRefresh = React.useCallback(async () => {
     setRefreshing(true);
     await fetchUserProfile();
+    // Trigger appointments refresh by incrementing the trigger
+    setAppointmentsRefreshTrigger(prev => prev + 1);
     setRefreshing(false);
   }, [userId]);
 
@@ -142,6 +160,33 @@ export default function UserHome({ route, navigation }) {
 
   const navigateToCancel = (appointmentId) => {
     navigation.navigate('CancelAppointment', { userId, appointmentId });
+  };
+
+  const contactDevelopers = () => {
+    const email = 'santhoshsripadha101@gmail.com';
+    const subject = 'Feedback from Line App User';
+    const body = `Hello Line App Developers,
+
+I am writing to provide feedback about the Line App.
+
+App Version: 1.0
+User Type: User
+Mobile: ${userProfile?.mobileNumber || 'N/A'}
+
+My feedback/issue:
+[Please describe your feedback or issue here]
+
+Thank you for your time and for creating this helpful app!
+
+Best regards,
+${userProfile?.fullName || 'Line App User'}`;
+
+    const mailto = `mailto:${email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    
+    Linking.openURL(mailto).catch(err => {
+      Alert.alert('Error', 'Could not open email app. Please ensure you have an email app installed.');
+      console.error('Error opening email:', err);
+    });
   };
 
   return (
@@ -262,6 +307,24 @@ export default function UserHome({ route, navigation }) {
               <Text style={styles.serviceArrow}>→</Text>
             </TouchableOpacity>
           </View>
+        </View>
+
+        {/* Contact Developers Section */}
+        <View style={styles.contactSection}>
+          <Text style={styles.sectionTitle}>Support</Text>
+          <TouchableOpacity 
+            style={styles.contactCard}
+            onPress={contactDevelopers}
+          >
+            <Text style={styles.contactIcon}>📧</Text>
+            <View style={styles.contactInfo}>
+              <Text style={styles.contactTitle}>Contact Developers</Text>
+              <Text style={styles.contactDescription}>
+                Send feedback or report issues to our development team
+              </Text>
+            </View>
+            <Text style={styles.contactArrow}>→</Text>
+          </TouchableOpacity>
         </View>
 
         {/* Bottom Spacing for Navigation */}
@@ -459,5 +522,47 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',
+  },
+  // Contact Developers Section Styles
+  contactSection: {
+    marginHorizontal: 20,
+    marginBottom: 20,
+  },
+  contactCard: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    borderWidth: 1,
+    borderColor: '#e8f4fd',
+  },
+  contactIcon: {
+    fontSize: 24,
+    marginRight: 15,
+  },
+  contactInfo: {
+    flex: 1,
+  },
+  contactTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#2c3e50',
+    marginBottom: 4,
+  },
+  contactDescription: {
+    fontSize: 14,
+    color: '#7f8c8d',
+    lineHeight: 18,
+  },
+  contactArrow: {
+    fontSize: 18,
+    color: '#3498db',
+    fontWeight: 'bold',
   },
 });

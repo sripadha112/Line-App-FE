@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "70896608926",
+    "project_id": "line-application-84af7",
+    "storage_bucket": "line-application-84af7.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:70896608926:android:764abe94c83aa7b0933d8f",
+        "android_client_info": {
+          "package_name": "com.lineappandroid.mobile"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAGDr6APHUf2VcWiwQiMHi7ljB4mwj8XC0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:70896608926:android:9e5a22b9cdf6d023933d8f",
+        "android_client_info": {
+          "package_name": "com.santhu_112.lineapp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAGDr6APHUf2VcWiwQiMHi7ljB4mwj8XC0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
