@@ -42,6 +42,7 @@ export const API_ENDPOINTS = {
     SEARCH_DOCTORS: '/api/user/search/doctors',        // GET with query params (deprecated)
     SEARCH_DOCTORS_ENHANCED: '/api/doctors/search/enhanced',  // GET with keyword param
     SEARCH_DOCTORS_NEARBY: '/api/doctors/search/nearby',  // GET with location param
+    ALL_DOCTORS_PAGINATED: '/api/doctors/all',  // GET with page & size params
     DOCTOR_WORKPLACES: (doctorId) => `/api/user/doctor/${doctorId}/workplaces`,
     AVAILABLE_SLOTS: '/api/user/available-slots',      // GET with query params
     BOOK_APPOINTMENT: (userId) => `/api/user/${userId}/appointments/book`,   // POST

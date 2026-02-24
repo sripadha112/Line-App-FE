@@ -64,11 +64,19 @@ export default function EditProfile({ route, navigation }) {
     emergencyContactRelation: '',
   });
 
-  const [medications, setMedications] = useState('');
-  const [allergies, setAllergies] = useState('');
-  const [chronicDiseases, setChronicDiseases] = useState('');
-  const [surgeries, setSurgeries] = useState('');
-  const [vaccinations, setVaccinations] = useState('');
+  // Medical history arrays - each item stored separately
+  const [medicationsList, setMedicationsList] = useState([]);
+  const [allergiesList, setAllergiesList] = useState([]);
+  const [chronicDiseasesList, setChronicDiseasesList] = useState([]);
+  const [surgeriesList, setSurgeriesList] = useState([]);
+  const [vaccinationsList, setVaccinationsList] = useState([]);
+
+  // Input fields for adding new items
+  const [newMedication, setNewMedication] = useState('');
+  const [newAllergy, setNewAllergy] = useState('');
+  const [newChronicDisease, setNewChronicDisease] = useState('');
+  const [newSurgery, setNewSurgery] = useState('');
+  const [newVaccination, setNewVaccination] = useState('');
 
   useEffect(() => {
     if (userDetails) {
@@ -110,12 +118,12 @@ export default function EditProfile({ route, navigation }) {
         emergencyContactRelation: userDetails.emergencyContactRelation || '',
       });
 
-      // Set list strings for editing
-      setMedications(userDetails.currentMedications ? userDetails.currentMedications.join(', ') : '');
-      setAllergies(userDetails.allergies ? userDetails.allergies.join(', ') : '');
-      setChronicDiseases(userDetails.chronicDiseases ? userDetails.chronicDiseases.join(', ') : '');
-      setSurgeries(userDetails.previousSurgeries ? userDetails.previousSurgeries.join(', ') : '');
-      setVaccinations(userDetails.vaccinations ? userDetails.vaccinations.join(', ') : '');
+      // Set list arrays for editing
+      setMedicationsList(userDetails.currentMedications || []);
+      setAllergiesList(userDetails.allergies || []);
+      setChronicDiseasesList(userDetails.chronicDiseases || []);
+      setSurgeriesList(userDetails.previousSurgeries || []);
+      setVaccinationsList(userDetails.vaccinations || []);
     }
   }, [userDetails]);
 
@@ -132,6 +140,72 @@ export default function EditProfile({ route, navigation }) {
       [field]: value
     }));
   };
+
+  // Functions to add/remove items from medical history lists
+  const addItem = (list, setList, newItem, setNewItem) => {
+    const trimmedItem = newItem.trim();
+    if (trimmedItem && !list.includes(trimmedItem)) {
+      setList([...list, trimmedItem]);
+      setNewItem('');
+    }
+  };
+
+  const removeItem = (list, setList, itemToRemove) => {
+    setList(list.filter(item => item !== itemToRemove));
+  };
+
+  const editItem = (list, setList, oldItem, newItem) => {
+    const trimmedItem = newItem.trim();
+    if (trimmedItem && !list.includes(trimmedItem)) {
+      setList(list.map(item => item === oldItem ? trimmedItem : item));
+    }
+  };
+
+  // Render a tag/chip for each item
+  const renderTag = (item, index, list, setList) => (
+    <View key={index} style={styles.tag}>
+      <Text style={styles.tagText}>{item}</Text>
+      <TouchableOpacity
+        onPress={() => removeItem(list, setList, item)}
+        style={styles.tagRemove}
+      >
+        <Text style={styles.tagRemoveText}>×</Text>
+      </TouchableOpacity>
+    </View>
+  );
+
+  // Render input field with add button for medical history items
+  const renderListInput = (label, placeholder, list, setList, newValue, setNewValue, icon) => (
+    <View style={styles.inputGroup}>
+      <Text style={styles.inputLabel}>{icon} {label}</Text>
+      <Text style={styles.helpText}>Add items one by one</Text>
+      
+      {/* Tags container showing existing items */}
+      {list.length > 0 && (
+        <View style={styles.tagsContainer}>
+          {list.map((item, index) => renderTag(item, index, list, setList))}
+        </View>
+      )}
+      
+      {/* Input field with add button */}
+      <View style={styles.addItemContainer}>
+        <TextInput
+          style={styles.addItemInput}
+          value={newValue}
+          onChangeText={setNewValue}
+          placeholder={placeholder}
+          onSubmitEditing={() => addItem(list, setList, newValue, setNewValue)}
+        />
+        <TouchableOpacity
+          style={[styles.addButton, !newValue.trim() && styles.addButtonDisabled]}
+          onPress={() => addItem(list, setList, newValue, setNewValue)}
+          disabled={!newValue.trim()}
+        >
+          <Text style={styles.addButtonText}>+ Add</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
 
   const parseListString = (str) => {
     return str.split(',').map(item => item.trim()).filter(item => item.length > 0);
@@ -168,12 +242,12 @@ export default function EditProfile({ route, navigation }) {
         bloodPressureSystolic: formData.bloodPressureSystolic ? parseInt(formData.bloodPressureSystolic) : null,
         bloodPressureDiastolic: formData.bloodPressureDiastolic ? parseInt(formData.bloodPressureDiastolic) : null,
         
-        // Convert comma-separated strings to arrays
-        currentMedications: parseListString(medications),
-        allergies: parseListString(allergies),
-        chronicDiseases: parseListString(chronicDiseases),
-        previousSurgeries: parseListString(surgeries),
-        vaccinations: parseListString(vaccinations),
+        // Use the list arrays directly
+        currentMedications: medicationsList,
+        allergies: allergiesList,
+        chronicDiseases: chronicDiseasesList,
+        previousSurgeries: surgeriesList,
+        vaccinations: vaccinationsList,
       };
 
       console.log('Updating profile with data:', updatedData);
@@ -450,70 +524,55 @@ export default function EditProfile({ route, navigation }) {
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>📋 Medical History</Text>
             <View style={styles.formCard}>
-              <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>Current Medications</Text>
-                <Text style={styles.helpText}>Separate multiple medications with commas</Text>
-                <TextInput
-                  style={[styles.textInput, styles.multilineInput]}
-                  value={medications}
-                  onChangeText={setMedications}
-                  placeholder="e.g., Aspirin 100mg, Metformin 500mg"
-                  multiline
-                  numberOfLines={3}
-                />
-              </View>
+              {renderListInput(
+                'Current Medications',
+                'e.g., Aspirin 100mg',
+                medicationsList,
+                setMedicationsList,
+                newMedication,
+                setNewMedication,
+                '💊'
+              )}
 
-              <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>Allergies</Text>
-                <Text style={styles.helpText}>Separate multiple allergies with commas</Text>
-                <TextInput
-                  style={[styles.textInput, styles.multilineInput]}
-                  value={allergies}
-                  onChangeText={setAllergies}
-                  placeholder="e.g., Peanuts, Shellfish, Latex"
-                  multiline
-                  numberOfLines={3}
-                />
-              </View>
+              {renderListInput(
+                'Allergies',
+                'e.g., Peanuts',
+                allergiesList,
+                setAllergiesList,
+                newAllergy,
+                setNewAllergy,
+                '🚫'
+              )}
 
-              <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>Chronic Diseases</Text>
-                <Text style={styles.helpText}>Separate multiple diseases with commas</Text>
-                <TextInput
-                  style={[styles.textInput, styles.multilineInput]}
-                  value={chronicDiseases}
-                  onChangeText={setChronicDiseases}
-                  placeholder="e.g., Diabetes Type 2, Hypertension"
-                  multiline
-                  numberOfLines={3}
-                />
-              </View>
+              {renderListInput(
+                'Chronic Diseases',
+                'e.g., Diabetes Type 2',
+                chronicDiseasesList,
+                setChronicDiseasesList,
+                newChronicDisease,
+                setNewChronicDisease,
+                '🔄'
+              )}
 
-              <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>Previous Surgeries</Text>
-                <Text style={styles.helpText}>Separate multiple surgeries with commas</Text>
-                <TextInput
-                  style={[styles.textInput, styles.multilineInput]}
-                  value={surgeries}
-                  onChangeText={setSurgeries}
-                  placeholder="e.g., Appendectomy 2020, Gallbladder removal 2018"
-                  multiline
-                  numberOfLines={3}
-                />
-              </View>
+              {renderListInput(
+                'Previous Surgeries',
+                'e.g., Appendectomy 2020',
+                surgeriesList,
+                setSurgeriesList,
+                newSurgery,
+                setNewSurgery,
+                '🔪'
+              )}
 
-              <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>Vaccinations</Text>
-                <Text style={styles.helpText}>Separate multiple vaccinations with commas</Text>
-                <TextInput
-                  style={[styles.textInput, styles.multilineInput]}
-                  value={vaccinations}
-                  onChangeText={setVaccinations}
-                  placeholder="e.g., COVID-19, Flu 2024, Hepatitis B"
-                  multiline
-                  numberOfLines={3}
-                />
-              </View>
+              {renderListInput(
+                'Vaccinations',
+                'e.g., COVID-19',
+                vaccinationsList,
+                setVaccinationsList,
+                newVaccination,
+                setNewVaccination,
+                '💉'
+              )}
             </View>
           </View>
 
@@ -685,6 +744,73 @@ const styles = StyleSheet.create({
   checkboxLabel: {
     fontSize: 14,
     color: '#2c3e50',
+  },
+  // Tag/Chip styles for medical history items
+  tagsContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginBottom: 10,
+    gap: 8,
+  },
+  tag: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#e8f4f8',
+    borderRadius: 20,
+    paddingVertical: 6,
+    paddingLeft: 12,
+    paddingRight: 8,
+    borderWidth: 1,
+    borderColor: '#3498db',
+  },
+  tagText: {
+    fontSize: 13,
+    color: '#2980b9',
+    marginRight: 6,
+  },
+  tagRemove: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: '#3498db',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  tagRemoveText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
+    lineHeight: 18,
+  },
+  addItemContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  addItemInput: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: '#dee2e6',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 14,
+    color: '#2c3e50',
+    backgroundColor: '#fff',
+  },
+  addButton: {
+    backgroundColor: '#3498db',
+    paddingHorizontal: 15,
+    paddingVertical: 10,
+    borderRadius: 8,
+  },
+  addButtonDisabled: {
+    backgroundColor: '#bdc3c7',
+  },
+  addButtonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
   },
   bottomSpacing: {
     height: 50,

@@ -507,13 +507,13 @@ export default function UserProfile({ route, navigation }) {
         </View>
 
         {/* Previous Doctors Reviews */}
-        {(userDetails.medicalNotes || userDetails.familyMedicalHistory) && (
+        {(userDetails.medicalNotes || userDetails.familyMedicalHistory || userDetails.prescription) && (
           <View style={styles.section}>
             <TouchableOpacity 
               style={styles.sectionHeader}
               onPress={() => toggleSection('doctorReviews')}
             >
-              <Text style={styles.sectionTitle}>�‍⚕️ Previous Doctors Reviews</Text>
+              <Text style={styles.sectionTitle}>👨‍⚕️ Previous Doctors Reviews</Text>
               <Text style={styles.expandIcon}>
                 {expandedSections.doctorReviews ? '▼' : '▶'}
               </Text>
@@ -523,8 +523,15 @@ export default function UserProfile({ route, navigation }) {
               <>
                 {userDetails.medicalNotes && (
                   <View style={styles.infoCard}>
-                    <Text style={styles.subSectionTitle}>Medical Notes</Text>
+                    <Text style={styles.subSectionTitle}>Latest Medical Notes</Text>
                     <Text style={styles.notesText}>{userDetails.medicalNotes}</Text>
+                  </View>
+                )}
+
+                {userDetails.prescription && (
+                  <View style={styles.infoCard}>
+                    <Text style={styles.subSectionTitle}>📜 Complete Medical History</Text>
+                    <Text style={styles.notesText}>{userDetails.prescription}</Text>
                   </View>
                 )}
 

@@ -487,6 +487,25 @@ export class UserAPIService {
     }
   }
 
+  // Get all doctors with pagination
+  static async getAllDoctorsPaginated(page = 0, size = 10) {
+    try {
+      const queryParams = new URLSearchParams();
+      queryParams.append('page', page.toString());
+      queryParams.append('size', size.toString());
+      
+      const url = `${API_ENDPOINTS.USER.ALL_DOCTORS_PAGINATED}?${queryParams.toString()}`;
+      console.log('📄 Paginated doctors URL:', url);
+      
+      const response = await api.get(url);
+      console.log('📄 Paginated doctors response:', response.data);
+      return response.data || { doctors: [], totalElements: 0, totalPages: 0, hasNext: false };
+    } catch (error) {
+      console.log('Error fetching paginated doctors:', error.message);
+      throw error;
+    }
+  }
+
   // Fetch doctor workplaces
   static async fetchDoctorWorkplaces(doctorId) {
     try {

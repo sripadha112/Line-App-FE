@@ -1814,12 +1814,6 @@ Dr. ${name || 'Line App Doctor'}`;
         {/* Stats Cards */}
         <View style={styles.statsContainer}>
           <View style={styles.statsGrid}>
-            <Card 
-              title="History" 
-              subtitle={`${historyAppointments.length} past 2 weeks`}
-              onPress={() => navigation.navigate('AppointmentHistory', { doctorId })}
-              color="#9b59b6"
-            />
             {/* <Card 
               title="Upcoming (2 days)" 
               subtitle={`${upcomingAppointments.length} appointments`}
@@ -1851,6 +1845,12 @@ Dr. ${name || 'Line App Doctor'}`;
               subtitle="Cancel workspace day"
               onPress={() => navigation.navigate('CancelDay', { doctorId })}
               color="#e74c3c"
+            />
+            <Card 
+              title="History" 
+              subtitle={`${historyAppointments.length} past 2 weeks`}
+              onPress={() => navigation.navigate('AppointmentHistory', { doctorId })}
+              color="#9b59b6"
             />
             <Card 
               title="Contact Developers" 

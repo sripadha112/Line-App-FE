@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -8,6 +8,7 @@ import {
   StyleSheet,
   Alert,
   FlatList,
+  ActivityIndicator,
 } from 'react-native';
 import { UserAPIService, DoctorAPIService, SlotsAPIService } from '../services/doctorApiService';
 import TopBar from '../components/TopBar';
@@ -34,6 +35,20 @@ export default function BookAppointment({ route, navigation }) {
   const [noWorkplacesInfo, setNoWorkplacesInfo] = useState(null); // Info about doctors with no workplaces
   const [customSelectedDate, setCustomSelectedDate] = useState(null); // Date selected from calendar picker
 
+  // New states for pagination and local search
+  const [allDoctors, setAllDoctors] = useState([]); // Store all loaded doctors for local search
+  const [allDoctorWorkplaces, setAllDoctorWorkplaces] = useState([]); // Flattened workplaces from all doctors
+  const [currentPage, setCurrentPage] = useState(0);
+  const [hasMore, setHasMore] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
+  const [filteredWorkplaces, setFilteredWorkplaces] = useState([]); // Filtered results for local search
+  const [isSearching, setIsSearching] = useState(false); // Whether user is actively searching
+  const PAGE_SIZE = 15;
+
+  // Debounce timer ref for search
+  const searchDebounceRef = useRef(null);
+
   // Fetch user profile to get pincode for nearby doctors
   const fetchUserProfile = async () => {
     try {
@@ -55,7 +70,6 @@ export default function BookAppointment({ route, navigation }) {
   // Load nearby doctors based on user's pincode
   const loadNearbyDoctors = async (pincode) => {
     try {
-      setLoading(true);
       console.log('📍 Loading nearby doctors for pincode:', pincode);
       
       const nearbyResults = await UserAPIService.searchNearbyDoctors(pincode);
@@ -64,108 +78,154 @@ export default function BookAppointment({ route, navigation }) {
       setNearbyDoctors(nearbyResults);
       
       // Flatten workplaces from nearby doctors
-      const nearbyWorkplacesList = [];
-      nearbyResults.forEach(doctor => {
-        if (doctor.workplaces && doctor.workplaces.length > 0) {
-          doctor.workplaces.forEach(workplace => {
-            nearbyWorkplacesList.push({
-              ...workplace,
-              doctorId: doctor.doctorId,
-              doctorName: doctor.doctorName,
-              specialization: doctor.specialization,
-              designation: doctor.designation,
-              profileImage: doctor.profileImage,
-              experience: doctor.experience
-            });
-          });
-        }
-      });
-      
-      console.log('🏥 Flattened nearby workplaces:', nearbyWorkplacesList);
+      const nearbyWorkplacesList = flattenDoctorWorkplaces(nearbyResults);
+      console.log('🏥 Flattened nearby workplaces:', nearbyWorkplacesList.length);
       setNearbyWorkplaces(nearbyWorkplacesList);
     } catch (error) {
       console.error('❌ Error loading nearby doctors:', error);
-      // Don't show alert as this is a secondary feature
       setNearbyDoctors([]);
       setNearbyWorkplaces([]);
-    } finally {
-      setLoading(false);
     }
   };
 
-  const searchDoctorsEnhanced = async () => {
-    if (!searchQuery.trim()) {
-      Alert.alert('Error', 'Please enter a search term (doctor name, clinic, area, etc.)');
+  // Helper function to flatten doctor workplaces
+  const flattenDoctorWorkplaces = (doctors) => {
+    const workplacesList = [];
+    doctors.forEach(doctor => {
+      if (doctor.workplaces && doctor.workplaces.length > 0) {
+        doctor.workplaces.forEach(workplace => {
+          workplacesList.push({
+            ...workplace,
+            doctorId: doctor.doctorId,
+            doctorName: doctor.doctorName,
+            specialization: doctor.specialization,
+            designation: doctor.designation,
+            profileImage: doctor.profileImage,
+            experience: doctor.experience
+          });
+        });
+      }
+    });
+    return workplacesList;
+  };
+
+  // Load all doctors with pagination
+  const loadAllDoctors = async (page = 0, isLoadMore = false) => {
+    try {
+      if (isLoadMore) {
+        setLoadingMore(true);
+      } else {
+        setInitialLoading(true);
+      }
+      
+      console.log('📄 Loading doctors page:', page);
+      const response = await UserAPIService.getAllDoctorsPaginated(page, PAGE_SIZE);
+      
+      const newDoctors = response.doctors || [];
+      const newWorkplaces = flattenDoctorWorkplaces(newDoctors);
+      
+      if (isLoadMore) {
+        setAllDoctors(prev => [...prev, ...newDoctors]);
+        setAllDoctorWorkplaces(prev => [...prev, ...newWorkplaces]);
+      } else {
+        setAllDoctors(newDoctors);
+        setAllDoctorWorkplaces(newWorkplaces);
+      }
+      
+      setCurrentPage(response.currentPage);
+      setHasMore(response.hasNext);
+      
+      console.log('📄 Loaded', newDoctors.length, 'doctors. Total:', isLoadMore ? allDoctors.length + newDoctors.length : newDoctors.length);
+    } catch (error) {
+      console.error('❌ Error loading doctors:', error);
+      Alert.alert('Error', 'Failed to load doctors. Please try again.');
+    } finally {
+      setLoadingMore(false);
+      setInitialLoading(false);
+    }
+  };
+
+  // Load more doctors when scrolling
+  const loadMoreDoctors = () => {
+    if (!loadingMore && hasMore && !isSearching) {
+      loadAllDoctors(currentPage + 1, true);
+    }
+  };
+
+  // Local search function - filters already loaded data
+  const performLocalSearch = useCallback((query) => {
+    if (!query.trim()) {
+      setIsSearching(false);
+      setFilteredWorkplaces([]);
       return;
     }
+    
+    setIsSearching(true);
+    const searchTerm = query.toLowerCase().trim();
+    
+    // Combine nearby workplaces and all loaded workplaces
+    const allWorkplaces = [...nearbyWorkplaces, ...allDoctorWorkplaces];
+    
+    // Remove duplicates based on doctorId + workplaceId
+    const uniqueWorkplaces = allWorkplaces.filter((workplace, index, self) =>
+      index === self.findIndex(w => 
+        w.doctorId === workplace.doctorId && w.workplaceId === workplace.workplaceId
+      )
+    );
+    
+    // Filter workplaces based on search term
+    const filtered = uniqueWorkplaces.filter(workplace => {
+      const doctorName = (workplace.doctorName || '').toLowerCase();
+      const specialization = (workplace.specialization || '').toLowerCase();
+      const designation = (workplace.designation || '').toLowerCase();
+      const workplaceName = (workplace.workplaceName || '').toLowerCase();
+      const address = (workplace.address || '').toLowerCase();
+      const city = (workplace.city || '').toLowerCase();
+      const pincode = (workplace.pincode || '').toLowerCase();
+      
+      return doctorName.includes(searchTerm) ||
+             specialization.includes(searchTerm) ||
+             designation.includes(searchTerm) ||
+             workplaceName.includes(searchTerm) ||
+             address.includes(searchTerm) ||
+             city.includes(searchTerm) ||
+             pincode.includes(searchTerm);
+    });
+    
+    setFilteredWorkplaces(filtered);
+    console.log('🔍 Local search found', filtered.length, 'results for:', query);
+  }, [nearbyWorkplaces, allDoctorWorkplaces]);
 
-    try {
-      setLoading(true);
-      setNoWorkplacesInfo(null); // Clear previous error states
-      console.log('🔍 Searching for:', searchQuery);
-      
-      const results = await UserAPIService.searchDoctorsEnhanced(searchQuery.trim());
-      console.log('🎯 Search results:', results);
-      
-      // Check if no doctors found
-      if (!results || results.length === 0) {
-        Alert.alert(
-          'No Doctors Found',
-          `No doctors found matching "${searchQuery}". Please try a different search term.`,
-          [{ text: 'OK' }]
-        );
-        setSearchResults([]);
-        setWorkplaces([]);
-        return;
-      }
-      
-      setSearchResults(results);
-      
-      // Flatten workplaces from all doctors for easy display
-      const allWorkplaces = [];
-      results.forEach(doctor => {
-        if (doctor.workplaces && doctor.workplaces.length > 0) {
-          doctor.workplaces.forEach(workplace => {
-            allWorkplaces.push({
-              ...workplace,
-              doctorId: doctor.doctorId,
-              doctorName: doctor.doctorName,
-              specialization: doctor.specialization,
-              designation: doctor.designation,
-              profileImage: doctor.profileImage,
-              experience: doctor.experience
-            });
-          });
-        }
-      });
-      
-      // console.log('🏥 Flattened workplaces:', allWorkplaces);
-      
-      // Check if no workplaces found even though doctors exist
-      if (allWorkplaces.length === 0) {
-        const doctorNames = results.map(doctor => doctor.doctorName).join(', ');
-        setNoWorkplacesInfo({
-          doctorNames: doctorNames,
-          doctorCount: results.length
-        });
-        setWorkplaces([]);
-        setStep('workplaces'); // Show the workplaces step with error message
-        return;
-      }
-      
-      setNoWorkplacesInfo(null); // Clear any previous error info
-      setWorkplaces(allWorkplaces);
-      setStep('workplaces');
-    } catch (error) {
-      console.error('Enhanced search error:', error);
-      Alert.alert(
-        'Search Error',
-        'Failed to search doctors. Please check your internet connection and try again.',
-        [{ text: 'OK' }]
-      );
-    } finally {
-      setLoading(false);
+  // Handle search input with debounce
+  const handleSearchChange = (text) => {
+    setSearchQuery(text);
+    
+    // Clear previous debounce timer
+    if (searchDebounceRef.current) {
+      clearTimeout(searchDebounceRef.current);
     }
+    
+    // Debounce the search
+    searchDebounceRef.current = setTimeout(() => {
+      performLocalSearch(text);
+    }, 300);
+  };
+
+  // Clear search
+  const clearSearch = () => {
+    setSearchQuery('');
+    setIsSearching(false);
+    setFilteredWorkplaces([]);
+  };
+
+  // Legacy API search - kept as fallback but not used in main flow
+  const searchDoctorsEnhanced = async () => {
+    if (!searchQuery.trim()) {
+      Alert.alert('Error', 'Please enter a search term');
+      return;
+    }
+    // Use local search instead
+    performLocalSearch(searchQuery);
   };
 
   const selectWorkplace = async (workplace) => {
@@ -362,6 +422,9 @@ export default function BookAppointment({ route, navigation }) {
         // Load user profile and nearby doctors
         await fetchUserProfile();
         
+        // Load all doctors with pagination
+        await loadAllDoctors(0, false);
+        
         // You can implement this to load recent doctors from AsyncStorage or API
         // For now, setting empty array
         setRecentDoctors([]);
@@ -372,6 +435,13 @@ export default function BookAppointment({ route, navigation }) {
     };
     
     loadInitialData();
+    
+    // Cleanup debounce timer on unmount
+    return () => {
+      if (searchDebounceRef.current) {
+        clearTimeout(searchDebounceRef.current);
+      }
+    };
   }, []);
 
   const handleWorkplaceSelect = (workplace) => {
@@ -422,7 +492,7 @@ export default function BookAppointment({ route, navigation }) {
             </Text>
           )}
           <Text style={styles.clinicName}>🏥 {item.workplaceName}</Text>
-          <Text style={styles.areaText}>� {item.address}</Text>
+          <Text style={styles.areaText}>📍 {item.address}</Text>
         </View>
         <TouchableOpacity 
           style={styles.bookButton}
@@ -434,7 +504,35 @@ export default function BookAppointment({ route, navigation }) {
     </View>
   );
 
+  // Render footer for FlatList (loading indicator)
+  const renderListFooter = () => {
+    if (!loadingMore) return null;
+    return (
+      <View style={styles.loadingMoreContainer}>
+        <ActivityIndicator size="small" color="#3498db" />
+        <Text style={styles.loadingMoreText}>Loading more doctors...</Text>
+      </View>
+    );
+  };
 
+  // Get display workplaces based on search state
+  const getDisplayWorkplaces = () => {
+    if (isSearching) {
+      return filteredWorkplaces;
+    }
+    // Combine nearby (first) and all doctors
+    const combined = [...nearbyWorkplaces];
+    allDoctorWorkplaces.forEach(workplace => {
+      // Avoid duplicates
+      const exists = combined.some(w => 
+        w.doctorId === workplace.doctorId && w.workplaceId === workplace.workplaceId
+      );
+      if (!exists) {
+        combined.push(workplace);
+      }
+    });
+    return combined;
+  };
 
   const renderSlot = ({ item: slot }) => (
     <TouchableOpacity 
@@ -448,94 +546,97 @@ export default function BookAppointment({ route, navigation }) {
 
   return (
     <View style={styles.container}>
-      <ScrollView 
-        style={styles.content}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={true}
-      >
-        {step === 'search' && (
-          <View>
-            <Text style={styles.sectionTitle}>🔍 Search Doctors</Text>
+      {step === 'search' && (
+        <View style={styles.searchStepContainer}>
+          {/* Search Header - Fixed at top */}
+          <View style={styles.searchHeader}>
+            <Text style={styles.sectionTitle}>🔍 Find Doctors</Text>
             <Text style={styles.searchInstructions}>
-              Search by Name, Specialization, Designation, Hospital Name, Area/Address, City or Pincode
+              Search by Name, Specialization, Hospital, Area or Pincode
             </Text>
             <View style={styles.searchContainer}>
               <TextInput
                 style={styles.searchInput}
-                placeholder="Enter search term..."
+                placeholder="Search doctors..."
                 value={searchQuery}
-                onChangeText={setSearchQuery}
+                onChangeText={handleSearchChange}
+                returnKeyType="search"
               />
-              <TouchableOpacity 
-                style={styles.searchButton} 
-                onPress={searchDoctorsEnhanced}
-                disabled={loading}
-              >
-                <Text style={styles.searchButtonText}>
-                  {loading ? 'Searching...' : 'Search'}
-                </Text>
-              </TouchableOpacity>
+              {searchQuery.length > 0 && (
+                <TouchableOpacity 
+                  style={styles.clearButton} 
+                  onPress={clearSearch}
+                >
+                  <Text style={styles.clearButtonText}>✕</Text>
+                </TouchableOpacity>
+              )}
             </View>
-
-            {/* Nearby Doctors Section */}
-            {nearbyWorkplaces.length > 0 && (
-              <View style={styles.nearbySection}>
-                <Text style={styles.sectionTitle}>📍 Nearby Doctors</Text>
-                <Text style={styles.nearbySubtitle}>
-                  Doctors near your location ({userProfile?.pincode})
-                </Text>
-                <FlatList
-                  data={nearbyWorkplaces.slice(0, 5)} // Show only first 5
-                  keyExtractor={(item) => `${item.doctorId}-${item.workplaceId}`}
-                  renderItem={renderWorkplaceCard}
-                  scrollEnabled={false}
-                />
-                {nearbyWorkplaces.length > 5 && (
-                  <TouchableOpacity 
-                    style={styles.viewAllButton}
-                    onPress={() => {
-                      // Set workplaces to all nearby workplaces and go to workplaces step
-                      setWorkplaces(nearbyWorkplaces);
-                      setStep('workplaces');
-                    }}
-                  >
-                    <Text style={styles.viewAllButtonText}>
-                      View All {nearbyWorkplaces.length} Nearby Doctors
-                    </Text>
-                  </TouchableOpacity>
-                )}
-              </View>
-            )}
-
-            {recentDoctors.length > 0 && (
-              <View style={styles.recentSection}>
-                <Text style={styles.sectionTitle}>👨‍⚕️ Recent Doctors</Text>
-                <FlatList
-                  data={recentDoctors}
-                  keyExtractor={(item) => String(item.id)}
-                  renderItem={({ item }) => (
-                    <TouchableOpacity 
-                      style={styles.doctorCard} 
-                      onPress={() => {
-                        setSearchQuery(item.fullName);
-                        searchDoctorsEnhanced();
-                      }}
-                    >
-                      <Text style={styles.doctorName}>{item.fullName}</Text>
-                      <Text style={styles.doctorSpecialization}>
-                        🩺 {item.specialization}
-                        {item.designation && ` • ${item.designation}`}
-                      </Text>
-                    </TouchableOpacity>
-                  )}
-                  scrollEnabled={false}
-                />
-              </View>
+            
+            {/* Search results info */}
+            {isSearching && (
+              <Text style={styles.searchResultsInfo}>
+                {filteredWorkplaces.length} result{filteredWorkplaces.length !== 1 ? 's' : ''} found
+              </Text>
             )}
           </View>
-        )}
 
-        {step === 'workplaces' && (
+          {/* Initial Loading State */}
+          {initialLoading ? (
+            <View style={styles.initialLoadingContainer}>
+              <ActivityIndicator size="large" color="#3498db" />
+              <Text style={styles.loadingText}>Loading doctors...</Text>
+            </View>
+          ) : (
+            /* Doctor List with Infinite Scroll */
+            <FlatList
+              data={getDisplayWorkplaces()}
+              keyExtractor={(item, index) => `${item.doctorId}-${item.workplaceId}-${index}`}
+              renderItem={renderWorkplaceCard}
+              contentContainerStyle={styles.doctorListContent}
+              showsVerticalScrollIndicator={true}
+              onEndReached={loadMoreDoctors}
+              onEndReachedThreshold={0.3}
+              ListFooterComponent={renderListFooter}
+              ListEmptyComponent={
+                <View style={styles.emptyListContainer}>
+                  <Text style={styles.emptyListIcon}>
+                    {isSearching ? '🔍' : '👨‍⚕️'}
+                  </Text>
+                  <Text style={styles.emptyListTitle}>
+                    {isSearching ? 'No matches found' : 'No doctors available'}
+                  </Text>
+                  <Text style={styles.emptyListSubtitle}>
+                    {isSearching 
+                      ? 'Try different search terms' 
+                      : 'Please check back later'}
+                  </Text>
+                </View>
+              }
+              ListHeaderComponent={
+                !isSearching && nearbyWorkplaces.length > 0 ? (
+                  <View style={styles.listSectionHeader}>
+                    <Text style={styles.listSectionTitle}>
+                      📍 Nearby Doctors ({nearbyWorkplaces.length})
+                    </Text>
+                    {userProfile?.pincode && (
+                      <Text style={styles.listSectionSubtitle}>
+                        Near pincode: {userProfile.pincode}
+                      </Text>
+                    )}
+                  </View>
+                ) : null
+              }
+            />
+          )}
+        </View>
+      )}
+      
+      {step === 'workplaces' && (
+        <ScrollView 
+          style={styles.content}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={true}
+        >
           <View>
             <TouchableOpacity 
               style={styles.backButton}
@@ -579,11 +680,15 @@ export default function BookAppointment({ route, navigation }) {
               />
             )}
           </View>
-        )}
+        </ScrollView>
+      )}
 
-
-
-        {step === 'slots' && (
+      {step === 'slots' && (
+        <ScrollView 
+          style={styles.content}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={true}
+        >
           <View>
             <TouchableOpacity 
               style={styles.backButton}
@@ -723,8 +828,8 @@ export default function BookAppointment({ route, navigation }) {
               </>
             )}
           </View>
-        )}
-      </ScrollView>
+        </ScrollView>
+      )}
       
       <BottomNavigation 
         activeTab="appointments"
@@ -761,33 +866,118 @@ const styles = StyleSheet.create({
     paddingBottom: 100, // Extra padding for bottom navigation
     flexGrow: 1,
   },
+  // New styles for infinite scroll and local search
+  searchStepContainer: {
+    flex: 1,
+  },
+  searchHeader: {
+    padding: 20,
+    paddingBottom: 10,
+    backgroundColor: '#f8f9fa',
+  },
   sectionTitle: {
     fontSize: 20,
     fontWeight: '700',
     color: '#2c3e50',
-    marginBottom: 15,
+    marginBottom: 10,
   },
   searchInstructions: {
     fontSize: 12,
     fontStyle: 'italic',
     color: '#7f8c8d',
     marginBottom: 10,
-    marginLeft: 4,
     lineHeight: 18,
   },
   searchContainer: {
     flexDirection: 'row',
-    marginBottom: 20,
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    borderWidth: 1,
+    borderColor: '#e9ecef',
   },
   searchInput: {
     flex: 1,
-    backgroundColor: '#fff',
-    borderRadius: 8,
-    paddingHorizontal: 12,
     paddingVertical: 12,
-    marginRight: 10,
     fontSize: 16,
+    color: '#2c3e50',
   },
+  clearButton: {
+    padding: 8,
+  },
+  clearButtonText: {
+    fontSize: 18,
+    color: '#7f8c8d',
+  },
+  searchResultsInfo: {
+    fontSize: 13,
+    color: '#27ae60',
+    fontWeight: '500',
+    marginTop: 8,
+  },
+  initialLoadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 60,
+  },
+  loadingText: {
+    fontSize: 16,
+    color: '#7f8c8d',
+    marginTop: 12,
+  },
+  doctorListContent: {
+    paddingHorizontal: 20,
+    paddingBottom: 120,
+  },
+  loadingMoreContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 20,
+  },
+  loadingMoreText: {
+    fontSize: 14,
+    color: '#7f8c8d',
+    marginLeft: 10,
+  },
+  emptyListContainer: {
+    alignItems: 'center',
+    paddingVertical: 60,
+    paddingHorizontal: 20,
+  },
+  emptyListIcon: {
+    fontSize: 48,
+    marginBottom: 16,
+  },
+  emptyListTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#2c3e50',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  emptyListSubtitle: {
+    fontSize: 14,
+    color: '#7f8c8d',
+    textAlign: 'center',
+  },
+  listSectionHeader: {
+    paddingVertical: 12,
+    marginBottom: 8,
+  },
+  listSectionTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#27ae60',
+  },
+  listSectionSubtitle: {
+    fontSize: 12,
+    color: '#7f8c8d',
+    marginTop: 4,
+  },
+  // Old styles (retained for compatibility)
   searchButton: {
     backgroundColor: '#3498db',
     paddingHorizontal: 20,

@@ -668,9 +668,9 @@ export default function RescheduleAppointment({ route, navigation }) {
         paddingBottom: 20
       }
     ]}>
-      <ScrollView style={styles.content}>
+      <ScrollView style={styles.content} contentContainerStyle={{ paddingBottom: selectedSlot ? 140 : 20 }}>
         <Text style={styles.pageTitle}>
-          {fromRevisit ? '� Book Next Visit' : '�🔄 Reschedule Appointment'}
+          {fromRevisit ? '📅 Book Next Visit' : '🔄 Reschedule Appointment'}
         </Text>
         
         {/* Current Appointment Details */}
@@ -879,32 +879,27 @@ export default function RescheduleAppointment({ route, navigation }) {
             </>
           )}
         </View>
-        
-        {/* Action Buttons */}
-        {availableDates.length > 0 && currentDateSlots.length > 0 && (
-          <View style={styles.actionButtons}>
-            <TouchableOpacity
-              style={[
-                styles.rescheduleButton,
-                !selectedSlot && styles.disabledButton
-              ]}
-              onPress={proceedWithReschedule}
-              disabled={!selectedSlot}
-            >
-              <Text style={styles.rescheduleButtonText}>
-                {fromRevisit ? '� Book Next Visit' : '�🔄 Reschedule Appointment'}
-              </Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity
-              style={styles.cancelButton}
-              onPress={() => navigation.goBack()}
-            >
-              <Text style={styles.cancelButtonText}>Cancel</Text>
-            </TouchableOpacity>
-          </View>
-        )}
       </ScrollView>
+      
+      {/* Fixed Action Buttons - Show when slot is selected */}
+      {selectedSlot && availableDates.length > 0 && currentDateSlots.length > 0 && (
+        <View style={styles.fixedActionButtons}>
+          <TouchableOpacity
+            style={styles.fixedRescheduleButton}
+            onPress={proceedWithReschedule}
+          >
+            <Text style={styles.fixedRescheduleButtonText}>
+              {fromRevisit ? '📅 Book Next Visit' : '🔄 Reschedule Appointment'}
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.fixedCancelButton}
+            onPress={() => navigation.goBack()}
+          >
+            <Text style={styles.fixedCancelButtonText}>Cancel</Text>
+          </TouchableOpacity>
+        </View>
+      )}
       
       {/* Reason Modal */}
       <Modal
@@ -1609,5 +1604,46 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#2980b9',
+  },
+  // Fixed action buttons styles - appears when slot is selected
+  fixedActionButtons: {
+    position: 'absolute',
+    bottom: 80,
+    left: 0,
+    right: 0,
+    backgroundColor: '#fff',
+    paddingHorizontal: 20,
+    paddingTop: 15,
+    paddingBottom: 15,
+    borderTopWidth: 1,
+    borderTopColor: '#e9ecef',
+    elevation: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+  fixedRescheduleButton: {
+    backgroundColor: '#f39c12',
+    borderRadius: 8,
+    paddingVertical: 14,
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  fixedRescheduleButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#fff',
+  },
+  fixedCancelButton: {
+    backgroundColor: '#e74c3c',
+    borderRadius: 8,
+    paddingVertical: 14,
+    alignItems: 'center',
+  },
+  fixedCancelButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#fff',
   },
 });
