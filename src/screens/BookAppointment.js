@@ -102,7 +102,9 @@ export default function BookAppointment({ route, navigation }) {
             specialization: doctor.specialization,
             designation: doctor.designation,
             profileImage: doctor.profileImage,
-            experience: doctor.experience
+            experience: doctor.experience,
+            // include verified flag from doctor level (some APIs may use isVerified)
+            verified: doctor.verified ?? doctor.isVerified ?? false
           });
         });
       }
@@ -518,14 +520,30 @@ export default function BookAppointment({ route, navigation }) {
           </Text>
         </View>
         <View style={styles.doctorMainInfo}>
-          <Text style={styles.doctorName}>Dr. {item.doctorName}</Text>
+          <View style={styles.nameRow}>
+            <Text style={styles.doctorName}>Dr. {item.doctorName}</Text>
+            {(item.isVerified || item.verified || item.verifiedDoctor) ? (
+              <View style={styles.verifiedBadge}>
+                <Text style={styles.verifiedText}>✔ Verified</Text>
+              </View>
+            ) : (
+              <View style={styles.unverifiedBadge}>
+                <Text style={styles.unverifiedText}>Unverified</Text>
+              </View>
+            )}
+          </View>
           {item.specialization && (
             <Text style={styles.specialization}>
               🩺 {item.specialization}
               {item.designation && ` • ${item.designation}`}
             </Text>
           )}
-          <Text style={styles.clinicName}>🏥 {item.workplaceName}</Text>
+          <View style={styles.clinicRow}>
+            <Text style={styles.clinicName}>🏥 {item.workplaceName}</Text>
+            {(item.workplaceType || item.type) && (
+              <Text style={styles.workspaceTypeText}> • {item.workplaceType || item.type}</Text>
+            )}
+          </View>
           <Text style={styles.areaText}>📍 {item.address}</Text>
         </View>
         <TouchableOpacity 
@@ -1318,6 +1336,44 @@ const styles = StyleSheet.create({
   },
   doctorMainInfo: {
     flex: 1,
+  },
+  nameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  verifiedBadge: {
+    backgroundColor: '#27ae60',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    marginLeft: 8,
+  },
+  verifiedText: {
+    color: '#fff',
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  unverifiedBadge: {
+    backgroundColor: '#bdc3c7',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    marginLeft: 8,
+  },
+  unverifiedText: {
+    color: '#2c3e50',
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  clinicRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  workspaceTypeText: {
+    fontSize: 12,
+    color: '#7f8c8d',
+    marginLeft: 6,
   },
   doctorName: {
     fontSize: 16,
