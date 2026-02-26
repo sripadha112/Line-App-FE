@@ -27,6 +27,10 @@ export const API_ENDPOINTS = {
     CANCEL_DAY: (doctorId) => `/api/doctor/${doctorId}/appointments/cancel-day`,
   // Updated to match API: /api/doctor/workspaces/{workspaceId}/appointments/cancel-day
   CANCEL_WORKSPACE_DAY: (workspaceId) => `/api/doctor/workspaces/${workspaceId}/appointments/cancel-day`,
+    // Block slots endpoints
+    BLOCK_SLOTS: (doctorId) => `/api/doctor/${doctorId}/block-slots`,
+    BLOCKED_SLOTS: (doctorId) => `/api/doctor/${doctorId}/blocked-slots`,
+    REMOVE_BLOCKED_SLOT: (blockedSlotId) => `/api/doctor/blocked-slots/${blockedSlotId}`,
     // New endpoints
     APPOINTMENTS_WITH_USERS: (doctorId, date) => `/api/doctor/${doctorId}/appointments/date/${date}/users`,
     BULK_UPDATE_STATUS: (doctorId, date) => `/api/doctor/${doctorId}/appointments/date/${date}/bulk-status`,

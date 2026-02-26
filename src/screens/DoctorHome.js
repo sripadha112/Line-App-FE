@@ -1841,8 +1841,8 @@ Dr. ${name || 'Line App Doctor'}`;
               color="#f39c12"
             />
             <Card 
-              title="Cancel Day" 
-              subtitle="Cancel workspace day"
+              title="Cancel/Block Day" 
+              subtitle="Cancel or block appointments"
               onPress={() => navigation.navigate('CancelDay', { doctorId })}
               color="#e74c3c"
             />

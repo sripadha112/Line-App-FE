@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, ActivityIndicator, Modal, FlatList, RefreshControl } from 'react-native';
+import * as Clipboard from 'expo-clipboard';
 import { useFocusEffect } from '@react-navigation/native';
 import QRCode from 'react-native-qrcode-svg';
 import * as MediaLibrary from 'expo-media-library';
@@ -228,8 +229,34 @@ export default function QuickBookingQR({ route, navigation }) {
                   </View>
                 </ViewShot>
 
-                {/* this section contails info about qr code */}
-                {/* <View style={styles.qrInfoSection}>
+                {/* Info message and URL section */}
+                <View style={styles.shareInfoContainer}>
+                  <Text style={styles.shareInfoIcon}>📱</Text>
+                  <Text style={styles.shareInfoText}>
+                    Download the QR code and share the link below to let patients book appointments easily.
+                  </Text>
+                </View>
+
+                <View style={styles.urlSection}>
+                  <Text style={styles.urlLabel}>Booking Link:</Text>
+                  <View style={styles.urlBox}>
+                    <Text style={styles.urlText} numberOfLines={2}>
+                      {generateBookingURL(selectedWorkplace)}
+                    </Text>
+                  </View>
+                  <TouchableOpacity 
+                    style={styles.copyButton}
+                    onPress={async () => {
+                      await Clipboard.setStringAsync(generateBookingURL(selectedWorkplace));
+                      Alert.alert('Copied!', 'Booking link copied to clipboard.');
+                    }}
+                  >
+                    <Text style={styles.copyButtonText}>📋 Copy Link</Text>
+                  </TouchableOpacity>
+                </View>
+
+                {/* this section contains info about qr code
+                <View style={styles.qrInfoSection}>
                   <Text style={styles.qrUrlTitle}>Booking URL:</Text>
                   <Text style={styles.qrUrl}>
                     {generateBookingURL(selectedWorkplace)}
@@ -414,12 +441,67 @@ const styles = StyleSheet.create({
     backgroundColor: 'white',
     padding: 20,
     borderRadius: 8,
-    marginBottom: 20,
+    marginBottom: 16,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
+  },
+  shareInfoContainer: {
+    flexDirection: 'row',
+    backgroundColor: '#e8f5e9',
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 16,
+    alignItems: 'flex-start',
+    width: '100%',
+  },
+  shareInfoIcon: {
+    fontSize: 18,
+    marginRight: 10,
+  },
+  shareInfoText: {
+    flex: 1,
+    fontSize: 13,
+    color: '#2e7d32',
+    lineHeight: 18,
+  },
+  urlSection: {
+    width: '100%',
+    marginBottom: 20,
+  },
+  urlLabel: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#2c3e50',
+    marginBottom: 8,
+  },
+  urlBox: {
+    backgroundColor: '#f5f5f5',
+    padding: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+    marginBottom: 10,
+  },
+  urlText: {
+    fontSize: 11,
+    color: '#3498db',
+    lineHeight: 16,
+  },
+  copyButton: {
+    backgroundColor: '#9b59b6',
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 6,
+    alignItems: 'center',
+    alignSelf: 'center',
+  },
+  copyButtonText: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: '600',
   },
   qrInfoSection: {
     width: '100%',

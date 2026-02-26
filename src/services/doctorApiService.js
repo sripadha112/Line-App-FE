@@ -170,6 +170,42 @@ export class DoctorAPIService {
     }
   }
 
+  // Block slots for a doctor
+  static async blockSlots(doctorId, payload) {
+    try {
+      console.log('[doctorApiService] blockSlots -> doctorId:', doctorId);
+      console.log('[doctorApiService] blockSlots payload:', JSON.stringify(payload, null, 2));
+      const response = await api.post(API_ENDPOINTS.DOCTOR.BLOCK_SLOTS(doctorId), payload);
+      console.log('[doctorApiService] blockSlots response:', JSON.stringify(response.data, null, 2));
+      return response.data;
+    } catch (error) {
+      console.log('Error blocking slots:', error.message, error.response?.data || 'no response data');
+      throw error;
+    }
+  }
+
+  // Get blocked slots for a doctor
+  static async getBlockedSlots(doctorId) {
+    try {
+      const response = await api.get(API_ENDPOINTS.DOCTOR.BLOCKED_SLOTS(doctorId));
+      return response.data;
+    } catch (error) {
+      console.log('Error fetching blocked slots:', error.message);
+      throw error;
+    }
+  }
+
+  // Remove blocked slot
+  static async removeBlockedSlot(blockedSlotId) {
+    try {
+      const response = await api.delete(API_ENDPOINTS.DOCTOR.REMOVE_BLOCKED_SLOT(blockedSlotId));
+      return response.data;
+    } catch (error) {
+      console.log('Error removing blocked slot:', error.message);
+      throw error;
+    }
+  }
+
   // Fetch own profile
   static async fetchOwnProfile(doctorId) {
     try {

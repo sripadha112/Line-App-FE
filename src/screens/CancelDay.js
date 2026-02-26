@@ -17,7 +17,7 @@ import TopBar from '../components/TopBar';
 import BottomNavigation from '../components/BottomNavigation';
 import DatePicker from '../components/DatePicker';
 
-const CANCEL_DAY_REASONS = [
+const REASONS = [
   'Personal emergency',
   'Medical emergency', 
   'Family emergency',
@@ -26,8 +26,25 @@ const CANCEL_DAY_REASONS = [
   'Doctor illness',
   'Weather conditions',
   'Administrative issues',
+  'Training/Conference',
+  'Holiday',
   'Other'
 ];
+
+// Generate time options for picker (30-minute intervals)
+const generateTimeOptions = () => {
+  const times = [];
+  for (let h = 0; h < 24; h++) {
+    for (let m = 0; m < 60; m += 30) {
+      const hour = h.toString().padStart(2, '0');
+      const minute = m.toString().padStart(2, '0');
+      times.push(`${hour}:${minute}`);
+    }
+  }
+  return times;
+};
+
+const TIME_OPTIONS = generateTimeOptions();
 
 export default function CancelDay({ route, navigation }) {
   const { doctorId } = route.params;
@@ -35,13 +52,28 @@ export default function CancelDay({ route, navigation }) {
   const [workplaces, setWorkplaces] = useState([]);
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
-  const [cancelDayModalVisible, setCancelDayModalVisible] = useState(false);
+  const [modalVisible, setModalVisible] = useState(false);
   const [selectedWorkplace, setSelectedWorkplace] = useState(null);
-  const [cancelDayData, setCancelDayData] = useState({
+  
+  // Mode: 'cancel' for cancel all appointments, 'block' for blocking slots
+  const [mode, setMode] = useState('cancel');
+  
+  // Unblock modal state
+  const [unblockModalVisible, setUnblockModalVisible] = useState(false);
+  const [existingBlocks, setExistingBlocks] = useState([]);
+  const [selectedBlocks, setSelectedBlocks] = useState([]);
+  const [loadingBlocks, setLoadingBlocks] = useState(false);
+  
+  const [formData, setFormData] = useState({
     dateOption: 'today', // 'today', 'tomorrow', 'custom'
     customDateText: '',
     selectedReason: '',
     customReason: '',
+    // Block specific options
+    blockType: 'fullDay', // 'fullDay', 'timeRange'
+    startTime: '09:00',
+    endTime: '17:00',
+    applyToAll: false, // Apply to all workplaces
   });
   const [submitting, setSubmitting] = useState(false);
 
@@ -57,7 +89,6 @@ export default function CancelDay({ route, navigation }) {
     try {
       setLoading(true);
       const response = await DoctorAPIService.fetchWorkplaces(doctorId);
-      // console.log('Workplaces data:', response);
       setWorkplaces(response || []);
     } catch (error) {
       console.error('Error fetching workplaces:', error);
@@ -73,25 +104,29 @@ export default function CancelDay({ route, navigation }) {
     setRefreshing(false);
   };
 
-  const openCancelDayModal = (workplace) => {
+  const openModal = (workplace, actionMode) => {
     setSelectedWorkplace(workplace);
-    setCancelDayModalVisible(true);
+    setMode(actionMode);
+    setModalVisible(true);
     // Reset form
-    setCancelDayData({
+    setFormData({
       dateOption: 'today',
       customDateText: '',
       selectedReason: '',
       customReason: '',
+      blockType: 'fullDay',
+      startTime: '',
+      endTime: '',
+      applyToAll: false,
     });
   };
 
-  const getCancelDate = () => {
-    // Use local date components to avoid UTC related shifts
+  const getTargetDate = () => {
     const pad = (n) => (n < 10 ? '0' + n : '' + n);
     const formatLocal = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 
     const today = new Date();
-    switch (cancelDayData.dateOption) {
+    switch (formData.dateOption) {
       case 'today':
         return formatLocal(today);
       case 'tomorrow':
@@ -99,25 +134,23 @@ export default function CancelDay({ route, navigation }) {
         tomorrow.setDate(tomorrow.getDate() + 1);
         return formatLocal(tomorrow);
       case 'custom':
-        return cancelDayData.customDateText;
+        return formData.customDateText;
       default:
         return formatLocal(today);
     }
   };
 
   const handleReasonSelection = (reason) => {
-    setCancelDayData(prev => ({ 
+    setFormData(prev => ({ 
       ...prev, 
       selectedReason: reason,
       customReason: reason !== 'Other' ? '' : prev.customReason
     }));
 
-    // Auto-focus and scroll to text input when "Other" is selected
     if (reason === 'Other') {
       setTimeout(() => {
         if (customReasonInputRef.current) {
           customReasonInputRef.current.focus();
-          // Scroll to the bottom to ensure the text input is visible
           if (modalScrollRef.current) {
             modalScrollRef.current.scrollToEnd({ animated: true });
           }
@@ -127,66 +160,142 @@ export default function CancelDay({ route, navigation }) {
   };
 
   const handleDateSelect = (selectedDate) => {
-    setCancelDayData(prev => ({
+    setFormData(prev => ({
       ...prev,
       customDateText: selectedDate,
       dateOption: 'custom'
     }));
   };
 
-  const handleCancelDay = async () => {
-    if (!selectedWorkplace) return;
-
-    // Validation
-    if (cancelDayData.dateOption === 'custom' && !cancelDayData.customDateText.trim()) {
-      Alert.alert('Validation Error', 'Please specify the date');
-      return;
+  const validateForm = () => {
+    if (formData.dateOption === 'custom' && !formData.customDateText.trim()) {
+      Alert.alert('Validation Error', 'Please select a date');
+      return false;
     }
 
-    if (!cancelDayData.selectedReason) {
-      Alert.alert('Validation Error', 'Please select a reason for cancellation');
-      return;
+    if (!formData.selectedReason) {
+      Alert.alert('Validation Error', 'Please select a reason');
+      return false;
     }
 
-    if (cancelDayData.selectedReason === 'Other' && !cancelDayData.customReason.trim()) {
-      Alert.alert('Validation Error', 'Please specify your reason for cancellation');
+    if (formData.selectedReason === 'Other' && !formData.customReason.trim()) {
+      Alert.alert('Validation Error', 'Please specify your reason');
+      return false;
+    }
+
+    if (mode === 'block' && formData.blockType === 'timeRange') {
+      if (!formData.startTime || !formData.endTime) {
+        Alert.alert('Validation Error', 'Please specify start and end time for blocking');
+        return false;
+      }
+    }
+
+    return true;
+  };
+
+  // Show confirmation before blocking (warns about existing appointments)
+  const confirmBlockAction = () => {
+    if (!validateForm()) return;
+    
+    const targetDate = getTargetDate();
+    const timeInfo = formData.blockType === 'fullDay' 
+      ? 'the entire day' 
+      : `${formData.startTime} to ${formData.endTime}`;
+    
+    Alert.alert(
+      '⚠️ Confirm Block Action',
+      `You are about to block ${timeInfo} on ${targetDate}.\n\n` +
+      `IMPORTANT: Any existing appointments during this blocked time will be automatically CANCELLED and patients will be notified.\n\n` +
+      `This action cannot be undone, but you can reschedule cancelled appointments manually.\n\n` +
+      `Do you want to proceed?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { 
+          text: 'Proceed & Cancel Appointments', 
+          style: 'destructive',
+          onPress: () => executeBlockAction()
+        }
+      ]
+    );
+  };
+
+  const executeBlockAction = async () => {
+    try {
+      setSubmitting(true);
+      const finalReason = formData.selectedReason === 'Other' 
+        ? formData.customReason.trim() 
+        : formData.selectedReason;
+      const targetDate = getTargetDate();
+
+      const payload = {
+        date: targetDate,
+        workplaceId: formData.applyToAll ? null : selectedWorkplace.id,
+        isFullDay: formData.blockType === 'fullDay',
+        startTime: formData.blockType === 'timeRange' ? formData.startTime : null,
+        endTime: formData.blockType === 'timeRange' ? formData.endTime : null,
+        reason: finalReason,
+        cancelExistingAppointments: true // Flag to cancel existing appointments
+      };
+
+      console.log('[CancelDay] Blocking slots with cancel:', payload);
+      const response = await DoctorAPIService.blockSlots(doctorId, payload);
+      
+      let successMessage = formData.blockType === 'fullDay'
+        ? `Entire day blocked for ${targetDate}.`
+        : `Time slot blocked from ${formData.startTime} to ${formData.endTime} on ${targetDate}.`;
+      
+      if (response.cancelledAppointments > 0) {
+        successMessage += `\n\n${response.cancelledAppointments} existing appointment(s) were cancelled and patients have been notified.`;
+      }
+      
+      Alert.alert(
+        'Success',
+        response.message || successMessage,
+        [{ text: 'OK', onPress: () => { setModalVisible(false); fetchWorkplaces(); } }]
+      );
+    } catch (error) {
+      console.error('Error blocking:', error);
+      Alert.alert(
+        'Error',
+        error.response?.data?.message || 'Failed to block appointments. Please try again.'
+      );
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleSubmit = async () => {
+    if (!validateForm()) return;
+
+    if (mode === 'block') {
+      // Show confirmation for blocking
+      confirmBlockAction();
       return;
     }
 
     try {
       setSubmitting(true);
+      const finalReason = formData.selectedReason === 'Other' 
+        ? formData.customReason.trim() 
+        : formData.selectedReason;
+      const targetDate = getTargetDate();
 
-      const finalReason = cancelDayData.selectedReason === 'Other' ? cancelDayData.customReason.trim() : cancelDayData.selectedReason;
-      const cancelDate = getCancelDate();
+      // Cancel all appointments for the day
       const payload = {
-        date: cancelDate,
+        date: targetDate,
         reason: finalReason
       };
 
-      try {
-        console.log('[cancel-day] calling cancelWorkspaceDayAppointments with workspaceId:', selectedWorkplace.id);
-        console.log('[cancel-day] payload:', JSON.stringify(payload, null, 2));
-      } catch (e) {}
-
+      console.log('[CancelDay] Cancelling appointments:', payload);
       const response = await DoctorAPIService.cancelWorkspaceDayAppointments(selectedWorkplace.id, payload);
       
-      // Show success message
       Alert.alert(
         'Success',
         response.message || 'All appointments for the selected date have been cancelled successfully',
-        [
-          {
-            text: 'OK',
-            onPress: () => {
-              setCancelDayModalVisible(false);
-              navigation.goBack(); // Go back to previous screen
-            }
-          }
-        ]
+        [{ text: 'OK', onPress: () => { setModalVisible(false); navigation.goBack(); } }]
       );
-      
     } catch (error) {
-      console.error('Error canceling day appointments:', error);
+      console.error('Error:', error);
       Alert.alert(
         'Error',
         error.response?.data?.message || 'Failed to cancel appointments. Please try again.'
@@ -196,17 +305,102 @@ export default function CancelDay({ route, navigation }) {
     }
   };
 
-  const renderCancelDateOption = (option, label) => (
+  // Unblock functionality
+  const openUnblockModal = async (workplace) => {
+    setSelectedWorkplace(workplace);
+    setUnblockModalVisible(true);
+    setSelectedBlocks([]);
+    await fetchExistingBlocks(workplace.id);
+  };
+
+  const fetchExistingBlocks = async (workplaceId) => {
+    try {
+      setLoadingBlocks(true);
+      const blocks = await DoctorAPIService.getBlockedSlots(doctorId);
+      // Filter blocks for this workplace or all workplaces (workplaceId = null)
+      const filteredBlocks = blocks.filter(b => 
+        b.workplaceId === workplaceId || b.workplaceId === null
+      );
+      setExistingBlocks(filteredBlocks);
+    } catch (error) {
+      console.error('Error fetching blocks:', error);
+      Alert.alert('Error', 'Failed to fetch existing blocks');
+    } finally {
+      setLoadingBlocks(false);
+    }
+  };
+
+  const toggleBlockSelection = (blockId) => {
+    setSelectedBlocks(prev => {
+      if (prev.includes(blockId)) {
+        return prev.filter(id => id !== blockId);
+      } else {
+        return [...prev, blockId];
+      }
+    });
+  };
+
+  const handleUnblock = async () => {
+    if (selectedBlocks.length === 0) {
+      Alert.alert('Selection Required', 'Please select at least one block to remove');
+      return;
+    }
+
+    Alert.alert(
+      'Confirm Unblock',
+      `Are you sure you want to remove ${selectedBlocks.length} blocked slot(s)?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Unblock',
+          onPress: async () => {
+            try {
+              setSubmitting(true);
+              for (const blockId of selectedBlocks) {
+                await DoctorAPIService.removeBlockedSlot(blockId);
+              }
+              Alert.alert(
+                'Success',
+                `${selectedBlocks.length} blocked slot(s) have been removed successfully`,
+                [{ text: 'OK', onPress: () => { setUnblockModalVisible(false); fetchWorkplaces(); } }]
+              );
+            } catch (error) {
+              console.error('Error unblocking:', error);
+              Alert.alert('Error', 'Failed to unblock slots. Please try again.');
+            } finally {
+              setSubmitting(false);
+            }
+          }
+        }
+      ]
+    );
+  };
+
+  const formatBlockInfo = (block) => {
+    const date = new Date(block.blockDate).toLocaleDateString('en-US', {
+      weekday: 'short',
+      month: 'short',
+      day: 'numeric'
+    });
+    
+    if (block.isFullDay) {
+      return `${date} - Full Day`;
+    } else {
+      return `${date} - ${block.startTime} to ${block.endTime}`;
+    }
+  };
+
+  const renderDateOption = (option, label) => (
     <TouchableOpacity
       style={[
         styles.dateOption,
-        cancelDayData.dateOption === option && styles.dateOptionSelected
+        formData.dateOption === option && styles.dateOptionSelected
       ]}
-      onPress={() => setCancelDayData(prev => ({ ...prev, dateOption: option }))}
+      onPress={() => setFormData(prev => ({ ...prev, dateOption: option }))}
     >
       <Text style={[
         styles.dateOptionText,
-        cancelDayData.dateOption === option && styles.dateOptionTextSelected
+        formData.dateOption === option && styles.dateOptionTextSelected
       ]}>
         {label}
       </Text>
@@ -221,18 +415,65 @@ export default function CancelDay({ route, navigation }) {
         <Text style={styles.workplaceAddress}>{item.address}</Text>
       </View>
       
-      <TouchableOpacity 
-        style={styles.cancelButton}
-        onPress={() => openCancelDayModal(item)}
+      <View style={styles.actionButtonsContainer}>
+        <View style={styles.actionButtonsRow}>
+          <TouchableOpacity 
+            style={styles.cancelButton}
+            onPress={() => openModal(item, 'cancel')}
+          >
+            <Text style={styles.cancelButtonText} numberOfLines={1}>Cancel Day</Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity 
+            style={styles.blockButton}
+            onPress={() => openModal(item, 'block')}
+          >
+            <Text style={styles.blockButtonText} numberOfLines={1}>Block</Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity 
+            style={styles.unblockButton}
+            onPress={() => openUnblockModal(item)}
+          >
+            <Text style={styles.unblockButtonText} numberOfLines={1}>Unblock</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </View>
+  );
+
+  const renderTimePicker = (label, value, onChange) => (
+    <View style={styles.timePickerContainer}>
+      <Text style={styles.timePickerLabel}>{label}</Text>
+      <ScrollView 
+        style={styles.timeScrollPicker}
+        showsVerticalScrollIndicator={true}
+        nestedScrollEnabled={true}
       >
-        <Text style={styles.cancelButtonText}>Cancel Day</Text>
-      </TouchableOpacity>
+        {TIME_OPTIONS.map((time) => (
+          <TouchableOpacity
+            key={time}
+            style={[
+              styles.timeOption,
+              value === time && styles.timeOptionSelected
+            ]}
+            onPress={() => onChange(time)}
+          >
+            <Text style={[
+              styles.timeOptionText,
+              value === time && styles.timeOptionTextSelected
+            ]}>
+              {time}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </ScrollView>
     </View>
   );
 
   return (
     <View style={styles.container}>
-      <TopBar title="Cancel Day" onBack={() => navigation.goBack()} />
+      <TopBar title="Manage Availability" onBack={() => navigation.goBack()} />
       
       {loading ? (
         <View style={styles.loadingContainer}>
@@ -240,28 +481,36 @@ export default function CancelDay({ route, navigation }) {
           <Text style={styles.loadingText}>Loading workplaces...</Text>
         </View>
       ) : (
-        <FlatList
-          data={workplaces}
-          renderItem={renderWorkplaceCard}
-          keyExtractor={(item) => item.id ? item.id.toString() : Math.random().toString()}
-          contentContainerStyle={styles.listContainer}
-          refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-          }
-          ListEmptyComponent={
-            <View style={styles.emptyContainer}>
-              <Text style={styles.emptyText}>No workplaces found</Text>
-            </View>
-          }
-        />
+        <>
+          <View style={styles.infoNoteContainer}>
+            <Text style={styles.infoNoteIcon}>💡</Text>
+            <Text style={styles.infoNoteText}>
+              You can block specific time slots or entire day for your clinic/hospital using the <Text style={styles.infoNoteHighlight}>Block</Text> button below.
+            </Text>
+          </View>
+          <FlatList
+            data={workplaces}
+            renderItem={renderWorkplaceCard}
+            keyExtractor={(item) => item.id ? item.id.toString() : Math.random().toString()}
+            contentContainerStyle={styles.listContainer}
+            refreshControl={
+              <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+            }
+            ListEmptyComponent={
+              <View style={styles.emptyContainer}>
+                <Text style={styles.emptyText}>No workplaces found</Text>
+              </View>
+            }
+          />
+        </>
       )}
 
-      {/* Cancel Day Modal */}
+      {/* Cancel/Block Modal */}
       <Modal
         animationType="slide"
         transparent={true}
-        visible={cancelDayModalVisible}
-        onRequestClose={() => setCancelDayModalVisible(false)}
+        visible={modalVisible}
+        onRequestClose={() => setModalVisible(false)}
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalContainer}>
@@ -270,30 +519,32 @@ export default function CancelDay({ route, navigation }) {
               style={styles.modalScrollView} 
               showsVerticalScrollIndicator={false}
             >
-              <Text style={styles.modalTitle}>Cancel Day Appointments</Text>
+              <Text style={[styles.modalTitle, mode === 'block' && styles.modalTitleBlock]}>
+                {mode === 'cancel' ? 'Cancel Day Appointments' : 'Block Time Slots'}
+              </Text>
               <Text style={styles.modalSubtitle}>
                 {selectedWorkplace?.workplaceName}
               </Text>
               
               {/* Date Selection */}
-              <Text style={styles.sectionTitle}>Select Date to Cancel:</Text>
+              <Text style={styles.sectionTitle}>Select Date:</Text>
               <View style={styles.dateContainer}>
-                {renderCancelDateOption('today', 'Today')}
-                {renderCancelDateOption('tomorrow', 'Tomorrow')}
-                {renderCancelDateOption('custom', 'Custom Date')}
+                {renderDateOption('today', 'Today')}
+                {renderDateOption('tomorrow', 'Tomorrow')}
+                {renderDateOption('custom', 'Custom Date')}
               </View>
 
               {/* Custom Date Input */}
-              {cancelDayData.dateOption === 'custom' && (
+              {formData.dateOption === 'custom' && (
                 <View style={styles.inputGroup}>
-                  <Text style={styles.inputLabel}>Select Date to Cancel:</Text>
+                  <Text style={styles.inputLabel}>Select Date:</Text>
                   <DatePicker
-                    selectedDate={cancelDayData.customDateText}
+                    selectedDate={formData.customDateText}
                     onDateSelect={handleDateSelect}
                     minDate={new Date().toISOString().split('T')[0]}
-                    title="Select Cancellation Date"
-                    buttonTitle={cancelDayData.customDateText ? 
-                      new Date(cancelDayData.customDateText).toLocaleDateString('en-US', {
+                    title="Select Date"
+                    buttonTitle={formData.customDateText ? 
+                      new Date(formData.customDateText).toLocaleDateString('en-US', {
                         weekday: 'short',
                         year: 'numeric',
                         month: 'short',
@@ -304,31 +555,97 @@ export default function CancelDay({ route, navigation }) {
                 </View>
               )}
 
+              {/* Block Type Selection (only for block mode) */}
+              {mode === 'block' && (
+                <View style={styles.inputGroup}>
+                  <Text style={styles.inputLabel}>Block Type</Text>
+                  <View style={styles.blockTypeContainer}>
+                    <TouchableOpacity
+                      style={[
+                        styles.blockTypeOption,
+                        formData.blockType === 'fullDay' && styles.blockTypeOptionSelected
+                      ]}
+                      onPress={() => setFormData(prev => ({ ...prev, blockType: 'fullDay' }))}
+                    >
+                      <Text style={[
+                        styles.blockTypeText,
+                        formData.blockType === 'fullDay' && styles.blockTypeTextSelected
+                      ]}>Full Day</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[
+                        styles.blockTypeOption,
+                        formData.blockType === 'timeRange' && styles.blockTypeOptionSelected
+                      ]}
+                      onPress={() => setFormData(prev => ({ ...prev, blockType: 'timeRange' }))}
+                    >
+                      <Text style={[
+                        styles.blockTypeText,
+                        formData.blockType === 'timeRange' && styles.blockTypeTextSelected
+                      ]}>Time Range</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              )}
+
+              {/* Time Range Inputs (only for block mode with timeRange) */}
+              {mode === 'block' && formData.blockType === 'timeRange' && (
+                <View style={styles.inputGroup}>
+                  <Text style={styles.inputLabel}>Select Time Range</Text>
+                  <View style={styles.timeRangePickerContainer}>
+                    {renderTimePicker('Start Time', formData.startTime, 
+                      (time) => setFormData(prev => ({ ...prev, startTime: time })))}
+                    <Text style={styles.timeRangeSeparator}>to</Text>
+                    {renderTimePicker('End Time', formData.endTime, 
+                      (time) => setFormData(prev => ({ ...prev, endTime: time })))}
+                  </View>
+                </View>
+              )}
+
+              {/* Apply to All Workplaces (only for block mode) */}
+              {mode === 'block' && (
+                <TouchableOpacity
+                  style={styles.checkboxContainer}
+                  onPress={() => setFormData(prev => ({ ...prev, applyToAll: !prev.applyToAll }))}
+                >
+                  <View style={[styles.checkbox, formData.applyToAll && styles.checkboxChecked]}>
+                    {formData.applyToAll && <Text style={styles.checkmark}>✓</Text>}
+                  </View>
+                  <Text style={styles.checkboxLabel}>Apply to all workplaces</Text>
+                </TouchableOpacity>
+              )}
+
               {/* Reason Selection */}
               <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>Reason for Cancellation *</Text>
-                <Text style={styles.subLabel}>Please select a reason for canceling all appointments</Text>
+                <Text style={styles.inputLabel}>
+                  {mode === 'cancel' ? 'Reason for Cancellation *' : 'Reason for Blocking *'}
+                </Text>
+                <Text style={styles.subLabel}>
+                  {mode === 'cancel' 
+                    ? 'Please select a reason for canceling all appointments' 
+                    : 'Please select a reason (users will see this message)'}
+                </Text>
                 
                 <View style={styles.reasonsList}>
-                  {CANCEL_DAY_REASONS.map((reason, index) => (
+                  {REASONS.map((reason, index) => (
                     <TouchableOpacity
                       key={index}
                       style={[
                         styles.reasonOption,
-                        cancelDayData.selectedReason === reason && styles.selectedReasonOption
+                        formData.selectedReason === reason && styles.selectedReasonOption
                       ]}
                       onPress={() => handleReasonSelection(reason)}
                     >
                       <View style={styles.reasonOptionContent}>
                         <View style={[
                           styles.radioButton,
-                          cancelDayData.selectedReason === reason && styles.selectedRadioButton
+                          formData.selectedReason === reason && styles.selectedRadioButton
                         ]}>
-                          {cancelDayData.selectedReason === reason && <View style={styles.radioButtonInner} />}
+                          {formData.selectedReason === reason && <View style={styles.radioButtonInner} />}
                         </View>
                         <Text style={[
                           styles.reasonText,
-                          cancelDayData.selectedReason === reason && styles.selectedReasonText
+                          formData.selectedReason === reason && styles.selectedReasonText
                         ]}>
                           {reason}
                         </Text>
@@ -336,15 +653,15 @@ export default function CancelDay({ route, navigation }) {
                     </TouchableOpacity>
                   ))}
                   
-                  {cancelDayData.selectedReason === 'Other' && (
+                  {formData.selectedReason === 'Other' && (
                     <TextInput
                       ref={customReasonInputRef}
                       style={styles.customReasonInput}
                       placeholder="Please specify your reason..."
                       multiline={true}
                       numberOfLines={3}
-                      value={cancelDayData.customReason}
-                      onChangeText={(text) => setCancelDayData(prev => ({ ...prev, customReason: text }))}
+                      value={formData.customReason}
+                      onChangeText={(text) => setFormData(prev => ({ ...prev, customReason: text }))}
                       textAlignVertical="top"
                     />
                   )}
@@ -355,25 +672,125 @@ export default function CancelDay({ route, navigation }) {
               <View style={styles.modalButtons}>
                 <TouchableOpacity
                   style={styles.modalCancelButton}
-                  onPress={() => setCancelDayModalVisible(false)}
+                  onPress={() => setModalVisible(false)}
                   disabled={submitting}
                 >
                   <Text style={styles.modalCancelButtonText}>Cancel</Text>
                 </TouchableOpacity>
                 
                 <TouchableOpacity
-                  style={[styles.submitButton, submitting && styles.submitButtonDisabled]}
-                  onPress={handleCancelDay}
+                  style={[
+                    styles.submitButton, 
+                    mode === 'block' && styles.submitButtonBlock,
+                    submitting && styles.submitButtonDisabled
+                  ]}
+                  onPress={handleSubmit}
                   disabled={submitting}
                 >
                   {submitting ? (
                     <ActivityIndicator size="small" color="#fff" />
                   ) : (
-                    <Text style={styles.submitButtonText}>Confirm</Text>
+                    <Text style={styles.submitButtonText}>
+                      {mode === 'cancel' ? 'Cancel Appointments' : 'Block Appointments'}
+                    </Text>
                   )}
                 </TouchableOpacity>
               </View>
             </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Unblock Modal */}
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={unblockModalVisible}
+        onRequestClose={() => setUnblockModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContainer}>
+            <Text style={styles.unblockModalTitle}>Manage Blocked Slots</Text>
+            <Text style={styles.modalSubtitle}>
+              {selectedWorkplace?.workplaceName}
+            </Text>
+            
+            {loadingBlocks ? (
+              <View style={styles.loadingBlocksContainer}>
+                <ActivityIndicator size="large" color="#3498db" />
+                <Text style={styles.loadingText}>Loading blocked slots...</Text>
+              </View>
+            ) : existingBlocks.length === 0 ? (
+              <View style={styles.noBlocksContainer}>
+                <Text style={styles.noBlocksIcon}>✓</Text>
+                <Text style={styles.noBlocksText}>No blocked slots found for this workplace</Text>
+              </View>
+            ) : (
+              <ScrollView style={styles.blocksListContainer}>
+                <Text style={styles.selectInstructions}>
+                  Select the blocked slots you want to remove:
+                </Text>
+                {existingBlocks.map((block) => (
+                  <TouchableOpacity
+                    key={block.id}
+                    style={[
+                      styles.blockItem,
+                      selectedBlocks.includes(block.id) && styles.blockItemSelected
+                    ]}
+                    onPress={() => toggleBlockSelection(block.id)}
+                  >
+                    <View style={[
+                      styles.blockCheckbox,
+                      selectedBlocks.includes(block.id) && styles.blockCheckboxChecked
+                    ]}>
+                      {selectedBlocks.includes(block.id) && (
+                        <Text style={styles.blockCheckmark}>✓</Text>
+                      )}
+                    </View>
+                    <View style={styles.blockInfo}>
+                      <Text style={styles.blockDateText}>
+                        {formatBlockInfo(block)}
+                      </Text>
+                      <Text style={styles.blockReasonText}>
+                        {block.reason || 'No reason specified'}
+                      </Text>
+                      <Text style={styles.blockWorkplaceText}>
+                        {block.workplaceName || 'All Workplaces'}
+                      </Text>
+                    </View>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            )}
+            
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={styles.modalCancelButton}
+                onPress={() => setUnblockModalVisible(false)}
+                disabled={submitting}
+              >
+                <Text style={styles.modalCancelButtonText}>Close</Text>
+              </TouchableOpacity>
+              
+              {existingBlocks.length > 0 && (
+                <TouchableOpacity
+                  style={[
+                    styles.unblockSubmitButton,
+                    (submitting || selectedBlocks.length === 0) && styles.submitButtonDisabled
+                  ]}
+                  onPress={handleUnblock}
+                  disabled={submitting || selectedBlocks.length === 0}
+                >
+                  {submitting ? (
+                    <ActivityIndicator size="small" color="#fff" />
+                  ) : (
+                    <Text style={styles.submitButtonText}>
+                      Unblock ({selectedBlocks.length})
+                    </Text>
+                  )}
+                </TouchableOpacity>
+              )}
+            </View>
           </View>
         </View>
       </Modal>
@@ -397,6 +814,32 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f8f9fa',
+  },
+  infoNoteContainer: {
+    flexDirection: 'row',
+    backgroundColor: '#e3f2fd',
+    marginHorizontal: 16,
+    marginTop: 12,
+    marginBottom: 4,
+    padding: 12,
+    borderRadius: 10,
+    borderLeftWidth: 4,
+    borderLeftColor: '#2196F3',
+    alignItems: 'flex-start',
+  },
+  infoNoteIcon: {
+    fontSize: 18,
+    marginRight: 10,
+  },
+  infoNoteText: {
+    flex: 1,
+    fontSize: 13,
+    color: '#1565C0',
+    lineHeight: 18,
+  },
+  infoNoteHighlight: {
+    fontWeight: 'bold',
+    color: '#f39c12',
   },
   listContainer: {
     padding: 16,
@@ -436,13 +879,9 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 3.84,
     elevation: 5,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
   },
   workplaceContent: {
-    flex: 1,
-    marginRight: 16,
+    marginBottom: 12,
   },
   workplaceName: {
     fontSize: 18,
@@ -463,15 +902,64 @@ const styles = StyleSheet.create({
   },
   cancelButton: {
     backgroundColor: '#e74c3c',
-    paddingHorizontal: 20,
-    paddingVertical: 12,
+    paddingHorizontal: 6,
+    paddingVertical: 10,
     borderRadius: 8,
-    alignSelf: 'flex-start',
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 40,
+    marginHorizontal: 2,
   },
   cancelButtonText: {
     color: '#fff',
     fontWeight: '600',
-    fontSize: 14,
+    fontSize: 11,
+    textAlign: 'center',
+  },
+  blockButton: {
+    backgroundColor: '#f39c12',
+    paddingHorizontal: 6,
+    paddingVertical: 10,
+    borderRadius: 8,
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 40,
+    marginHorizontal: 2,
+  },
+  blockButtonText: {
+    color: '#fff',
+    fontWeight: '600',
+    fontSize: 11,
+    textAlign: 'center',
+  },
+  unblockButton: {
+    backgroundColor: '#27ae60',
+    paddingHorizontal: 6,
+    paddingVertical: 10,
+    borderRadius: 8,
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 40,
+    marginHorizontal: 2,
+  },
+  unblockButtonText: {
+    color: '#fff',
+    fontWeight: '600',
+    fontSize: 11,
+    textAlign: 'center',
+  },
+  actionButtonsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    width: '100%',
+  },
+  actionButtonsContainer: {
+    width: '100%',
+    marginTop: 12,
   },
   modalOverlay: {
     flex: 1,
@@ -558,9 +1046,9 @@ const styles = StyleSheet.create({
   modalButtons: {
     flexDirection: 'row',
     paddingTop: 20,
-    paddingHorizontal: 20,
+    paddingHorizontal: 10,
     paddingBottom: 20,
-    gap: 12,
+    justifyContent: 'space-between',
   },
   modalCancelButton: {
     flex: 1,
@@ -568,12 +1056,15 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     borderRadius: 10,
     alignItems: 'center',
+    justifyContent: 'center',
     minHeight: 48,
+    marginHorizontal: 5,
   },
   modalCancelButtonText: {
     color: '#fff',
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '600',
+    textAlign: 'center',
   },
   submitButton: {
     flex: 1,
@@ -581,15 +1072,18 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     borderRadius: 10,
     alignItems: 'center',
+    justifyContent: 'center',
     minHeight: 48,
+    marginHorizontal: 5,
   },
   submitButtonDisabled: {
     backgroundColor: '#bdc3c7',
   },
   submitButtonText: {
     color: '#fff',
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '600',
+    textAlign: 'center',
   },
   subLabel: {
     fontSize: 14,
@@ -653,5 +1147,236 @@ const styles = StyleSheet.create({
     marginTop: 10,
     backgroundColor: '#fff',
     textAlignVertical: 'top',
+  },
+  modalTitleBlock: {
+    color: '#f39c12',
+  },
+  blockTypeContainer: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  blockTypeOption: {
+    flex: 1,
+    backgroundColor: '#ecf0f1',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: 'transparent',
+  },
+  blockTypeOptionSelected: {
+    backgroundColor: '#ffeaa7',
+    borderColor: '#f39c12',
+  },
+  blockTypeText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#2c3e50',
+  },
+  blockTypeTextSelected: {
+    color: '#d68910',
+    fontWeight: '600',
+  },
+  timeRangeContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  timeInputContainer: {
+    flex: 1,
+  },
+  timeInputLabel: {
+    fontSize: 12,
+    color: '#7f8c8d',
+    marginBottom: 4,
+  },
+  timeInput: {
+    borderWidth: 1,
+    borderColor: '#bdc3c7',
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 16,
+    backgroundColor: '#fff',
+    textAlign: 'center',
+  },
+  timeSeparator: {
+    fontSize: 16,
+    color: '#7f8c8d',
+    marginTop: 18,
+  },
+  checkboxContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 20,
+    paddingVertical: 8,
+  },
+  checkbox: {
+    width: 24,
+    height: 24,
+    borderWidth: 2,
+    borderColor: '#bdc3c7',
+    borderRadius: 4,
+    marginRight: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  checkboxChecked: {
+    backgroundColor: '#f39c12',
+    borderColor: '#d68910',
+  },
+  checkmark: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  checkboxLabel: {
+    fontSize: 16,
+    color: '#2c3e50',
+  },
+  submitButtonBlock: {
+    backgroundColor: '#f39c12',
+  },
+  // Time Picker Styles
+  timePickerContainer: {
+    flex: 1,
+  },
+  timePickerLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#2c3e50',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  timeScrollPicker: {
+    height: 150,
+    backgroundColor: '#f8f9fa',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#ddd',
+  },
+  timeOption: {
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+  },
+  timeOptionSelected: {
+    backgroundColor: '#f39c12',
+  },
+  timeOptionText: {
+    fontSize: 16,
+    textAlign: 'center',
+    color: '#2c3e50',
+  },
+  timeOptionTextSelected: {
+    color: '#fff',
+    fontWeight: '600',
+  },
+  timeRangePickerContainer: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 10,
+  },
+  timeRangeSeparator: {
+    fontSize: 18,
+    color: '#7f8c8d',
+    marginTop: 85,
+    fontWeight: '600',
+  },
+  // Unblock Modal Styles
+  unblockModalTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#27ae60',
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  loadingBlocksContainer: {
+    padding: 40,
+    alignItems: 'center',
+  },
+  noBlocksContainer: {
+    padding: 40,
+    alignItems: 'center',
+  },
+  noBlocksIcon: {
+    fontSize: 50,
+    color: '#27ae60',
+    marginBottom: 10,
+  },
+  noBlocksText: {
+    fontSize: 16,
+    color: '#7f8c8d',
+    textAlign: 'center',
+  },
+  blocksListContainer: {
+    maxHeight: 300,
+    marginVertical: 10,
+  },
+  selectInstructions: {
+    fontSize: 14,
+    color: '#7f8c8d',
+    marginBottom: 10,
+  },
+  blockItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f8f9fa',
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: '#e9ecef',
+  },
+  blockItemSelected: {
+    backgroundColor: '#e8f5e9',
+    borderColor: '#27ae60',
+  },
+  blockCheckbox: {
+    width: 24,
+    height: 24,
+    borderWidth: 2,
+    borderColor: '#bdc3c7',
+    borderRadius: 4,
+    marginRight: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  blockCheckboxChecked: {
+    backgroundColor: '#27ae60',
+    borderColor: '#1e8449',
+  },
+  blockCheckmark: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: 'bold',
+  },
+  blockInfo: {
+    flex: 1,
+  },
+  blockDateText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#2c3e50',
+    marginBottom: 2,
+  },
+  blockReasonText: {
+    fontSize: 14,
+    color: '#7f8c8d',
+    fontStyle: 'italic',
+  },
+  blockWorkplaceText: {
+    fontSize: 12,
+    color: '#3498db',
+    marginTop: 2,
+  },
+  unblockSubmitButton: {
+    flex: 1,
+    backgroundColor: '#27ae60',
+    paddingVertical: 14,
+    borderRadius: 10,
+    alignItems: 'center',
+    minHeight: 48,
   },
 });

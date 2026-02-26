@@ -29,6 +29,7 @@ export default function BookAppointment({ route, navigation }) {
   const [availableDates, setAvailableDates] = useState([]); // Array of available dates
   const [selectedDate, setSelectedDate] = useState(null); // Currently selected date
   const [currentDateSlots, setCurrentDateSlots] = useState([]); // Slots for current selected date
+  const [blockedDates, setBlockedDates] = useState({}); // Store blocked dates info
   const [recentDoctors, setRecentDoctors] = useState([]); // Store recent doctors for quick access
   const [loading, setLoading] = useState(false);
   const [step, setStep] = useState('search'); // 'search', 'workplaces', 'slots'
@@ -260,6 +261,16 @@ export default function BookAppointment({ route, navigation }) {
       
       // console.log('📅 Received slots data for booking:', slotsData);
       
+      // Store blocked dates information if available
+      let blockedDatesData = {};
+      if (slotsData.blockedDates) {
+        blockedDatesData = slotsData.blockedDates;
+        setBlockedDates(slotsData.blockedDates);
+        console.log('🚫 Blocked dates received:', slotsData.blockedDates);
+      } else {
+        setBlockedDates({});
+      }
+      
       // Check if we received the structured response
       if (!slotsData.slotsByDate) {
         console.warn('⚠️ No slotsByDate found in response:', slotsData);
@@ -281,19 +292,42 @@ export default function BookAppointment({ route, navigation }) {
         
         // Only include future dates
         if (slotDate >= new Date(now.getFullYear(), now.getMonth(), now.getDate())) {
-          const dateSlots = timeSlots.map((timeSlot, index) => ({
-            id: `${date}-${index}`,
-            date: date,
-            slotTime: timeSlot,
-            isAvailable: true,
-            workplaceId: workplace.workplaceId,
-            doctorId: workplace.doctorId,
-            doctorName: slotsData.doctorName || workplace.doctorName,
-            workplaceName: slotsData.workplaceName || workplace.workplaceName
-          }));
+          // Check if this date is blocked (full day) - handle both isFullDay and fullDay from Jackson
+          const blockInfo = blockedDatesData[date];
+          const isBlockedFullDay = blockInfo?.isFullDay || blockInfo?.fullDay;
           
-          if (dateSlots.length > 0) {
-            processedSlotsByDate[date] = dateSlots;
+          if (isBlockedFullDay) {
+            // Include blocked day with empty slots - will show blocked message
+            processedSlotsByDate[date] = [];
+            dates.push(date);
+          } else {
+            const dateSlots = timeSlots.map((timeSlot, index) => ({
+              id: `${date}-${index}`,
+              date: date,
+              slotTime: timeSlot,
+              isAvailable: true,
+              workplaceId: workplace.workplaceId,
+              doctorId: workplace.doctorId,
+              doctorName: slotsData.doctorName || workplace.doctorName,
+              workplaceName: slotsData.workplaceName || workplace.workplaceName
+            }));
+            
+            if (dateSlots.length > 0) {
+              processedSlotsByDate[date] = dateSlots;
+              dates.push(date);
+            }
+          }
+        }
+      });
+      
+      // Also add any blocked dates that might not be in slotsByDate
+      Object.entries(blockedDatesData).forEach(([date, blockInfo]) => {
+        const isFullDayBlocked = blockInfo.isFullDay || blockInfo.fullDay;
+        if (isFullDayBlocked && !dates.includes(date)) {
+          const [datePart] = date.split('T');
+          const slotDate = new Date(datePart + 'T12:00:00');
+          if (slotDate >= new Date(now.getFullYear(), now.getMonth(), now.getDate())) {
+            processedSlotsByDate[date] = [];
             dates.push(date);
           }
         }
@@ -730,9 +764,79 @@ export default function BookAppointment({ route, navigation }) {
               )}
             </View>
             
+            {/* Date Navigation - Show for all cases including blocked days */}
+            {!loading && !customSelectedDate && availableDates.length > 0 && (
+              <View style={styles.dateNavigation}>
+                <TouchableOpacity 
+                  style={[
+                    styles.dateNavButton,
+                    availableDates.indexOf(selectedDate) === 0 && styles.disabledButton
+                  ]}
+                  onPress={goToPreviousDate}
+                  disabled={availableDates.indexOf(selectedDate) === 0}
+                >
+                  <Text style={[
+                    styles.dateNavButtonText,
+                    availableDates.indexOf(selectedDate) === 0 && styles.disabledButtonText
+                  ]}>
+                    ← Prev
+                  </Text>
+                </TouchableOpacity>
+                
+                <View style={styles.dateInfo}>
+                  <Text style={styles.currentDate}>
+                    {selectedDate && new Date(selectedDate).toLocaleDateString('en-US', {
+                      weekday: 'short',
+                      year: 'numeric',
+                      month: 'short', 
+                      day: 'numeric'
+                    })}
+                  </Text>
+                  <Text style={styles.dateCounter}>
+                    {getCurrentDateIndex()} of {availableDates.length}
+                  </Text>
+                </View>
+                
+                <TouchableOpacity 
+                  style={[
+                    styles.dateNavButton,
+                    availableDates.indexOf(selectedDate) === availableDates.length - 1 && styles.disabledButton
+                  ]}
+                  onPress={goToNextDate}
+                  disabled={availableDates.indexOf(selectedDate) === availableDates.length - 1}
+                >
+                  <Text style={[
+                    styles.dateNavButtonText,
+                    availableDates.indexOf(selectedDate) === availableDates.length - 1 && styles.disabledButtonText
+                  ]}>
+                    Next →
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            )}
+
             {loading ? (
               <View style={styles.loadingContainer}>
                 <Text style={styles.loadingText}>Loading slots...</Text>
+              </View>
+            ) : (blockedDates[selectedDate]?.isFullDay || blockedDates[selectedDate]?.fullDay) ? (
+              <View style={styles.blockedDayContainer}>
+                <Text style={styles.blockedDayIcon}>🚫</Text>
+                <Text style={styles.blockedDayTitle}>Day Blocked by Doctor</Text>
+                <Text style={styles.blockedDaySubtitle}>
+                  This day has been blocked by the doctor for taking appointments.
+                </Text>
+                {blockedDates[selectedDate]?.reason && (
+                  <View style={styles.blockedReasonBox}>
+                    <Text style={styles.blockedReasonLabel}>Doctor's Reason:</Text>
+                    <Text style={styles.blockedReasonText}>
+                      "{blockedDates[selectedDate].reason}"
+                    </Text>
+                  </View>
+                )}
+                <Text style={styles.blockedDaySuggestion}>
+                  Please select a different date to book an appointment.
+                </Text>
               </View>
             ) : availableDates.length === 0 ? (
               <View style={styles.noSlotsContainer}>
@@ -747,65 +851,14 @@ export default function BookAppointment({ route, navigation }) {
               </View>
             ) : (
               <>
-                {/* Date Navigation - Only show if not using custom date picker */}
-                {!customSelectedDate && availableDates.length > 1 && (
-                  <View style={styles.dateNavigation}>
-                    <TouchableOpacity 
-                      style={[
-                        styles.dateNavButton,
-                        availableDates.indexOf(selectedDate) === 0 && styles.disabledButton
-                      ]}
-                      onPress={goToPreviousDate}
-                      disabled={availableDates.indexOf(selectedDate) === 0}
-                    >
-                      <Text style={[
-                        styles.dateNavButtonText,
-                        availableDates.indexOf(selectedDate) === 0 && styles.disabledButtonText
-                      ]}>
-                        ← Previous
-                      </Text>
-                    </TouchableOpacity>
-                    
-                    <View style={styles.dateInfo}>
-                      <Text style={styles.currentDate}>
-                        {selectedDate && new Date(selectedDate).toLocaleDateString('en-US', {
-                          weekday: 'long',
-                          year: 'numeric',
-                          month: 'long', 
-                          day: 'numeric'
-                        })}
-                      </Text>
-                      <Text style={styles.dateCounter}>
-                        {getCurrentDateIndex()} of {availableDates.length}
-                      </Text>
-                    </View>
-                    
-                    <TouchableOpacity 
-                      style={[
-                        styles.dateNavButton,
-                        availableDates.indexOf(selectedDate) === availableDates.length - 1 && styles.disabledButton
-                      ]}
-                      onPress={goToNextDate}
-                      disabled={availableDates.indexOf(selectedDate) === availableDates.length - 1}
-                    >
-                      <Text style={[
-                        styles.dateNavButtonText,
-                        availableDates.indexOf(selectedDate) === availableDates.length - 1 && styles.disabledButtonText
-                      ]}>
-                        Next →
-                      </Text>
-                    </TouchableOpacity>
-                  </View>
-                )}
-
                 {/* Current Date Display for Custom Selected Date */}
                 {customSelectedDate && (
                   <View style={styles.customDateDisplay}>
                     <Text style={styles.customDateText}>
                       {selectedDate && new Date(selectedDate).toLocaleDateString('en-US', {
-                        weekday: 'long',
+                        weekday: 'short',
                         year: 'numeric',
-                        month: 'long', 
+                        month: 'short', 
                         day: 'numeric'
                       })}
                     </Text>
@@ -1164,6 +1217,60 @@ const styles = StyleSheet.create({
     color: '#7f8c8d',
     textAlign: 'center',
     lineHeight: 20,
+  },
+  blockedDayContainer: {
+    backgroundColor: '#fff8e1',
+    borderRadius: 12,
+    padding: 30,
+    alignItems: 'center',
+    marginVertical: 20,
+    borderWidth: 1,
+    borderColor: '#f39c12',
+  },
+  blockedDayIcon: {
+    fontSize: 50,
+    marginBottom: 15,
+  },
+  blockedDayTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#d68910',
+    marginBottom: 10,
+    textAlign: 'center',
+  },
+  blockedDaySubtitle: {
+    fontSize: 16,
+    color: '#7f8c8d',
+    textAlign: 'center',
+    lineHeight: 22,
+    marginBottom: 15,
+  },
+  blockedReasonBox: {
+    backgroundColor: '#fef9e7',
+    borderRadius: 8,
+    padding: 15,
+    width: '100%',
+    marginBottom: 15,
+    borderLeftWidth: 4,
+    borderLeftColor: '#f39c12',
+  },
+  blockedReasonLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#d68910',
+    marginBottom: 5,
+  },
+  blockedReasonText: {
+    fontSize: 15,
+    color: '#5d4e37',
+    lineHeight: 22,
+    fontStyle: 'italic',
+  },
+  blockedDaySuggestion: {
+    fontSize: 14,
+    color: '#27ae60',
+    textAlign: 'center',
+    fontWeight: '500',
   },
   slotsGrid: {
     flexDirection: 'row',
