@@ -105,6 +105,10 @@ export default function ActiveBookings({ userId, onReschedule, onCancel, refresh
       <Text style={styles.doctorName}>
         👨‍⚕️ Dr. {appointment.doctorName || 'N/A'}
       </Text>
+      {/* If appointment booked for a family member, show member name */}
+      {(appointment.patientMemberId || appointment.patient_member_id) && (
+        <Text style={styles.familyBookedText}>👪 Booked for family: {appointment.patientName || appointment.patient_name || 'Family Member'}</Text>
+      )}
       
       <Text style={styles.appointmentTime}>
         🕐 {appointment.slot} • {format(new Date(appointment.appointmentDate), 'MMM dd, yyyy')}
@@ -338,6 +342,12 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#2c3e50',
     marginBottom: 6,
+  },
+  familyBookedText: {
+    fontSize: 13,
+    color: '#34495e',
+    marginBottom: 6,
+    fontStyle: 'italic',
   },
   appointmentTime: {
     fontSize: 13,

@@ -8,6 +8,8 @@ import {
   RefreshControl,
   Alert,
   Linking,
+  Modal,
+  TextInput,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
@@ -28,6 +30,22 @@ export default function UserHome({ route, navigation }) {
   const [refreshing, setRefreshing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [appointmentsRefreshTrigger, setAppointmentsRefreshTrigger] = useState(0);
+  
+  // Family members state
+  const [familyMembers, setFamilyMembers] = useState([]);
+  const [showAddMemberModal, setShowAddMemberModal] = useState(false);
+  const [showViewMemberModal, setShowViewMemberModal] = useState(false);
+  const [selectedMember, setSelectedMember] = useState(null);
+  const [newMemberName, setNewMemberName] = useState('');
+  const [newMemberAge, setNewMemberAge] = useState('');
+  const [newMemberRelationship, setNewMemberRelationship] = useState('');
+  const [newMemberGender, setNewMemberGender] = useState('');
+  const [newMemberContact, setNewMemberContact] = useState('');
+  const [showGenderPicker, setShowGenderPicker] = useState(false);
+  const [showRelationshipPicker, setShowRelationshipPicker] = useState(false);
+  
+  const genderOptions = ['Male', 'Female', 'Other'];
+  const relationshipOptions = ['Father', 'Mother', 'Son', 'Daughter', 'Brother', 'Sister', 'Spouse', 'Grandfather', 'Grandmother', 'Other'];
 
   useEffect(() => {
     initializeUser();
@@ -98,12 +116,71 @@ export default function UserHome({ route, navigation }) {
       if (profile?.fullName) {
         setUserFullName(profile.fullName);
       }
+      
+      // Fetch family members
+      await fetchFamilyMembers(userIdToFetch);
     } catch (error) {
       console.error('❌ Error fetching user profile:', error);
       Alert.alert('Error', 'Failed to load user profile');
     } finally {
       setLoading(false);
     }
+  };
+  
+  const fetchFamilyMembers = async (userIdToFetch = userId) => {
+    try {
+      const members = await UserAPIService.getFamilyMembers(userIdToFetch);
+      setFamilyMembers(members || []);
+    } catch (error) {
+      console.log('Failed to fetch family members:', error.message);
+    }
+  };
+  
+  const handleAddMember = async () => {
+    if (!newMemberName.trim()) {
+      Alert.alert('Error', 'Please enter a name');
+      return;
+    }
+    
+    try {
+      const payload = {
+        name: newMemberName.trim(),
+        age: newMemberAge ? parseInt(newMemberAge, 10) : null,
+        relationship: newMemberRelationship.trim(),
+        gender: newMemberGender.trim(),
+        contact: newMemberContact.trim(),
+      };
+      
+      await UserAPIService.createFamilyMember(userId, payload);
+      await fetchFamilyMembers();
+      
+      // Clear form
+      setNewMemberName('');
+      setNewMemberAge('');
+      setNewMemberRelationship('');
+      setNewMemberGender('');
+      setNewMemberContact('');
+      setShowAddMemberModal(false);
+      
+      Alert.alert('Success', 'Family member added successfully');
+    } catch (error) {
+      console.error('Failed to add family member:', error);
+      Alert.alert('Error', 'Failed to add family member');
+    }
+  };
+  
+  const handleViewMember = (member) => {
+    setSelectedMember(member);
+    setShowViewMemberModal(true);
+  };
+  
+  const handleBookForMember = () => {
+    setShowViewMemberModal(false);
+    navigation.navigate('BookAppointment', { 
+      userId,
+      familyMemberId: selectedMember?.id,
+      familyMemberName: selectedMember?.name
+    });
   };
 
   const onRefresh = React.useCallback(async () => {
@@ -210,6 +287,72 @@ ${userProfile?.fullName || 'Line App User'}`;
           <Text style={styles.welcomeSubtitle}>
             How can we help you today?
           </Text>
+        </View>
+
+        {/* Family Members Section */}
+        <View style={styles.familySection}>
+          <Text style={styles.familySectionTitle}>Family</Text>
+          <View style={styles.familyScrollContainer}>
+            <ScrollView 
+              horizontal 
+              showsHorizontalScrollIndicator={true} 
+              style={styles.familyScrollView}
+              contentContainerStyle={styles.familyScrollContent}
+            >
+              {/* You - Profile Icon */}
+              <TouchableOpacity 
+                style={styles.familyMemberCircle}
+                onPress={() => navigation.navigate('UserProfile', { userId })}
+              >
+                <View style={styles.circleIconContainer}>
+                  <Text style={styles.circleIcon}>👤</Text>
+                </View>
+                <Text style={styles.familyMemberName}>You</Text>
+              </TouchableOpacity>
+              
+              {/* Existing Family Members */}
+              {familyMembers.map((member) => (
+                <TouchableOpacity 
+                  key={member.id}
+                  style={styles.familyMemberCircle}
+                  onPress={() => handleViewMember(member)}
+                >
+                  <View style={styles.circleIconContainer}>
+                    <Text style={styles.circleIcon}>👤</Text>
+                  </View>
+                  <Text style={styles.familyMemberName} numberOfLines={1}>
+                    {member.name}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+              
+              {/* Add New Member - Inline (when 2 or fewer members) */}
+              {familyMembers.length <= 2 && (
+                <TouchableOpacity 
+                  style={styles.familyMemberCircle}
+                  onPress={() => setShowAddMemberModal(true)}
+                >
+                  <View style={[styles.circleIconContainer, styles.addCircle]}>
+                    <Text style={styles.addIcon}>+</Text>
+                  </View>
+                  <Text style={styles.familyMemberName}>Add</Text>
+                </TouchableOpacity>
+              )}
+            </ScrollView>
+            
+            {/* Add New Member - Fixed to Right (when more than 2 members) */}
+            {familyMembers.length > 2 && (
+              <TouchableOpacity 
+                style={styles.familyAddButtonFixed}
+                onPress={() => setShowAddMemberModal(true)}
+              >
+                <View style={[styles.circleIconContainer, styles.addCircle]}>
+                  <Text style={styles.addIcon}>+</Text>
+                </View>
+                <Text style={styles.familyMemberName}>Add</Text>
+              </TouchableOpacity>
+            )}
+          </View>
         </View>
 
         {/* Active Bookings Section */}
@@ -330,6 +473,215 @@ ${userProfile?.fullName || 'Line App User'}`;
         {/* Bottom Spacing for Navigation */}
         <View style={styles.bottomSpacing} />
       </ScrollView>
+      
+      {/* Add Family Member Modal */}
+      <Modal
+        visible={showAddMemberModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowAddMemberModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContainer}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Add Family Member</Text>
+              <TouchableOpacity onPress={() => setShowAddMemberModal(false)}>
+                <Text style={styles.modalCloseButton}>✕</Text>
+              </TouchableOpacity>
+            </View>
+            
+            <ScrollView style={styles.modalContent}>
+              <Text style={styles.inputLabel}>Name *</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Enter name"
+                value={newMemberName}
+                onChangeText={setNewMemberName}
+              />
+              
+              <Text style={styles.inputLabel}>Age</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Enter age"
+                value={newMemberAge}
+                onChangeText={setNewMemberAge}
+                keyboardType="numeric"
+              />
+              
+              <Text style={styles.inputLabel}>Relationship</Text>
+              <TouchableOpacity 
+                style={styles.input}
+                onPress={() => setShowRelationshipPicker(true)}
+              >
+                <Text style={newMemberRelationship ? styles.inputText : styles.placeholderText}>
+                  {newMemberRelationship || 'Select relationship'}
+                </Text>
+              </TouchableOpacity>
+              
+              <Text style={styles.inputLabel}>Gender</Text>
+              <TouchableOpacity 
+                style={styles.input}
+                onPress={() => setShowGenderPicker(true)}
+              >
+                <Text style={newMemberGender ? styles.inputText : styles.placeholderText}>
+                  {newMemberGender || 'Select gender'}
+                </Text>
+              </TouchableOpacity>
+              
+              <Text style={styles.inputLabel}>Contact</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Phone number"
+                value={newMemberContact}
+                onChangeText={setNewMemberContact}
+                keyboardType="phone-pad"
+              />
+              
+              <View style={styles.modalContentSpacing} />
+            </ScrollView>
+            
+            <View style={styles.modalFooter}>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.cancelButton]}
+                onPress={() => setShowAddMemberModal(false)}
+              >
+                <Text style={styles.cancelButtonText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.saveButton]}
+                onPress={handleAddMember}
+              >
+                <Text style={styles.saveButtonText}>Save</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+      
+      {/* Gender Picker Modal */}
+      <Modal
+        visible={showGenderPicker}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowGenderPicker(false)}
+      >
+        <TouchableOpacity 
+          style={styles.pickerOverlay}
+          activeOpacity={1}
+          onPress={() => setShowGenderPicker(false)}
+        >
+          <View style={styles.pickerContainer}>
+            <Text style={styles.pickerTitle}>Select Gender</Text>
+            {genderOptions.map((option) => (
+              <TouchableOpacity
+                key={option}
+                style={styles.pickerOption}
+                onPress={() => {
+                  setNewMemberGender(option);
+                  setShowGenderPicker(false);
+                }}
+              >
+                <Text style={styles.pickerOptionText}>{option}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </TouchableOpacity>
+      </Modal>
+      
+      {/* Relationship Picker Modal */}
+      <Modal
+        visible={showRelationshipPicker}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowRelationshipPicker(false)}
+      >
+        <TouchableOpacity 
+          style={styles.pickerOverlay}
+          activeOpacity={1}
+          onPress={() => setShowRelationshipPicker(false)}
+        >
+          <View style={styles.pickerContainer}>
+            <Text style={styles.pickerTitle}>Select Relationship</Text>
+            <ScrollView style={styles.pickerScrollView}>
+              {relationshipOptions.map((option) => (
+                <TouchableOpacity
+                  key={option}
+                  style={styles.pickerOption}
+                  onPress={() => {
+                    setNewMemberRelationship(option);
+                    setShowRelationshipPicker(false);
+                  }}
+                >
+                  <Text style={styles.pickerOptionText}>{option}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        </TouchableOpacity>
+      </Modal>
+      
+      {/* View/Edit Family Member Modal */}
+      <Modal
+        visible={showViewMemberModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowViewMemberModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContainer}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Family Member Details</Text>
+              <TouchableOpacity onPress={() => setShowViewMemberModal(false)}>
+                <Text style={styles.modalCloseButton}>✕</Text>
+              </TouchableOpacity>
+            </View>
+            
+            <View style={styles.modalContent}>
+              <View style={styles.memberDetailRow}>
+                <Text style={styles.detailLabel}>Name:</Text>
+                <Text style={styles.detailValue}>{selectedMember?.name}</Text>
+              </View>
+              
+              {selectedMember?.age && (
+                <View style={styles.memberDetailRow}>
+                  <Text style={styles.detailLabel}>Age:</Text>
+                  <Text style={styles.detailValue}>{selectedMember.age}</Text>
+                </View>
+              )}
+              
+              {selectedMember?.relationship && (
+                <View style={styles.memberDetailRow}>
+                  <Text style={styles.detailLabel}>Relationship:</Text>
+                  <Text style={styles.detailValue}>{selectedMember.relationship}</Text>
+                </View>
+              )}
+              
+              {selectedMember?.gender && (
+                <View style={styles.memberDetailRow}>
+                  <Text style={styles.detailLabel}>Gender:</Text>
+                  <Text style={styles.detailValue}>{selectedMember.gender}</Text>
+                </View>
+              )}
+              
+              {selectedMember?.contact && (
+                <View style={styles.memberDetailRow}>
+                  <Text style={styles.detailLabel}>Contact:</Text>
+                  <Text style={styles.detailValue}>{selectedMember.contact}</Text>
+                </View>
+              )}
+            </View>
+            
+            <View style={styles.modalFooter}>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.bookButton]}
+                onPress={handleBookForMember}
+              >
+                <Text style={styles.bookButtonText}>📅 Book Appointment</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
       
       <BottomNavigation 
         activeTab="appointments"
@@ -564,5 +916,228 @@ const styles = StyleSheet.create({
     fontSize: 18,
     color: '#3498db',
     fontWeight: 'bold',
+  },
+  // Family Members Section Styles
+  familySection: {
+    backgroundColor: '#fff',
+    padding: 20,
+    marginBottom: 10,
+  },
+  familySectionTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#2c3e50',
+    marginBottom: 15,
+  },
+  familyScrollContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  familyScrollView: {
+    flexDirection: 'row',
+    flex: 1,
+  },
+  familyScrollContent: {
+    paddingRight: 10,
+  },
+  familyMemberCircle: {
+    alignItems: 'center',
+    marginRight: 20,
+    width: 70,
+  },
+  familyAddButtonFixed: {
+    alignItems: 'center',
+    marginLeft: 10,
+    width: 70,
+  },
+  circleIconContainer: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: '#f0f0f0',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 8,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+  },
+  addCircle: {
+    backgroundColor: '#3498db',
+  },
+  circleIcon: {
+    fontSize: 28,
+  },
+  addIcon: {
+    fontSize: 32,
+    color: '#fff',
+    fontWeight: '300',
+  },
+  familyMemberName: {
+    fontSize: 12,
+    color: '#2c3e50',
+    textAlign: 'center',
+    fontWeight: '500',
+  },
+  // Modal Styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContainer: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    width: '90%',
+    maxHeight: '80%',
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e1e8ed',
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#2c3e50',
+  },
+  modalCloseButton: {
+    fontSize: 24,
+    color: '#7f8c8d',
+    fontWeight: '300',
+  },
+  modalContent: {
+    padding: 20,
+    maxHeight: 400,
+  },
+  inputLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#2c3e50',
+    marginBottom: 8,
+    marginTop: 12,
+  },
+  input: {
+    backgroundColor: '#f8f9fa',
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 16,
+    borderWidth: 1,
+    borderColor: '#e1e8ed',
+  },
+  inputText: {
+    fontSize: 16,
+    color: '#2c3e50',
+  },
+  placeholderText: {
+    fontSize: 16,
+    color: '#95a5a6',
+  },
+  modalContentSpacing: {
+    height: 20,
+  },
+  modalFooter: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    padding: 20,
+    borderTopWidth: 1,
+    borderTopColor: '#e1e8ed',
+    gap: 12,
+  },
+  modalButton: {
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 8,
+    minWidth: 100,
+    alignItems: 'center',
+  },
+  cancelButton: {
+    backgroundColor: '#f8f9fa',
+    borderWidth: 1,
+    borderColor: '#e1e8ed',
+  },
+  cancelButtonText: {
+    color: '#7f8c8d',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  saveButton: {
+    backgroundColor: '#3498db',
+  },
+  saveButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  bookButton: {
+    backgroundColor: '#27ae60',
+    flex: 1,
+  },
+  bookButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  memberDetailRow: {
+    flexDirection: 'row',
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  detailLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#7f8c8d',
+    width: 120,
+  },
+  detailValue: {
+    fontSize: 16,
+    color: '#2c3e50',
+    flex: 1,
+  },
+  // Picker Modal Styles
+  pickerOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  pickerContainer: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    width: '80%',
+    maxHeight: '60%',
+    padding: 20,
+  },
+  pickerTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#2c3e50',
+    marginBottom: 15,
+    textAlign: 'center',
+  },
+  pickerScrollView: {
+    maxHeight: 300,
+  },
+  pickerOption: {
+    paddingVertical: 15,
+    paddingHorizontal: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  pickerOptionText: {
+    fontSize: 16,
+    color: '#2c3e50',
   },
 });

@@ -4,11 +4,11 @@
     "slug": "line-app",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/Logo.jpeg",
     "userInterfaceStyle": "light",
     "newArchEnabled": false,
     "splash": {
-      "image": "./assets/splash-icon.png",
+      "image": "./assets/Logo.jpeg",
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
@@ -18,7 +18,7 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
+        "foregroundImage": "./assets/Logo.jpeg",
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
@@ -33,7 +33,7 @@
       ]
     },
     "web": {
-      "favicon": "./assets/favicon.png",
+      "favicon": "./assets/Logo.jpeg",
       "bundler": "metro"
     },
     "plugins": [
@@ -41,17 +41,17 @@
       [
         "expo-notifications",
         {
-          "icon": "./assets/icon.png",
+          "icon": "./assets/Logo.jpeg",
           "color": "#2196F3",
           "defaultChannel": "default"
         }
       ]
     ],
     "notification": {
-      "icon": "./assets/icon.png",
+      "icon": "./assets/Logo.jpeg",
       "color": "#2196F3",
       "androidMode": "default",
-      "androidCollapsedTitle": "Line App",
+      "androidCollapsedTitle": "NeextApp",
       "iosDisplayInForeground": true
     },
     "extra": {

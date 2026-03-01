@@ -15,6 +15,7 @@ import * as SecureStore from 'expo-secure-store';
 import { UserAPIService } from '../services/doctorApiService';
 import { api } from '../services/api';
 import BottomNavigation from '../components/BottomNavigation';
+import { Modal, TextInput } from 'react-native';
 
 export default function UserProfile({ route, navigation }) {
   const { userId } = route.params;
@@ -24,6 +25,10 @@ export default function UserProfile({ route, navigation }) {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [userFullName, setUserFullName] = useState('');
+  const [familyMembers, setFamilyMembers] = useState([]);
+  const [showAddMemberModal, setShowAddMemberModal] = useState(false);
+  const [newMemberName, setNewMemberName] = useState('');
+  const [newMemberAge, setNewMemberAge] = useState('');
   
   // State for expandable sections
   const [expandedSections, setExpandedSections] = useState({
@@ -73,6 +78,13 @@ export default function UserProfile({ route, navigation }) {
       ]);
       
       setUserDetails(userProfile);
+      // fetch family members
+      try {
+        const fm = await UserAPIService.getFamilyMembers(userId);
+        setFamilyMembers(fm || []);
+      } catch (e) {
+        console.log('Failed to fetch family members', e.message);
+      }
       // setAppointmentsData(userAppointments);
       
     } catch (error) {
@@ -81,6 +93,22 @@ export default function UserProfile({ route, navigation }) {
     } finally {
       setLoading(false);
     }
+  };
+
+  const submitNewFamilyMember = async () => {
+    if (!newMemberName.trim()) return Alert.alert('Error','Please enter a name');
+    const payload = { name: newMemberName.trim(), age: newMemberAge ? parseInt(newMemberAge,10) : null };
+    try {
+      setLoading(true);
+      await UserAPIService.createFamilyMember(userId, payload);
+      const fm = await UserAPIService.getFamilyMembers(userId);
+      setFamilyMembers(fm || []);
+      setShowAddMemberModal(false);
+      setNewMemberName(''); setNewMemberAge('');
+    } catch (e) {
+      console.error('Failed to create family member', e);
+      Alert.alert('Error','Failed to add family member');
+    } finally { setLoading(false); }
   };
 
   // const getAppointmentStats = () => {
@@ -256,6 +284,23 @@ export default function UserProfile({ route, navigation }) {
           </View>
         </View>
 
+        {/* Family Members */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>👪 Family Members</Text>
+          <View style={styles.infoCard}>
+            {familyMembers.length === 0 ? (
+              <Text style={{color:'#7f8c8d'}}>No family members added.</Text>
+            ) : (
+              familyMembers.map(m => (
+                <View key={m.id} style={styles.infoRow}>
+                  <Text style={styles.infoLabel}>{m.name}{m.age ? `, ${m.age}` : ''}</Text>
+                  <Text style={styles.infoValue}>{m.relationship || ''}</Text>
+                </View>
+              ))
+            )}
+          </View>
+        </View>
+
         {/* Address Information */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>📍 Address Information</Text>
@@ -384,7 +429,7 @@ export default function UserProfile({ route, navigation }) {
             </View>
           )}
         </View>
-
+  
         {/* Medical History */}
         <View style={styles.section}>
           <TouchableOpacity 
@@ -413,6 +458,25 @@ export default function UserProfile({ route, navigation }) {
                   <Text style={styles.emptyText}>No current medications</Text>
                 )}
               </View>
+
+                {/* Add Member Modal */}
+                <Modal visible={showAddMemberModal} transparent animationType="slide">
+                  <View style={styles.modalOverlay}>
+                    <View style={styles.modalContent}>
+                      <Text style={styles.modalTitle}>Add Family Member</Text>
+                      <TextInput placeholder="Name" value={newMemberName} onChangeText={setNewMemberName} style={styles.modalInput} />
+                      <TextInput placeholder="Age" value={newMemberAge} onChangeText={setNewMemberAge} style={styles.modalInput} keyboardType="numeric" />
+                      <View style={styles.modalButtonsRow}>
+                        <TouchableOpacity style={styles.modalButton} onPress={() => setShowAddMemberModal(false)}>
+                          <Text>Cancel</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity style={[styles.modalButton, styles.modalPrimary]} onPress={submitNewFamilyMember}>
+                          <Text style={{color: '#fff'}}>Add</Text>
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  </View>
+                </Modal>
 
               {/* Allergies */}
               <View style={styles.infoCard}>
@@ -596,6 +660,7 @@ export default function UserProfile({ route, navigation }) {
     </SafeAreaView>
   );
 }
+
 
 const styles = StyleSheet.create({
   safeArea: {
@@ -908,4 +973,25 @@ const styles = StyleSheet.create({
   bottomSpacing: {
     height: 100, // Reduced from 120
   },
+  modalOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    width: '90%',
+    backgroundColor: '#fff',
+    padding: 16,
+    borderRadius: 8,
+  },
+  modalTitle: { fontSize: 18, fontWeight: '600', marginBottom: 8 },
+  modalInput: { borderWidth: 1, borderColor: '#ddd', padding: 8, marginBottom: 8, borderRadius: 4 },
+  modalButtonsRow: { flexDirection: 'row', justifyContent: 'flex-end' },
+  modalButton: { padding: 8, marginLeft: 8 },
+  modalPrimary: { backgroundColor: '#3498db', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 4 },
 });

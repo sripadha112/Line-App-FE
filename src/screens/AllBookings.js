@@ -14,6 +14,8 @@ import { useFocusEffect } from '@react-navigation/native';
 import { DoctorAPIService } from '../services/doctorApiService';
 import TopBar from '../components/TopBar';
 import BottomNavigation from '../components/BottomNavigation';
+import API_BASE_URL from '../config';
+import * as SecureStore from 'expo-secure-store';
 
 export default function AllBookings({ route, navigation }) {
   const { doctorId, workplaceId, workplaceName, refresh } = route.params;
@@ -23,6 +25,7 @@ export default function AllBookings({ route, navigation }) {
   const [refreshing, setRefreshing] = useState(false);
   const [collapsedSections, setCollapsedSections] = useState({});
   const [todaySectionCollapsed, setTodaySectionCollapsed] = useState(!refresh); // Expand if coming from refresh (revisit booking)
+  const [familyMembersCache, setFamilyMembersCache] = useState({}); // Cache family members by userId
 
   useEffect(() => {
     fetchAppointments();
@@ -41,12 +44,59 @@ export default function AllBookings({ route, navigation }) {
       setLoading(true);
       const data = await DoctorAPIService.fetchAppointmentsByWorkplace(doctorId, workplaceId);
       setAppointmentsByDate(data);
+      
+      // Fetch family members for appointments with patientMemberId
+      await fetchFamilyMembersForAppointments(data);
     } catch (error) {
       console.error('Error fetching appointments:', error);
       Alert.alert('Error', 'Failed to fetch appointments');
     } finally {
       setLoading(false);
     }
+  };
+
+  const fetchFamilyMembersForAppointments = async (appointmentsByDate) => {
+    const userIdsToFetch = new Set();
+    
+    // Collect all userIds that have family appointments
+    appointmentsByDate.forEach(dateGroup => {
+      dateGroup.appointments.forEach(apt => {
+        if (apt.patientMemberId || apt.patient_member_id) {
+          userIdsToFetch.add(apt.userId);
+        }
+      });
+    });
+
+    // Fetch family members for each userId
+    const newCache = { ...familyMembersCache };
+    for (const userId of userIdsToFetch) {
+      if (!newCache[userId]) {
+        try {
+          const response = await fetch(`${API_BASE_URL}/api/user/${userId}/family-members`, {
+            headers: {
+              'Authorization': `Bearer ${await SecureStore.getItemAsync('accessToken')}`
+            }
+          });
+          if (response.ok) {
+            const familyMembers = await response.json();
+            newCache[userId] = familyMembers;
+          }
+        } catch (error) {
+          console.error(`Error fetching family members for user ${userId}:`, error);
+        }
+      }
+    }
+    setFamilyMembersCache(newCache);
+  };
+
+  const getFamilyMemberDetails = (appointment) => {
+    const memberId = appointment.patientMemberId || appointment.patient_member_id;
+    if (!memberId) return null;
+    
+    const familyMembers = familyMembersCache[appointment.userId];
+    if (!familyMembers) return null;
+    
+    return familyMembers.find(member => member.id === memberId);
   };
 
   const onRefresh = async () => {
@@ -157,53 +207,90 @@ export default function AllBookings({ route, navigation }) {
     );
   };
 
-  const renderPatientDetails = (appointment) => (
-    <View style={styles.patientDetails}>
-      <View style={styles.detailRow}>
-        <View style={styles.detailItem}>
-          <Text style={styles.detailLabel}>Age</Text>
-          <Text style={styles.detailValue}>{appointment.age || 'N/A'}</Text>
+  const renderPatientDetails = (appointment) => {
+    const isFamily = isFamilyAppointment(appointment);
+    const familyMember = isFamily ? getFamilyMemberDetails(appointment) : null;
+    
+    // Use family member details if available, otherwise use appointment details
+    const displayName = familyMember ? familyMember.name : appointment.patientName;
+    const displayAge = familyMember ? familyMember.age : appointment.age;
+    const displayContact = familyMember ? familyMember.contact : appointment.mobileNumber;
+    const displayGender = familyMember ? familyMember.gender : null;
+    const displayRelationship = familyMember ? familyMember.relationship : null;
+    
+    return (
+      <View style={styles.patientDetails}>
+        {/* Show family member indicator if it's a family booking */}
+        {isFamily && (
+          <View style={styles.familyIndicator}>
+            <Text style={styles.familyIndicatorText}>
+              👪 Family Member Appointment{displayRelationship ? ` (${displayRelationship})` : ''}
+            </Text>
+            {displayName && <Text style={styles.familyMemberName}>{displayName}</Text>}
+          </View>
+        )}
+        
+        <View style={styles.detailRow}>
+          <View style={styles.detailItem}>
+            <Text style={styles.detailLabel}>Age</Text>
+            <Text style={styles.detailValue}>{displayAge || 'N/A'}</Text>
+          </View>
+          
+          {displayGender && (
+            <View style={styles.detailItem}>
+              <Text style={styles.detailLabel}>Gender</Text>
+              <Text style={styles.detailValue}>{displayGender}</Text>
+            </View>
+          )}
+          
+          {/* Hide Blood Group for family members - not available */}
+          {!isFamily && (
+            <View style={styles.detailItem}>
+              <Text style={styles.detailLabel}>Blood Group</Text>
+              <Text style={styles.detailValue}>{appointment.bloodGroup || 'N/A'}</Text>
+            </View>
+          )}
+          
+          {/* Hide Weight for family members - not available */}
+          {!isFamily && (
+            <View style={styles.detailItem}>
+              <Text style={styles.detailLabel}>Weight</Text>
+              <Text style={styles.detailValue}>{appointment.weightKg ? `${appointment.weightKg} kg` : 'N/A'}</Text>
+            </View>
+          )}
         </View>
-        <View style={styles.detailItem}>
-          <Text style={styles.detailLabel}>Blood Group</Text>
-          <Text style={styles.detailValue}>{appointment.bloodGroup || 'N/A'}</Text>
-        </View>
-        <View style={styles.detailItem}>
-          <Text style={styles.detailLabel}>Weight</Text>
-          <Text style={styles.detailValue}>{appointment.weightKg ? `${appointment.weightKg} kg` : 'N/A'}</Text>
-        </View>
-      </View>
-      
-      <View style={styles.detailRow}>
-        <View style={styles.detailItem}>
-          <Text style={styles.detailLabel}>BP</Text>
-          <Text style={styles.detailValue}>
-            {appointment.bloodPressureSystolic && appointment.bloodPressureDiastolic 
-              ? `${appointment.bloodPressureSystolic}/${appointment.bloodPressureDiastolic}` 
-              : 'N/A'}
-          </Text>
-        </View>
-        <View style={styles.detailItem}>
-          <Text style={styles.detailLabel}>Status</Text>
-          <View style={[styles.statusBadgeSmall, { backgroundColor: getStatusColor(appointment.status) }]}>
-            <Text style={styles.statusTextSmall}>{appointment.status}</Text>
+        
+        <View style={styles.detailRow}>
+          <View style={styles.detailItem}>
+            <Text style={styles.detailLabel}>BP</Text>
+            <Text style={styles.detailValue}>
+              {appointment.bloodPressureSystolic && appointment.bloodPressureDiastolic 
+                ? `${appointment.bloodPressureSystolic}/${appointment.bloodPressureDiastolic}` 
+                : 'N/A'}
+            </Text>
+          </View>
+          <View style={styles.detailItem}>
+            <Text style={styles.detailLabel}>Status</Text>
+            <View style={[styles.statusBadgeSmall, { backgroundColor: getStatusColor(appointment.status) }]}>
+              <Text style={styles.statusTextSmall}>{appointment.status}</Text>
+            </View>
           </View>
         </View>
+        
+        {displayContact && (
+          <View style={styles.phoneRow}>
+            <Text style={styles.phoneNumber}>📞 {displayContact}</Text>
+          </View>
+        )}
+        
+        {appointment.timeSlot && (
+          <View style={styles.timeSlotRow}>
+            <Text style={styles.timeSlot}>⏰ Time Slot: {appointment.timeSlot}</Text>
+          </View>
+        )}
       </View>
-      
-      {appointment.mobileNumber && (
-        <View style={styles.phoneRow}>
-          <Text style={styles.phoneNumber}>📞 {appointment.mobileNumber}</Text>
-        </View>
-      )}
-      
-      {appointment.timeSlot && (
-        <View style={styles.timeSlotRow}>
-          <Text style={styles.timeSlot}>⏰ Time Slot: {appointment.timeSlot}</Text>
-        </View>
-      )}
-    </View>
-  );
+    );
+  };
 
   const renderAppointmentCard = ({ item }) => (
     <View style={styles.appointmentCard}>
@@ -244,12 +331,14 @@ export default function AllBookings({ route, navigation }) {
       
       {/* View Patient & Prescription button only for today's appointments */}
       <View style={styles.bottomButtonRow}>
-        <TouchableOpacity 
-          style={[styles.actionButton, styles.prescriptionButton]}
-          onPress={() => handleWritePrescription(item)}
-        >
-          <Text style={styles.actionButtonText}>� View Patient & Write Prescription</Text>
-        </TouchableOpacity>
+          {!isFamilyAppointment(item) && (
+            <TouchableOpacity 
+              style={[styles.actionButton, styles.prescriptionButton]}
+              onPress={() => handleWritePrescription(item)}
+            >
+              <Text style={styles.actionButtonText}>📋 View Patient & Write Prescription</Text>
+            </TouchableOpacity>
+          )}
       </View>
     </View>
   );
@@ -306,7 +395,6 @@ export default function AllBookings({ route, navigation }) {
               >
                 <Text style={styles.actionButtonText}>Reschedule</Text>
               </TouchableOpacity>
-              
               <TouchableOpacity 
                 style={[styles.actionButton, styles.cancelButton]}
                 onPress={() => handleCancel(appointment)}
@@ -328,6 +416,16 @@ export default function AllBookings({ route, navigation }) {
       case 'cancelled': return '#e74c3c';
       default: return '#7f8c8d';
     }
+  };
+
+  // Robust check for whether an appointment is for a family member
+  const isFamilyAppointment = (appt) => {
+    if (!appt) return false;
+    const cand = appt.patientMemberId ?? appt.patient_member_id ?? appt.familyMemberId ?? appt.family_member_id ?? appt.bookedForFamily ?? appt.isFamily;
+    if (cand === undefined || cand === null) return false;
+    if (typeof cand === 'number') return cand > 0;
+    if (typeof cand === 'string') return cand.trim() !== '' && cand !== '0';
+    return !!cand;
   };
 
   const todayAppointments = getTodayAppointments();
@@ -419,27 +517,27 @@ export default function AllBookings({ route, navigation }) {
                       >
                         <Text style={styles.actionButtonText}>✓ Complete</Text>
                       </TouchableOpacity>
-                      
                       <TouchableOpacity 
                         style={[styles.actionButton, styles.rescheduleButton]}
                         onPress={() => handleReschedule(appointment)}
                       >
                         <Text style={styles.actionButtonText}>Reschedule</Text>
                       </TouchableOpacity>
-                      
                       <TouchableOpacity 
                         style={[styles.actionButton, styles.cancelButton]}
                         onPress={() => handleCancel(appointment)}
                       >
                         <Text style={styles.actionButtonText}>Cancel</Text>
                       </TouchableOpacity>
-                      
-                      <TouchableOpacity 
-                        style={[styles.actionButton, styles.prescriptionButton]}
-                        onPress={() => handleWritePrescription(appointment)}
-                      >
-                        <Text style={styles.actionButtonText}>📋 View Patient & Write Prescription</Text>
-                      </TouchableOpacity>
+                      {/* Hide Prescription button for family appointments */}
+                      {!isFamilyAppointment(appointment) && (
+                        <TouchableOpacity 
+                          style={[styles.actionButton, styles.prescriptionButton]}
+                          onPress={() => handleWritePrescription(appointment)}
+                        >
+                          <Text style={styles.actionButtonText}>📋 View Patient & Write Prescription</Text>
+                        </TouchableOpacity>
+                      )}
                     </View>
                   </View>
                 ))}
@@ -738,5 +836,24 @@ const styles = StyleSheet.create({
     color: '#95a5a6',
     textAlign: 'center',
     marginTop: 4,
+  },
+  familyIndicator: {
+    backgroundColor: '#e8f5e9',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+    marginBottom: 12,
+    borderLeftWidth: 3,
+    borderLeftColor: '#4caf50',
+  },
+  familyIndicatorText: {
+    fontSize: 13,
+    color: '#2e7d32',
+    fontWeight: '600',
+  },
+  familyMemberName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#2e7d32',
   },
 });

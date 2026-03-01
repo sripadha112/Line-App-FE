@@ -16,7 +16,7 @@ import BottomNavigation from '../components/BottomNavigation';
 import DatePicker from '../components/DatePicker';
 
 export default function BookAppointment({ route, navigation }) {
-  const { userId } = route.params;
+  const { userId, familyMemberId, familyMemberName } = route.params;
   
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]); // Store enhanced search results
@@ -35,6 +35,8 @@ export default function BookAppointment({ route, navigation }) {
   const [step, setStep] = useState('search'); // 'search', 'workplaces', 'slots'
   const [noWorkplacesInfo, setNoWorkplacesInfo] = useState(null); // Info about doctors with no workplaces
   const [customSelectedDate, setCustomSelectedDate] = useState(null); // Date selected from calendar picker
+  const [familyMembers, setFamilyMembers] = useState([]);
+  const [selectedFamilyMemberId, setSelectedFamilyMemberId] = useState(familyMemberId || null);
 
   // New states for pagination and local search
   const [allDoctors, setAllDoctors] = useState([]); // Store all loaded doctors for local search
@@ -61,6 +63,13 @@ export default function BookAppointment({ route, navigation }) {
       // Load nearby doctors if pincode is available
       if (profile && profile.pincode) {
         await loadNearbyDoctors(profile.pincode);
+      }
+      // fetch family members for the user
+      try {
+        const fm = await UserAPIService.getFamilyMembers(userId);
+        setFamilyMembers(fm || []);
+      } catch (e) {
+        console.log('No family members or failed to fetch:', e.message);
       }
     } catch (error) {
       console.error('❌ Error fetching user profile:', error);
@@ -403,6 +412,9 @@ export default function BookAppointment({ route, navigation }) {
         notes: 'Booked via mobile app'
       };
 
+      // include family member id if selected
+      if (selectedFamilyMemberId) appointmentData.familyMemberId = selectedFamilyMemberId;
+
       console.log('📝 Booking appointment with data:', appointmentData);
       console.log('📅 Selected date:', selectedDate);
       console.log('🕐 Selected slot:', slot.slotTime);
@@ -479,6 +491,8 @@ export default function BookAppointment({ route, navigation }) {
       }
     };
   }, []);
+
+  // No create handler here — user can only select existing family members. Adding is in Profile.
 
   const handleWorkplaceSelect = (workplace) => {
     selectWorkplace(workplace);
@@ -753,6 +767,18 @@ export default function BookAppointment({ route, navigation }) {
             <Text style={styles.doctorInfo}>
               {selectedWorkplace?.doctorName} - {selectedWorkplace?.workplaceName}
             </Text>
+
+            {/* Family member chips: You + members + add */}
+            <ScrollView horizontal style={styles.familyChipsRow} contentContainerStyle={{alignItems: 'center'}}>
+              <TouchableOpacity style={[styles.familyChip, !selectedFamilyMemberId && styles.familyChipSelected]} onPress={() => setSelectedFamilyMemberId(null)}>
+                <Text style={styles.familyChipText}>You</Text>
+              </TouchableOpacity>
+              {familyMembers.map(m => (
+                <TouchableOpacity key={m.id} style={[styles.familyChip, selectedFamilyMemberId === m.id && styles.familyChipSelected]} onPress={() => setSelectedFamilyMemberId(m.id)}>
+                  <Text style={styles.familyChipText}>{m.name}{m.age ? `, ${m.age}` : ''}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
             
             {/* Date Picker Section */}
             <View style={styles.datePickerSection}>
@@ -899,6 +925,7 @@ export default function BookAppointment({ route, navigation }) {
               </>
             )}
           </View>
+          {/* Family member creation belongs in UserProfile; no modal here */}
         </ScrollView>
       )}
       
@@ -1132,6 +1159,34 @@ const styles = StyleSheet.create({
     marginBottom: 15,
     fontStyle: 'italic',
   },
+  familyChipsRow: {
+    flexDirection: 'row',
+    marginBottom: 12,
+  },
+  familyChip: {
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    backgroundColor: '#f0f0f0',
+    borderRadius: 20,
+    marginRight: 8,
+  },
+  familyChipSelected: {
+    backgroundColor: '#3498db'
+  },
+  familyChipText: {
+    color: '#000'
+  },
+  familyChipAdd: {
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#3498db'
+  },
+  familyChipAddText: {
+    color: '#3498db'
+  },
+  /* modal styles removed — creation happens in UserProfile */
   workplaceName: {
     fontSize: 18,
     fontWeight: '600',

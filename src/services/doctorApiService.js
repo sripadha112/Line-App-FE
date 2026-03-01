@@ -444,6 +444,31 @@ export class UserAPIService {
     }
   }
 
+  // Family members APIs
+  static async getFamilyMembers(userId) {
+    try {
+      const numericUserId = parseInt(userId, 10);
+      if (isNaN(numericUserId)) throw new Error('Invalid userId');
+      const response = await api.get(`/api/user/${numericUserId}/family-members`);
+      return response.data || [];
+    } catch (error) {
+      console.log('Error fetching family members:', error.message);
+      throw error;
+    }
+  }
+
+  static async createFamilyMember(userId, memberData) {
+    try {
+      const numericUserId = parseInt(userId, 10);
+      if (isNaN(numericUserId)) throw new Error('Invalid userId');
+      const response = await api.post(`/api/user/${numericUserId}/family-members`, memberData);
+      return response.data;
+    } catch (error) {
+      console.log('Error creating family member:', error.message);
+      throw error;
+    }
+  }
+
   // Fetch all user appointments (for calendar and history) - Enhanced response
   static async fetchAllUserAppointments(userId) {
     try {

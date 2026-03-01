@@ -1324,55 +1324,74 @@ Dr. ${name || 'Line App Doctor'}`;
     setRefreshing(false);
   };
 
-  const renderAppointment = ({item}) => (
-    <TouchableOpacity 
-      style={styles.appointmentCard}
-      onPress={() => fetchUserDetails(item.userId)}
-    >
-      <View style={styles.appointmentHeader}>
-        <Text style={styles.patientName}>{item.userName || `Patient #${item.userId}`}</Text>
-        <View style={[styles.statusBadge, 
-          item.status === 'BOOKED' ? styles.statusBooked : 
-          item.status === 'CANCELLED' ? styles.statusCancelled : 
-          item.status === 'COMPLETED' ? styles.statusCompleted : styles.statusRescheduled
-        ]}>
-          <Text style={styles.statusText}>{item.status}</Text>
+  const renderAppointment = ({item}) => {
+    const isFamily = !!(item.patientMemberId || item.patient_member_id);
+    const displayName = item.patientName || item.userName || `Patient #${item.userId}`;
+    const displayAge = item.age || item.patientAge || 'N/A';
+
+    return (
+      <TouchableOpacity 
+        style={styles.appointmentCard}
+        onPress={() => fetchUserDetails(item.userId)}
+      >
+        <View style={styles.appointmentHeader}>
+          <Text style={styles.patientName}>{displayName}</Text>
+          <View style={[styles.statusBadge, 
+            item.status === 'BOOKED' ? styles.statusBooked : 
+            item.status === 'CANCELLED' ? styles.statusCancelled : 
+            item.status === 'COMPLETED' ? styles.statusCompleted : styles.statusRescheduled
+          ]}>
+            <Text style={styles.statusText}>{item.status}</Text>
+          </View>
         </View>
-      </View>
-      <Text style={styles.appointmentTime}>
-        📅 {format(new Date(item.appointmentTime), 'MMM dd, yyyy • hh:mm a')}
-      </Text>
-      <Text style={styles.queuePosition}>Queue Position: #{item.queuePosition}</Text>
-      {item.workplace && (
-        <Text style={styles.workplace}>📍 {item.workplace.workplaceName}</Text>
-      )}
-      {item.notes && <Text style={styles.notes}>📝 {item.notes}</Text>}
-      
-      {item.status === 'BOOKED' && (
-        <View style={styles.appointmentActions}>
-          <TouchableOpacity 
-            style={styles.cancelBtn}
-            onPress={(e) => {
-              e.stopPropagation();
-              handleCancelAppointment(item.id, item.userId);
-            }}
-          >
-            <Text style={styles.cancelBtnText}>Cancel</Text>
-          </TouchableOpacity>
-          <TouchableOpacity 
-            style={styles.rescheduleBtn}
-            onPress={(e) => {
-              e.stopPropagation();
-              setSelectedAppointment(item);
-              setRescheduleModalVisible(true);
-            }}
-          >
-            <Text style={styles.rescheduleBtnText}>Reschedule</Text>
-          </TouchableOpacity>
-        </View>
-      )}
-    </TouchableOpacity>
-  );
+
+        <Text style={styles.appointmentTime}>
+          📅 {format(new Date(item.appointmentTime), 'MMM dd, yyyy • hh:mm a')}
+        </Text>
+
+        <Text style={styles.patientAge}>Age: {displayAge}</Text>
+        <Text style={styles.queuePosition}>Queue Position: #{item.queuePosition}</Text>
+
+        {item.workplace && (
+          <Text style={styles.workplace}>📍 {item.workplace.workplaceName}</Text>
+        )}
+
+        {item.notes && <Text style={styles.notes}>📝 {item.notes}</Text>}
+
+        {/* Show blood group and weight only for non-family bookings (family members may not have these fields) */}
+        {!isFamily && item.bloodGroup && (
+          <Text style={styles.patientArea}>Blood Group: {item.bloodGroup}</Text>
+        )}
+        {!isFamily && item.weightKg && (
+          <Text style={styles.patientArea}>Weight: {item.weightKg} kg</Text>
+        )}
+
+        {item.status === 'BOOKED' && (
+          <View style={styles.appointmentActions}>
+            <TouchableOpacity 
+              style={styles.cancelBtn}
+              onPress={(e) => {
+                e.stopPropagation();
+                handleCancelAppointment(item.id, item.userId);
+              }}
+            >
+              <Text style={styles.cancelBtnText}>Cancel</Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={styles.rescheduleBtn}
+              onPress={(e) => {
+                e.stopPropagation();
+                setSelectedAppointment(item);
+                setRescheduleModalVisible(true);
+              }}
+            >
+              <Text style={styles.rescheduleBtnText}>Reschedule</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+      </TouchableOpacity>
+    );
+  };
 
   const renderHistoryCard = ({item}) => (
     <TouchableOpacity 
