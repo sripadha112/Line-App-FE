@@ -23,6 +23,7 @@ export default function UserRegistrationScreen({ navigation, route }) {
   const [formData, setFormData] = useState({
     fullName: '',
     email: '',
+    gender: '',
     mobileNumber: mobile,
     address: '',
     city: '',
@@ -30,14 +31,17 @@ export default function UserRegistrationScreen({ navigation, route }) {
     pincode: '',
   });
   const [loading, setLoading] = useState(false);
+  const [genderDropdownVisible, setGenderDropdownVisible] = useState(false);
+  
+  const GENDER_OPTIONS = ['Male', 'Female', 'Other'];
 
   const handleInputChange = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
   const handleRegister = async () => {
-    // Validate required fields
-    const requiredFields = ['fullName', 'email', 'address', 'city', 'state', 'pincode'];
+    // Validate required fields (email is now optional)
+    const requiredFields = ['fullName', 'gender', 'address', 'city', 'state', 'pincode'];
     const missingFields = requiredFields.filter(field => !formData[field].trim());
     
     if (missingFields.length > 0) {
@@ -45,11 +49,13 @@ export default function UserRegistrationScreen({ navigation, route }) {
       return;
     }
 
-    // Validate email format
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(formData.email)) {
-      Alert.alert('Error', 'Please enter a valid email address');
-      return;
+    // Validate email format only if provided
+    if (formData.email && formData.email.trim()) {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(formData.email)) {
+        Alert.alert('Error', 'Please enter a valid email address');
+        return;
+      }
     }
 
     setLoading(true);
@@ -57,7 +63,8 @@ export default function UserRegistrationScreen({ navigation, route }) {
       const body = {
         mobileNumber: String(mobile).trim(),
         fullName: formData.fullName.trim(),
-        email: formData.email.trim().toLowerCase(),
+        email: formData.email.trim() ? formData.email.trim().toLowerCase() : null,
+        gender: formData.gender.trim(),
         address: formData.address.trim(),
         city: formData.city.trim(),
         state: formData.state.trim(),
@@ -145,7 +152,7 @@ export default function UserRegistrationScreen({ navigation, route }) {
         </View>
 
         <View style={styles.inputGroup}>
-          <Text style={styles.label}>Email *</Text>
+          <Text style={styles.label}>Email (Optional)</Text>
           <TextInput
             style={styles.input}
             placeholder="Enter your email address"
@@ -154,6 +161,35 @@ export default function UserRegistrationScreen({ navigation, route }) {
             keyboardType="email-address"
             autoCapitalize="none"
           />
+        </View>
+
+        <View style={styles.inputGroup}>
+          <Text style={styles.label}>Gender *</Text>
+          <TouchableOpacity 
+            style={styles.dropdown}
+            onPress={() => setGenderDropdownVisible(!genderDropdownVisible)}
+          >
+            <Text style={formData.gender ? styles.dropdownText : styles.dropdownPlaceholder}>
+              {formData.gender || 'Select gender'}
+            </Text>
+            <Text style={styles.dropdownArrow}>▼</Text>
+          </TouchableOpacity>
+          {genderDropdownVisible && (
+            <View style={styles.dropdownList}>
+              {GENDER_OPTIONS.map((option) => (
+                <TouchableOpacity
+                  key={option}
+                  style={styles.dropdownItem}
+                  onPress={() => {
+                    handleInputChange('gender', option);
+                    setGenderDropdownVisible(false);
+                  }}
+                >
+                  <Text style={styles.dropdownItemText}>{option}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
         </View>
 
         <View style={styles.inputGroup}>
@@ -300,5 +336,48 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 18,
     fontWeight: '700',
+  },
+  dropdown: {
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 12,
+    padding: 16,
+    backgroundColor: '#fff',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  dropdownText: {
+    fontSize: 16,
+    color: '#2c3e50',
+  },
+  dropdownPlaceholder: {
+    fontSize: 16,
+    color: '#95a5a6',
+  },
+  dropdownArrow: {
+    fontSize: 12,
+    color: '#7f8c8d',
+  },
+  dropdownList: {
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 12,
+    marginTop: 4,
+    backgroundColor: '#fff',
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+  dropdownItem: {
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  dropdownItemText: {
+    fontSize: 16,
+    color: '#2c3e50',
   },
 });

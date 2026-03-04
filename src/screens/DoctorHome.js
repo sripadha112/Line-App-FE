@@ -402,13 +402,12 @@ export default function DoctorHome({ navigation, route }) {
   };
 
   const contactDevelopers = () => {
-    const email = 'santhoshsripadha101@gmail.com';
-    const subject = 'Feedback from Line App Doctor';
-    const body = `Hello Line App Developers,
+    const email = 'developers.neextapp@gmail.com';
+    const subject = 'Feedback from Neext App Doctor';
+    const body = `Hello Neext App Developers,
 
-I am writing to provide feedback about the Line App from a doctor's perspective.
+I am writing to provide feedback about the Neext App from a doctor's perspective.
 
-App Version: 1.0
 User Type: Doctor
 Mobile: ${name || 'N/A'}
 Doctor ID: ${doctorId || 'N/A'}
@@ -416,10 +415,9 @@ Doctor ID: ${doctorId || 'N/A'}
 My feedback/issue:
 [Please describe your feedback or issue here]
 
-Thank you for your time and for creating this helpful platform for connecting with patients!
 
 Best regards,
-Dr. ${name || 'Line App Doctor'}`;
+Dr. ${name || 'Neext App Doctor'}`;
 
     const mailto = `mailto:${email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
     
@@ -1790,7 +1788,16 @@ Dr. ${name || 'Line App Doctor'}`;
               
               {workplaces.length === 0 ? (
               <View style={styles.emptyWorkplaceContainer}>
-                <Text style={styles.emptyScheduleText}>� No workplaces added yet!</Text>
+                <Text style={styles.emptyScheduleText}>📍 No workplaces added yet!</Text>
+                <Text style={styles.emptyWorkplaceSubtext}>
+                  Add a workplace to start accepting appointments
+                </Text>
+                <TouchableOpacity
+                  style={styles.addWorkplaceEmptyButton}
+                  onPress={() => setAddWorkplaceModalVisible(true)}
+                >
+                  <Text style={styles.addWorkplaceEmptyButtonText}>+ Add Workplace</Text>
+                </TouchableOpacity>
               </View>
             ) : (
               workplaces.map((item, index) => (
@@ -3778,6 +3785,29 @@ const styles = StyleSheet.create({
   emptyWorkplaceContainer: {
     alignItems: 'center',
     padding: 40,
+  },
+  emptyWorkplaceSubtext: {
+    fontSize: 14,
+    color: '#7f8c8d',
+    textAlign: 'center',
+    marginTop: 8,
+    marginBottom: 20,
+  },
+  addWorkplaceEmptyButton: {
+    backgroundColor: '#3498db',
+    paddingVertical: 14,
+    paddingHorizontal: 32,
+    borderRadius: 12,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+  addWorkplaceEmptyButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
   },
   addWorkplaceBtn: {
     backgroundColor: '#3498db',

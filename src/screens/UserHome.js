@@ -240,23 +240,22 @@ export default function UserHome({ route, navigation }) {
   };
 
   const contactDevelopers = () => {
-    const email = 'santhoshsripadha101@gmail.com';
-    const subject = 'Feedback from Line App User';
-    const body = `Hello Line App Developers,
+    const email = 'developers.neextapp@gmail.com';
+    const subject = 'Feedback from Neext App User';
+    const body = `Hello Neext App Developers,
 
-I am writing to provide feedback about the Line App.
+I am writing to provide feedback about the Neext App.
 
-App Version: 1.0
 User Type: User
 Mobile: ${userProfile?.mobileNumber || 'N/A'}
 
 My feedback/issue:
 [Please describe your feedback or issue here]
 
-Thank you for your time and for creating this helpful app!
+
 
 Best regards,
-${userProfile?.fullName || 'Line App User'}`;
+${userProfile?.fullName || 'Neext App User'}`;
 
     const mailto = `mailto:${email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
     

@@ -15,9 +15,12 @@ import {
 import { DoctorAPIService } from '../services/doctorApiService';
 import TopBar from '../components/TopBar';
 import * as SecureStore from 'expo-secure-store';
+import API_BASE_URL from '../config';
+import MedicineSearchModal from '../components/MedicineSearchModal';
+import PrescriptionEditor from '../components/PrescriptionEditor';
 
 export default function PatientProfilePrescription({ route, navigation }) {
-  const { appointment } = route.params;
+  const { appointment, doctorId } = route.params;
   const [userProfile, setUserProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -31,10 +34,23 @@ export default function PatientProfilePrescription({ route, navigation }) {
   const [dropdownOptions, setDropdownOptions] = useState([]);
   const [currentDropdownField, setCurrentDropdownField] = useState('');
   const [prescriptionExpanded, setPrescriptionExpanded] = useState(false);
+  
+  // Prescription management state
+  const [prescriptions, setPrescriptions] = useState([]);
+  const [showPrescriptionEditor, setShowPrescriptionEditor] = useState(false);
+  const [selectedPrescription, setSelectedPrescription] = useState(null);
+  const [prescriptionAddedInSession, setPrescriptionAddedInSession] = useState(false);
+  const [showAllPrescriptionsModal, setShowAllPrescriptionsModal] = useState(false);
+  const [pdfLoading, setPdfLoading] = useState(false);
 
   useEffect(() => {
+    console.log('🏥 PatientProfilePrescription loaded');
+    console.log('🏥 Doctor ID from route params:', doctorId);
+    console.log('🏥 Appointment data:', appointment);
+    console.log('🏥 User ID from appointment:', appointment.userId || appointment.patientId);
     fetchUserProfile();
     getDoctorName();
+    fetchPrescriptions();
   }, []);
 
   const getDoctorName = async () => {
@@ -54,6 +70,129 @@ export default function PatientProfilePrescription({ route, navigation }) {
     } catch (error) {
       console.error('Error getting doctor name:', error);
       setDoctorName('Doctor');
+    }
+  };
+
+  const fetchPrescriptions = async () => {
+    try {
+      const userId = appointment.userId || appointment.patientId;
+      if (!userId) return;
+      
+      const token = await SecureStore.getItemAsync('accessToken');
+      const response = await fetch(`${API_BASE_URL}/api/prescriptions/user/${userId}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setPrescriptions(data || []);
+      }
+    } catch (error) {
+      console.error('Error fetching prescriptions:', error);
+    }
+  };
+
+  const handleCreatePrescription = () => {
+    console.log('📝 Creating new prescription...');
+    console.log('📝 Full appointment object:', JSON.stringify(appointment, null, 2));
+    
+    setSelectedPrescription(null);
+    setShowPrescriptionEditor(true);
+  };
+
+  const handleEditPrescription = (prescription) => {
+    setSelectedPrescription(prescription);
+    setShowPrescriptionEditor(true);
+  };
+
+  const handleSavePrescription = async () => {
+    setShowPrescriptionEditor(false);
+    await fetchPrescriptions();
+    setPrescriptionAddedInSession(true);
+  };
+
+  const handlePreviewPrescription = async (prescriptionId) => {
+    try {
+      setPdfLoading(true);
+      
+      const [token, Print, FileSystem, IntentLauncher] = await Promise.all([
+        SecureStore.getItemAsync('accessToken'),
+        import('expo-print'),
+        import('expo-file-system/legacy'),
+        import('expo-intent-launcher'),
+      ]);
+      
+      const response = await fetch(`${API_BASE_URL}/api/prescriptions/${prescriptionId}/pdf`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) throw new Error('Failed to generate prescription');
+
+      const htmlContent = await response.text();
+
+      // Generate PDF file with proper name and optimized settings
+      const currentDate = new Date().toISOString().split('T')[0];
+      const patientName = appointment?.userName?.replace(/\s+/g, '_') || 'Patient';
+      const fileName = `Prescription_${patientName}_${currentDate}.pdf`;
+      
+      const { uri } = await Print.printToFileAsync({ 
+        html: htmlContent,
+        base64: false,
+      });
+
+      // Move to a named file
+      const namedPath = `${FileSystem.documentDirectory}${fileName}`;
+      await FileSystem.moveAsync({
+        from: uri,
+        to: namedPath,
+      });
+
+      // On Android, open with intent to choose PDF viewer
+      if (Platform.OS === 'android') {
+        const contentUri = await FileSystem.getContentUriAsync(namedPath);
+        await IntentLauncher.startActivityAsync('android.intent.action.VIEW', {
+          data: contentUri,
+          flags: 1,
+          type: 'application/pdf',
+        });
+      } else {
+        // On iOS, use sharing
+        const Sharing = await import('expo-sharing');
+        if (await Sharing.isAvailableAsync()) {
+          await Sharing.shareAsync(namedPath);
+        }
+      }
+    } catch (error) {
+      console.error('Error previewing prescription:', error);
+      Alert.alert('Error', 'Failed to preview prescription');
+    } finally {
+      setPdfLoading(false);
+    }
+  };
+
+  const handlePrintPrescription = async (prescriptionId) => {
+    try {
+      const token = await SecureStore.getItemAsync('accessToken');
+      const response = await fetch(`${API_BASE_URL}/api/prescriptions/${prescriptionId}/pdf`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) throw new Error('Failed to generate prescription');
+
+      const htmlContent = await response.text();
+      const Print = await import('expo-print');
+
+      // Print the document directly
+      await Print.printAsync({ html: htmlContent });
+    } catch (error) {
+      console.error('Error printing prescription:', error);
+      Alert.alert('Error', 'Failed to print prescription');
     }
   };
 
@@ -149,8 +288,28 @@ export default function PatientProfilePrescription({ route, navigation }) {
   };
 
   const handleSaveAndComplete = async () => {
-    if (!newPrescription.trim()) {
-      Alert.alert('Error', 'Please add a prescription before saving');
+    // Check if prescription was added in the Prescription Management section
+    if (!prescriptionAddedInSession) {
+      Alert.alert(
+        'No Prescription Added',
+        'You have not added a prescription for this patient. What would you like to do?',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Add Prescription',
+            onPress: () => {
+              // Open the prescription editor
+              setSelectedPrescription(null);
+              setShowPrescriptionEditor(true);
+            }
+          },
+          {
+            text: 'Complete (Offline Prescription)',
+            style: 'destructive',
+            onPress: () => completeAppointmentWithoutPrescription()
+          }
+        ]
+      );
       return;
     }
 
@@ -161,54 +320,88 @@ export default function PatientProfilePrescription({ route, navigation }) {
         { text: 'Cancel', style: 'cancel' },
         { 
           text: 'Save & Complete', 
-          onPress: async () => {
-            try {
-              setSaving(true);
-              
-              // Prepare update data and format arrays properly
-              const updateData = formatDataForAPI({
-                ...editedFields
-              });
-
-              // Replace medical notes with new prescription and doctor's name
-              if (newPrescription.trim()) {
-                const prescriptionWithDoctor = `${newPrescription.trim()}, by: ${doctorName}`;
-                updateData.medicalNotes = prescriptionWithDoctor;
-              }
-
-              console.log('Doctor Name:', doctorName);
-              console.log('New Prescription:', newPrescription);
-              console.log('Existing Medical Notes:', userProfile.medicalNotes);
-              console.log('Updated Medical Notes:', updateData.medicalNotes);
-              console.log('Complete update data being sent to API:', JSON.stringify(updateData, null, 2));
-
-              // Update profile
-              const userId = appointment.userId || appointment.patientId;
-              await DoctorAPIService.updateUserProfile(userId, updateData);
-
-              // Complete appointment
-              await DoctorAPIService.completeAppointment(appointment.appointmentId);
-
-              Alert.alert(
-                'Success',
-                'Patient profile updated and appointment completed successfully!',
-                [
-                  {
-                    text: 'OK',
-                    onPress: () => navigation.goBack()
-                  }
-                ]
-              );
-            } catch (error) {
-              console.error('Error saving and completing:', error);
-              Alert.alert('Error', 'Failed to save changes. Please try again.');
-            } finally {
-              setSaving(false);
-            }
-          }
+          onPress: () => completeAppointment()
         }
       ]
     );
+  };
+
+  const completeAppointmentWithoutPrescription = async () => {
+    try {
+      setSaving(true);
+      
+      // Prepare update data and format arrays properly
+      const updateData = formatDataForAPI({
+        ...editedFields
+      });
+
+      console.log('Completing appointment without digital prescription (offline prescription given)');
+      console.log('Complete update data being sent to API:', JSON.stringify(updateData, null, 2));
+
+      // Update profile if there are any edited fields
+      if (Object.keys(updateData).length > 0) {
+        const userId = appointment.userId || appointment.patientId;
+        await DoctorAPIService.updateUserProfile(userId, updateData);
+      }
+
+      // Complete appointment
+      await DoctorAPIService.completeAppointment(appointment.appointmentId);
+
+      Alert.alert(
+        'Success',
+        'Appointment completed successfully (offline prescription given)!',
+        [
+          {
+            text: 'OK',
+            onPress: () => navigation.goBack()
+          }
+        ]
+      );
+    } catch (error) {
+      console.error('Error completing appointment:', error);
+      Alert.alert('Error', 'Failed to complete appointment. Please try again.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const completeAppointment = async () => {
+    try {
+      setSaving(true);
+      
+      // Prepare update data and format arrays properly
+      const updateData = formatDataForAPI({
+        ...editedFields
+      });
+
+      console.log('Doctor Name:', doctorName);
+      console.log('Complete update data being sent to API:', JSON.stringify(updateData, null, 2));
+
+      // Update profile if there are any edited fields
+      if (Object.keys(updateData).length > 0) {
+        const userId = appointment.userId || appointment.patientId;
+        await DoctorAPIService.updateUserProfile(userId, updateData);
+      }
+
+      // Complete appointment
+      await DoctorAPIService.completeAppointment(appointment.appointmentId);
+
+      Alert.alert(
+        'Success',
+        'Patient profile updated and appointment completed successfully!',
+        [
+          {
+            text: 'OK',
+            onPress: () => navigation.goBack()
+          }
+        ]
+      );
+    } catch (error) {
+      console.error('Error saving and completing:', error);
+      Alert.alert('Error', 'Failed to save changes. Please try again.');
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleBookNextVisit = () => {
@@ -641,6 +834,106 @@ export default function PatientProfilePrescription({ route, navigation }) {
           </View>
         </View>
 
+        {/* Prescription Management Section */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>💊 Prescription Management</Text>
+          
+          {/* Create New Prescription Button */}
+          <TouchableOpacity
+            style={styles.createPrescriptionButton}
+            onPress={handleCreatePrescription}
+          >
+            <Text style={styles.createPrescriptionText}>+ Write New Prescription</Text>
+          </TouchableOpacity>
+
+          {/* List of Previous Structured Prescriptions */}
+          {prescriptions.length > 0 && (
+            <View style={{marginTop: 16}}>
+              <Text style={styles.subSectionTitle}>Previous Prescriptions ({prescriptions.length})</Text>
+              {prescriptions.slice(0, 2).map((prescription, index) => (
+                <View key={prescription.id} style={styles.prescriptionCard}>
+                  <View style={styles.prescriptionCardHeader}>
+                    <View style={{flex: 1}}>
+                      <Text style={styles.prescriptionDate}>
+                        {new Date(prescription.createdAt).toLocaleDateString('en-US', {
+                          year: 'numeric',
+                          month: 'short',
+                          day: 'numeric',
+                        })}
+                      </Text>
+                      <Text style={styles.prescriptionDoctor}>
+                        By: Dr. {prescription.doctorName}
+                      </Text>
+                      {prescription.medicines && prescription.medicines.length > 0 && (
+                        <Text style={styles.medicineCount}>
+                          {prescription.medicines.length} medicine(s)
+                        </Text>
+                      )}
+                    </View>
+                    <View style={styles.prescriptionActions}>
+                      {index === 0 && (
+                        <TouchableOpacity
+                          style={styles.actionButton}
+                          onPress={() => handleEditPrescription(prescription)}
+                        >
+                          <Text style={styles.actionButtonIcon}>✏️</Text>
+                        </TouchableOpacity>
+                      )}
+                      <TouchableOpacity
+                        style={styles.actionButton}
+                        onPress={() => handlePrintPrescription(prescription.id)}
+                      >
+                        <Text style={styles.actionButtonIcon}>🖨️</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={styles.actionButton}
+                        onPress={() => handlePreviewPrescription(prescription.id)}
+                      >
+                        <Text style={styles.actionButtonIcon}>👁️</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+
+                  {prescription.medicalNotes && (
+                    <View style={styles.prescriptionNotes}>
+                      <Text style={styles.notesLabel}>Notes:</Text>
+                      <Text style={styles.notesText}>{prescription.medicalNotes}</Text>
+                    </View>
+                  )}
+
+                  {prescription.medicines && prescription.medicines.length > 0 && (
+                    <View style={styles.medicinesList}>
+                      <Text style={styles.medicinesLabel}>Medicines:</Text>
+                      {prescription.medicines.slice(0, 3).map((med, idx) => (
+                        <Text key={idx} style={styles.medicineItem}>
+                          • {med.medicineName} - {med.dosage}
+                        </Text>
+                      ))}
+                      {prescription.medicines.length > 3 && (
+                        <Text style={styles.moreText}>
+                          + {prescription.medicines.length - 3} more
+                        </Text>
+                      )}
+                    </View>
+                  )}
+                </View>
+              ))}
+              
+              {/* Load More Button */}
+              {prescriptions.length > 3 && (
+                <TouchableOpacity
+                  style={styles.loadMoreButton}
+                  onPress={() => setShowAllPrescriptionsModal(true)}
+                >
+                  <Text style={styles.loadMoreButtonText}>
+                    📋 View All Prescriptions ({prescriptions.length - 3} more)
+                  </Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          )}
+        </View>
+
         {/* Previous Prescriptions */}
         {userProfile.prescription && (
           <View style={styles.section}>
@@ -669,22 +962,6 @@ export default function PatientProfilePrescription({ route, navigation }) {
             </View>
           </View>
         )}
-
-        {/* New Prescription */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>New Prescription</Text>
-          <TextInput
-            style={styles.prescriptionInput}
-            placeholder="Enter new prescription here..."
-            value={newPrescription}
-            onChangeText={setNewPrescription}
-            multiline={true}
-            numberOfLines={6}
-            textAlignVertical="top"
-            returnKeyType="default"
-            blurOnSubmit={false}
-          />
-        </View>
 
         {/* Action Buttons */}
         <View style={styles.actionButtonsContainer}>
@@ -756,6 +1033,119 @@ export default function PatientProfilePrescription({ route, navigation }) {
           </View>
         </TouchableOpacity>
       </Modal>
+
+      {/* Prescription Editor Modal */}
+      <Modal
+        visible={showPrescriptionEditor}
+        animationType="slide"
+        onRequestClose={() => setShowPrescriptionEditor(false)}
+      >
+        <View style={{flex: 1, backgroundColor: '#fff'}}>
+          <TopBar
+            title={selectedPrescription ? 'Edit Prescription' : 'New Prescription'}
+            onBack={() => setShowPrescriptionEditor(false)}
+          />
+          <PrescriptionEditor
+            userId={appointment.userId || appointment.patientId}
+            doctorId={doctorId}
+            appointmentId={appointment.id || appointment.appointmentId}
+            prescriptionId={selectedPrescription?.id}
+            onSave={handleSavePrescription}
+            onCancel={() => setShowPrescriptionEditor(false)}
+          />
+        </View>
+      </Modal>
+
+      {/* All Prescriptions Modal */}
+      <Modal
+        visible={showAllPrescriptionsModal}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setShowAllPrescriptionsModal(false)}
+      >
+        <View style={styles.allPrescriptionsModalOverlay}>
+          <View style={styles.allPrescriptionsModalContainer}>
+            <View style={styles.allPrescriptionsModalHeader}>
+              <Text style={styles.allPrescriptionsModalTitle}>
+                All Prescriptions ({prescriptions.length})
+              </Text>
+              <TouchableOpacity
+                style={styles.allPrescriptionsCloseButton}
+                onPress={() => setShowAllPrescriptionsModal(false)}
+              >
+                <Text style={styles.allPrescriptionsCloseText}>✕</Text>
+              </TouchableOpacity>
+            </View>
+            <ScrollView style={styles.allPrescriptionsScrollView}>
+              {prescriptions.map((prescription, index) => (
+                <View key={prescription.id} style={styles.prescriptionCard}>
+                  <View style={styles.prescriptionCardHeader}>
+                    <View style={{flex: 1}}>
+                      <Text style={styles.prescriptionDate}>
+                        {new Date(prescription.createdAt).toLocaleDateString('en-US', {
+                          year: 'numeric',
+                          month: 'short',
+                          day: 'numeric',
+                        })}
+                      </Text>
+                      <Text style={styles.prescriptionDoctor}>
+                        By: Dr. {prescription.doctorName}
+                      </Text>
+                      {prescription.medicines && prescription.medicines.length > 0 && (
+                        <Text style={styles.medicineCount}>
+                          {prescription.medicines.length} medicine(s)
+                        </Text>
+                      )}
+                    </View>
+                    <View style={styles.prescriptionActions}>
+                      <TouchableOpacity
+                        style={styles.actionButton}
+                        onPress={() => handlePrintPrescription(prescription.id)}
+                      >
+                        <Text style={styles.actionButtonIcon}>🖨️</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={styles.actionButton}
+                        onPress={() => handlePreviewPrescription(prescription.id)}
+                      >
+                        <Text style={styles.actionButtonIcon}>👁️</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+
+                  {prescription.medicalNotes && (
+                    <View style={styles.prescriptionNotes}>
+                      <Text style={styles.notesLabel}>Notes:</Text>
+                      <Text style={styles.notesText}>{prescription.medicalNotes}</Text>
+                    </View>
+                  )}
+
+                  {prescription.medicines && prescription.medicines.length > 0 && (
+                    <View style={styles.medicinesList}>
+                      <Text style={styles.medicinesLabel}>Medicines:</Text>
+                      {prescription.medicines.map((med, idx) => (
+                        <Text key={idx} style={styles.medicineItem}>
+                          • {med.medicineName} - {med.dosage}
+                        </Text>
+                      ))}
+                    </View>
+                  )}
+                </View>
+              ))}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+      
+      {/* PDF Loading Overlay */}
+      {pdfLoading && (
+        <View style={styles.pdfLoadingOverlay}>
+          <View style={styles.pdfLoadingContainer}>
+            <ActivityIndicator size="large" color="#3498db" />
+            <Text style={styles.pdfLoadingText}>Generating PDF...</Text>
+          </View>
+        </View>
+      )}
     </KeyboardAvoidingView>
   );
 }
@@ -1068,5 +1458,196 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#2c3e50',
     textAlign: 'center',
+  },
+  createPrescriptionButton: {
+    backgroundColor: '#27ae60',
+    borderRadius: 8,
+    paddingVertical: 12,
+    alignItems: 'center',
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+  },
+  createPrescriptionText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  subSectionTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#2c3e50',
+    marginBottom: 12,
+  },
+  prescriptionCard: {
+    backgroundColor: '#f9f9f9',
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 12,
+    borderLeftWidth: 4,
+    borderLeftColor: '#2196F3',
+    elevation: 1,
+  },
+  prescriptionCardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
+  prescriptionDate: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#2c3e50',
+  },
+  prescriptionDoctor: {
+    fontSize: 12,
+    color: '#7f8c8d',
+    marginTop: 2,
+  },
+  medicineCount: {
+    fontSize: 11,
+    color: '#95a5a6',
+    marginTop: 2,
+  },
+  prescriptionActions: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  actionButton: {
+    padding: 4,
+  },
+  actionButtonIcon: {
+    fontSize: 20,
+  },
+  prescriptionNotes: {
+    marginTop: 8,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: '#e0e0e0',
+  },
+  notesLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#34495e',
+    marginBottom: 4,
+  },
+  notesText: {
+    fontSize: 13,
+    color: '#2c3e50',
+    lineHeight: 18,
+  },
+  medicinesList: {
+    marginTop: 8,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: '#e0e0e0',
+  },
+  medicinesLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#34495e',
+    marginBottom: 4,
+  },
+  medicineItem: {
+    fontSize: 12,
+    color: '#2c3e50',
+    marginBottom: 2,
+  },
+  moreText: {
+    fontSize: 11,
+    color: '#3498db',
+    fontStyle: 'italic',
+    marginTop: 4,
+  },
+  loadMoreButton: {
+    backgroundColor: '#f0f4f8',
+    borderRadius: 8,
+    padding: 12,
+    marginTop: 12,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#3498db',
+    borderStyle: 'dashed',
+  },
+  loadMoreButtonText: {
+    color: '#3498db',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  allPrescriptionsModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  allPrescriptionsModalContainer: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    width: '92%',
+    maxHeight: '85%',
+    elevation: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+  },
+  allPrescriptionsModalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#ecf0f1',
+  },
+  allPrescriptionsModalTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#2c3e50',
+  },
+  allPrescriptionsCloseButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#f0f0f0',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  allPrescriptionsCloseText: {
+    fontSize: 18,
+    color: '#7f8c8d',
+    fontWeight: '600',
+  },
+  allPrescriptionsScrollView: {
+    padding: 16,
+    maxHeight: 500,
+  },
+  pdfLoadingOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 9999,
+  },
+  pdfLoadingContainer: {
+    backgroundColor: '#fff',
+    padding: 30,
+    borderRadius: 12,
+    alignItems: 'center',
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+  },
+  pdfLoadingText: {
+    marginTop: 15,
+    fontSize: 16,
+    color: '#2c3e50',
+    fontWeight: '600',
   },
 });

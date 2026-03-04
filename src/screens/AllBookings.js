@@ -168,8 +168,11 @@ export default function AllBookings({ route, navigation }) {
 
   const handleWritePrescription = (appointment) => {
     // Navigate to patient profile and prescription screen
+    console.log('📝 Navigating with doctorId:', doctorId);
+    console.log('📝 Navigating with appointment:', appointment);
     navigation.navigate('PatientProfilePrescription', {
-      appointment: appointment
+      appointment: appointment,
+      doctorId: doctorId // Pass doctorId from route params
     });
   };
 

@@ -7,6 +7,7 @@ import {
   StyleSheet,
   Alert,
   RefreshControl,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
@@ -14,6 +15,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import * as SecureStore from 'expo-secure-store';
 import { UserAPIService } from '../services/doctorApiService';
 import { api } from '../services/api';
+import API_BASE_URL from '../config';
 import BottomNavigation from '../components/BottomNavigation';
 import { Modal, TextInput } from 'react-native';
 
@@ -29,12 +31,15 @@ export default function UserProfile({ route, navigation }) {
   const [showAddMemberModal, setShowAddMemberModal] = useState(false);
   const [newMemberName, setNewMemberName] = useState('');
   const [newMemberAge, setNewMemberAge] = useState('');
+  const [prescriptions, setPrescriptions] = useState([]);
+  const [pdfLoading, setPdfLoading] = useState(false);
   
   // State for expandable sections
   const [expandedSections, setExpandedSections] = useState({
     medicalConditions: false,
     medicalHistory: false,
     emergencyContact: false,
+    prescriptions: false,
     doctorReviews: false,
   });
 
@@ -85,6 +90,9 @@ export default function UserProfile({ route, navigation }) {
       } catch (e) {
         console.log('Failed to fetch family members', e.message);
       }
+      
+      // Fetch prescriptions
+      await fetchPrescriptions();
       // setAppointmentsData(userAppointments);
       
     } catch (error) {
@@ -92,6 +100,204 @@ export default function UserProfile({ route, navigation }) {
       Alert.alert('Error', 'Failed to load profile. Please try again.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchPrescriptions = async () => {
+    try {
+      const token = await SecureStore.getItemAsync('accessToken');
+      const response = await fetch(`${API_BASE_URL}/api/prescriptions/user/${userId}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setPrescriptions(data || []);
+      }
+    } catch (error) {
+      console.error('Error fetching prescriptions:', error);
+    }
+  };
+
+  const sharePrescription = async (prescriptionId) => {
+    try {
+      const token = await SecureStore.getItemAsync('accessToken');
+      const response = await fetch(`${API_BASE_URL}/api/prescriptions/${prescriptionId}/pdf`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) throw new Error('Failed to generate PDF');
+
+      const htmlContent = await response.text();
+      const Print = require('expo-print');
+      const Sharing = require('expo-sharing');
+      const FileSystem = require('expo-file-system/legacy');
+
+      // Generate PDF file with proper name
+      const currentDate = new Date().toISOString().split('T')[0];
+      const patientName = userDetails?.fullName?.replace(/\s+/g, '_') || 'Patient';
+      const fileName = `Prescription_${patientName}_${currentDate}.pdf`;
+
+      const { uri } = await Print.printToFileAsync({
+        html: htmlContent,
+      });
+
+      // Move to a named file
+      const namedPath = `${FileSystem.documentDirectory}${fileName}`;
+      await FileSystem.moveAsync({
+        from: uri,
+        to: namedPath,
+      });
+
+      // Share the PDF with proper name
+      if (await Sharing.isAvailableAsync()) {
+        await Sharing.shareAsync(namedPath);
+      }
+    } catch (error) {
+      console.error('Error sharing prescription:', error);
+      Alert.alert('Error', 'Failed to share prescription');
+    }
+  };
+
+  const deletePrescription = async (prescriptionId) => {
+    Alert.alert(
+      'Delete Prescription',
+      'Are you sure you want to delete this prescription?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const token = await SecureStore.getItemAsync('accessToken');
+              const response = await fetch(`${API_BASE_URL}/api/prescriptions/${prescriptionId}`, {
+                method: 'DELETE',
+                headers: {
+                  'Authorization': `Bearer ${token}`,
+                },
+              });
+
+              if (!response.ok) throw new Error('Failed to delete prescription');
+
+              Alert.alert('Success', 'Prescription deleted successfully');
+              fetchPrescriptions(); // Refresh the list
+            } catch (error) {
+              console.error('Error deleting prescription:', error);
+              Alert.alert('Error', 'Failed to delete prescription');
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const downloadPrescription = async (prescriptionId) => {
+    try {
+      setPdfLoading(true);
+      
+      const token = await SecureStore.getItemAsync('accessToken');
+      const response = await fetch(`${API_BASE_URL}/api/prescriptions/${prescriptionId}/pdf`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) throw new Error('Failed to generate PDF');
+
+      const htmlContent = await response.text();
+      const Print = require('expo-print');
+      const FileSystem = require('expo-file-system/legacy');
+
+      // Generate PDF with optimized settings
+      const { uri } = await Print.printToFileAsync({
+        html: htmlContent,
+        base64: false,
+      });
+
+      // Save to Downloads folder with proper naming
+      const currentDate = new Date().toISOString().split('T')[0];
+      const patientName = userDetails?.fullName?.replace(/\s+/g, '_') || 'Patient';
+      const fileName = `Prescription_${patientName}_${currentDate}.pdf`;
+      const downloadPath = `${FileSystem.documentDirectory}${fileName}`;
+      
+      await FileSystem.moveAsync({
+        from: uri,
+        to: downloadPath,
+      });
+
+      Alert.alert('Success', 'Prescription downloaded successfully!');
+    } catch (error) {
+      console.error('Error downloading prescription:', error);
+      Alert.alert('Error', 'Failed to download prescription');
+    } finally {
+      setPdfLoading(false);
+    }
+  };
+
+  const previewPrescription = async (prescriptionId) => {
+    try {
+      setPdfLoading(true);
+      
+      const [token, Print, FileSystem, IntentLauncher, { Platform }] = await Promise.all([
+        SecureStore.getItemAsync('accessToken'),
+        import('expo-print'),
+        import('expo-file-system/legacy'),
+        import('expo-intent-launcher'),
+        Promise.resolve(require('react-native')),
+      ]);
+      
+      const response = await fetch(`${API_BASE_URL}/api/prescriptions/${prescriptionId}/pdf`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) throw new Error('Failed to generate preview');
+
+      const htmlContent = await response.text();
+
+      // Generate PDF file with proper name and optimized settings
+      const currentDate = new Date().toISOString().split('T')[0];
+      const patientName = userDetails?.fullName?.replace(/\s+/g, '_') || 'Patient';
+      const fileName = `Prescription_${patientName}_${currentDate}.pdf`;
+      
+      const { uri } = await Print.printToFileAsync({ 
+        html: htmlContent,
+        base64: false,
+      });
+
+      // Move to a named file
+      const namedPath = `${FileSystem.documentDirectory}${fileName}`;
+      await FileSystem.moveAsync({
+        from: uri,
+        to: namedPath,
+      });
+
+      // On Android, open with intent to choose PDF viewer
+      if (Platform.OS === 'android') {
+        const contentUri = await FileSystem.getContentUriAsync(namedPath);
+        await IntentLauncher.startActivityAsync('android.intent.action.VIEW', {
+          data: contentUri,
+          flags: 1,
+          type: 'application/pdf',
+        });
+      } else {
+        // On iOS, use sharing
+        const Sharing = await import('expo-sharing');
+        if (await Sharing.isAvailableAsync()) {
+          await Sharing.shareAsync(namedPath);
+        }
+      }
+    } catch (error) {
+      console.error('Error previewing prescription:', error);
+      Alert.alert('Error', 'Failed to preview prescription');
+    } finally {
+      setPdfLoading(false);
     }
   };
 
@@ -238,7 +444,7 @@ export default function UserProfile({ route, navigation }) {
             </Text>
           </View>
           <Text style={styles.userName}>{userFullName}</Text>
-          <Text style={styles.userEmail}>{userDetails?.email || 'Loading...'}</Text>
+          {userDetails?.email && <Text style={styles.userEmail}>{userDetails.email}</Text>}
         </View>
 
         {/* Stats Cards */}
@@ -570,6 +776,107 @@ export default function UserProfile({ route, navigation }) {
           )}
         </View>
 
+        {/* My Prescriptions */}
+        <View style={styles.section}>
+          <TouchableOpacity 
+            style={styles.sectionHeader}
+            onPress={() => toggleSection('prescriptions')}
+          >
+            <Text style={styles.sectionTitle}>💊 My Prescriptions</Text>
+            <Text style={styles.expandIcon}>
+              {expandedSections.prescriptions ? '▼' : '▶'}
+            </Text>
+          </TouchableOpacity>
+          {expandedSections.prescriptions && (
+            <View style={styles.infoCard}>
+              {prescriptions.length === 0 ? (
+                <Text style={styles.emptyText}>No prescriptions found</Text>
+              ) : (
+                prescriptions.map((prescription, index) => (
+                  <View
+                    key={prescription.id}
+                    style={{
+                      backgroundColor: '#f8f9fa',
+                      padding: 12,
+                      borderRadius: 8,
+                      marginBottom: 8,
+                      borderLeftWidth: 4,
+                      borderLeftColor: '#3498db',
+                    }}
+                  >
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                      <View style={{ flex: 1 }}>
+                        <Text style={{ fontSize: 14, fontWeight: '600', color: '#2c3e50', marginBottom: 4 }}>
+                          📋 Prescription #{prescriptions.length - index}
+                        </Text>
+                        <Text style={{ fontSize: 12, color: '#7f8c8d' }}>
+                          Date: {new Date(prescription.createdAt).toLocaleDateString('en-US', {
+                            year: 'numeric',
+                            month: 'short',
+                            day: 'numeric',
+                          })}
+                        </Text>
+                        <Text style={{ fontSize: 12, color: '#7f8c8d', marginTop: 2 }}>
+                          By: Dr. {prescription.doctorName}
+                        </Text>
+                        {prescription.medicines && prescription.medicines.length > 0 && (
+                          <Text style={{ fontSize: 11, color: '#95a5a6', marginTop: 4 }}>
+                            {prescription.medicines.length} medicine(s) prescribed
+                          </Text>
+                        )}
+                      </View>
+                      <View style={{ flexDirection: 'row', gap: 8, marginLeft: 8 }}>
+                        <TouchableOpacity
+                          style={{
+                            backgroundColor: '#e3f2fd',
+                            padding: 8,
+                            borderRadius: 6,
+                            width: 36,
+                            height: 36,
+                            justifyContent: 'center',
+                            alignItems: 'center',
+                          }}
+                          onPress={() => sharePrescription(prescription.id)}
+                        >
+                          <Text style={{ fontSize: 16 }}>🔀</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          style={{
+                            backgroundColor: '#f3e5f5',
+                            padding: 8,
+                            borderRadius: 6,
+                            width: 36,
+                            height: 36,
+                            justifyContent: 'center',
+                            alignItems: 'center',
+                          }}
+                          onPress={() => previewPrescription(prescription.id)}
+                        >
+                          <Text style={{ fontSize: 16 }}>👁️</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          style={{
+                            backgroundColor: '#ffebee',
+                            padding: 8,
+                            borderRadius: 6,
+                            width: 36,
+                            height: 36,
+                            justifyContent: 'center',
+                            alignItems: 'center',
+                          }}
+                          onPress={() => deletePrescription(prescription.id)}
+                        >
+                          <Text style={{ fontSize: 16 }}>🗑️</Text>
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  </View>
+                ))
+              )}
+            </View>
+          )}
+        </View>
+
         {/* Previous Doctors Reviews */}
         {(userDetails.medicalNotes || userDetails.familyMedicalHistory || userDetails.prescription) && (
           <View style={styles.section}>
@@ -657,6 +964,16 @@ export default function UserProfile({ route, navigation }) {
         }}
       />
       </View>
+      
+      {/* PDF Loading Overlay */}
+      {pdfLoading && (
+        <View style={styles.pdfLoadingOverlay}>
+          <View style={styles.pdfLoadingContainer}>
+            <ActivityIndicator size="large" color="#3498db" />
+            <Text style={styles.pdfLoadingText}>Generating PDF...</Text>
+          </View>
+        </View>
+      )}
     </SafeAreaView>
   );
 }
@@ -994,4 +1311,32 @@ const styles = StyleSheet.create({
   modalButtonsRow: { flexDirection: 'row', justifyContent: 'flex-end' },
   modalButton: { padding: 8, marginLeft: 8 },
   modalPrimary: { backgroundColor: '#3498db', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 4 },
+  pdfLoadingOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 9999,
+  },
+  pdfLoadingContainer: {
+    backgroundColor: '#fff',
+    padding: 30,
+    borderRadius: 12,
+    alignItems: 'center',
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+  },
+  pdfLoadingText: {
+    marginTop: 15,
+    fontSize: 16,
+    color: '#2c3e50',
+    fontWeight: '600',
+  },
 });
