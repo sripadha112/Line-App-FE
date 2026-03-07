@@ -37,6 +37,9 @@ jobs:
       - name: Copy .nojekyll to dist
         run: cp .nojekyll dist/.nojekyll
       
+      - name: Copy booking folder to dist
+        run: cp -r web/booking dist/booking
+      
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v4
         with:
