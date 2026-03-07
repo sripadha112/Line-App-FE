@@ -9,11 +9,13 @@ import {
   Modal,
   TextInput,
   FlatList,
+  Platform,
 } from 'react-native';
 import { UserAPIService, SlotsAPIService, DoctorAPIService } from '../services/doctorApiService';
 import TopBar from '../components/TopBar';
 import BottomNavigation from '../components/BottomNavigation';
 import DatePicker from '../components/DatePicker';
+import { showAlert } from '../utils/alertUtils';
 
 const RESCHEDULE_REASONS = [
   'Schedule conflict',
@@ -150,7 +152,7 @@ export default function RescheduleAppointment({ route, navigation }) {
       setAllAppointments(bookableAppointments);
     } catch (error) {
       console.error('Error fetching appointments:', error);
-      Alert.alert('Error', 'Failed to load appointments');
+      showAlert('Error', 'Failed to load appointments');
     } finally {
       setLoading(false);
     }
@@ -168,13 +170,21 @@ export default function RescheduleAppointment({ route, navigation }) {
         // Fetch available slots for the same workplace using the doctorId from appointment
         await fetchAvailableSlots(currentAppointment.workplaceId, currentAppointment.doctorId);
       } else {
-        Alert.alert('Error', 'Appointment not found');
-        navigation.goBack();
+        showAlert('Error', 'Appointment not found');
+        if (Platform.OS === 'web') {
+          window.history.back();
+        } else {
+          navigation.goBack();
+        }
       }
     } catch (error) {
       console.error('Error fetching appointment details:', error);
-      Alert.alert('Error', 'Failed to load appointment details');
-      navigation.goBack();
+      showAlert('Error', 'Failed to load appointment details');
+      if (Platform.OS === 'web') {
+        window.history.back();
+      } else {
+        navigation.goBack();
+      }
     } finally {
       setLoading(false);
     }
@@ -196,7 +206,7 @@ export default function RescheduleAppointment({ route, navigation }) {
     try {
       if (!doctorId) {
         console.error('Doctor ID not provided');
-        Alert.alert('Error', 'Doctor information not available');
+        showAlert('Error', 'Doctor information not available');
         return;
       }
       
@@ -283,7 +293,7 @@ export default function RescheduleAppointment({ route, navigation }) {
       }
     } catch (error) {
       console.error('Error fetching available slots:', error);
-      Alert.alert('Error', 'Failed to load available slots');
+      showAlert('Error', 'Failed to load available slots');
     }
   };
 
@@ -345,7 +355,7 @@ export default function RescheduleAppointment({ route, navigation }) {
       }
     } catch (error) {
       console.error('Error loading slots for selected date:', error);
-      Alert.alert('Error', 'Failed to load slots for selected date. Please try again.');
+      showAlert('Error', 'Failed to load slots for selected date. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -354,14 +364,14 @@ export default function RescheduleAppointment({ route, navigation }) {
   const proceedWithReschedule = () => {
     console.log('🔄 proceedWithReschedule called - fromRevisit:', fromRevisit);
     if (!selectedSlot) {
-      Alert.alert('Error', 'Please select a new time slot');
+      showAlert('Error', 'Please select a new time slot');
       return;
     }
 
     if (fromRevisit) {
       console.log('📅 Showing revisit confirmation popup for:', selectedSlot.slotTime);
       // For revisit appointments, show simple confirmation instead of reason modal
-      Alert.alert(
+      showAlert(
         'Confirm Next Visit',
         `Reschedule current appointment to ${selectedDate && new Date(selectedDate).toLocaleDateString('en-US', {
           weekday: 'long',
@@ -453,7 +463,7 @@ export default function RescheduleAppointment({ route, navigation }) {
         }
       }
 
-      Alert.alert(
+      showAlert(
         'Success',
         result.message || (fromRevisit 
           ? 'Appointment rescheduled as revisit successfully! Original appointment has been completed.'
@@ -482,7 +492,11 @@ export default function RescheduleAppointment({ route, navigation }) {
                 });
               } else {
                 // Regular reschedule - go back to previous screen
-                navigation.goBack();
+                if (Platform.OS === 'web') {
+                  window.history.back();
+                } else {
+                  navigation.goBack();
+                }
               }
             }
           }
@@ -490,7 +504,7 @@ export default function RescheduleAppointment({ route, navigation }) {
       );
     } catch (error) {
       console.error(fromRevisit ? 'Error rescheduling revisit appointment:' : 'Error rescheduling appointment:', error);
-      Alert.alert(
+      showAlert(
         'Error',
         error.message || (fromRevisit 
           ? 'Failed to reschedule appointment as revisit. Please try again.'
@@ -503,7 +517,7 @@ export default function RescheduleAppointment({ route, navigation }) {
 
   const confirmReschedule = async () => {
     if (!selectedReason) {
-      Alert.alert('Error', fromRevisit 
+      showAlert('Error', fromRevisit 
         ? 'Please select a reason for booking the next visit'
         : 'Please select a reason for rescheduling'
       );
@@ -511,7 +525,7 @@ export default function RescheduleAppointment({ route, navigation }) {
     }
 
     if (selectedReason === 'Other' && !customReason.trim()) {
-      Alert.alert('Error', 'Please specify your reason for rescheduling');
+      showAlert('Error', 'Please specify your reason for rescheduling');
       return;
     }
 
@@ -894,7 +908,13 @@ export default function RescheduleAppointment({ route, navigation }) {
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.fixedCancelButton}
-            onPress={() => navigation.goBack()}
+            onPress={() => {
+              if (Platform.OS === 'web') {
+                window.history.back();
+              } else {
+                navigation.goBack();
+              }
+            }}
           >
             <Text style={styles.fixedCancelButtonText}>Cancel</Text>
           </TouchableOpacity>

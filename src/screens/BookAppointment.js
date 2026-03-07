@@ -9,6 +9,7 @@ import {
   Alert,
   FlatList,
   ActivityIndicator,
+  Platform,
 } from 'react-native';
 import { UserAPIService, DoctorAPIService, SlotsAPIService } from '../services/doctorApiService';
 import TopBar from '../components/TopBar';
@@ -382,21 +383,30 @@ export default function BookAppointment({ route, navigation }) {
     const doctorName = selectedWorkplace?.doctorName || 'Doctor';
     const workplaceName = selectedWorkplace?.workplaceName || selectedWorkplace?.clinicName || 'Clinic';
 
-    Alert.alert(
-      'Confirm Appointment',
-      `Are you sure you want to book this appointment?\n\nDoctor: Dr. ${doctorName}\nClinic: ${workplaceName}\nDate: ${appointmentDate}\nTime: ${slot.slotTime}`,
-      [
-        {
-          text: 'Cancel',
-          style: 'cancel'
-        },
-        {
-          text: 'Book Appointment',
-          style: 'default',
-          onPress: () => bookAppointment(slot)
-        }
-      ]
-    );
+    if (Platform.OS === 'web') {
+      const confirmed = window.confirm(
+        `Are you sure you want to book this appointment?\n\nDoctor: Dr. ${doctorName}\nClinic: ${workplaceName}\nDate: ${appointmentDate}\nTime: ${slot.slotTime}`
+      );
+      if (confirmed) {
+        bookAppointment(slot);
+      }
+    } else {
+      Alert.alert(
+        'Confirm Appointment',
+        `Are you sure you want to book this appointment?\n\nDoctor: Dr. ${doctorName}\nClinic: ${workplaceName}\nDate: ${appointmentDate}\nTime: ${slot.slotTime}`,
+        [
+          {
+            text: 'Cancel',
+            style: 'cancel'
+          },
+          {
+            text: 'Book Appointment',
+            style: 'default',
+            onPress: () => bookAppointment(slot)
+          }
+        ]
+      );
+    }
   };
 
   const bookAppointment = async (slot) => {
@@ -423,16 +433,21 @@ export default function BookAppointment({ route, navigation }) {
       
       console.log('✅ Booking successful:', result);
       
-      Alert.alert(
-        '🎉 Appointment Booked Successfully!',
-        `Your appointment is confirmed at ${result.workplaceName || selectedWorkplace.workplaceName} on ${result.slot || appointmentData.slot}.\n\nDoctor: ${selectedWorkplace.doctorName}`,
-        [
-          {
-            text: 'OK',
-            onPress: () => navigation.goBack()
-          }
-        ]
-      );
+      if (Platform.OS === 'web') {
+        alert(`🎉 Appointment Booked Successfully!\n\nYour appointment is confirmed at ${result.workplaceName || selectedWorkplace.workplaceName} on ${result.slot || appointmentData.slot}.\n\nDoctor: ${selectedWorkplace.doctorName}`);
+        navigation.goBack();
+      } else {
+        Alert.alert(
+          '🎉 Appointment Booked Successfully!',
+          `Your appointment is confirmed at ${result.workplaceName || selectedWorkplace.workplaceName} on ${result.slot || appointmentData.slot}.\n\nDoctor: ${selectedWorkplace.doctorName}`,
+          [
+            {
+              text: 'OK',
+              onPress: () => navigation.goBack()
+            }
+          ]
+        );
+      }
     } catch (error) {
       Alert.alert('Error', 'Failed to book appointment. Please try again.');
       console.error('Booking error:', error);

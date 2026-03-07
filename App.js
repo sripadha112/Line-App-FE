@@ -43,7 +43,7 @@ import BulkReschedule from './src/screens/BulkReschedule';
 import CancelDay from './src/screens/CancelDay';
 import QuickBookingQR from './src/screens/QuickBookingQR';
 import FCMTestScreen from './src/screens/FCMTestScreen';
-import * as SecureStore from 'expo-secure-store';
+import SecureStore from './src/utils/secureStorage';
 import { setAuthHeaderFromStore, overrideApiBaseUrl, setNavigationRef } from './src/services/api';
 import API_BASE_URL from './src/config';
 import { ActivityIndicator, View, Modal, Text, TextInput, Button, TouchableOpacity, StyleSheet, Alert } from 'react-native';

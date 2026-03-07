@@ -1,7 +1,7 @@
 import React, {useState} from 'react';
 import { View, Text, TextInput, Button, StyleSheet, ScrollView } from 'react-native';
 import api from '../services/api';
-import * as SecureStore from 'expo-secure-store';
+import SecureStore from '../utils/secureStorage';
 
 export default function OtpVerifyScreen({route, navigation}) {
   const mobile = route.params?.mobile;

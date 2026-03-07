@@ -8,10 +8,12 @@ import {
   Alert,
   Modal,
   TextInput,
+  Platform,
 } from 'react-native';
 import { UserAPIService } from '../services/doctorApiService';
 import TopBar from '../components/TopBar';
 import BottomNavigation from '../components/BottomNavigation';
+import { showAlert } from '../utils/alertUtils';
 
 const CANCELLATION_REASONS = [
   'Personal emergency',
@@ -145,7 +147,7 @@ export default function CancelAppointment({ route, navigation }) {
         cancelledBy: 'user'
       });
 
-      Alert.alert(
+      showAlert(
         'Appointment Cancelled',
         'Your appointment has been cancelled successfully. If applicable, any refund will be processed according to our policy.',
         [
@@ -160,7 +162,7 @@ export default function CancelAppointment({ route, navigation }) {
       );
     } catch (error) {
       console.error('Error cancelling appointment:', error);
-      Alert.alert(
+      showAlert(
         'Error',
         error.message || 'Failed to cancel appointment. Please try again or contact support.'
       );
@@ -405,7 +407,13 @@ export default function CancelAppointment({ route, navigation }) {
               
               <TouchableOpacity
                 style={styles.keepAppointmentButton}
-                onPress={() => navigation.goBack()}
+                onPress={() => {
+                  if (Platform.OS === 'web') {
+                    window.history.back();
+                  } else {
+                    navigation.goBack();
+                  }
+                }}
               >
                 <Text style={styles.keepAppointmentButtonText}>
                   ✅ Keep Appointment

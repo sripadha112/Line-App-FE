@@ -14,7 +14,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { useFocusEffect } from '@react-navigation/native';
-import * as SecureStore from 'expo-secure-store';
+import SecureStore from '../utils/secureStorage';
 import { UserAPIService } from '../services/doctorApiService';
 import BottomNavigation from '../components/BottomNavigation';
 import ActiveBookings from '../components/user/ActiveBookings';

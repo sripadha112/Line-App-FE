@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Alert, KeyboardAvoidingView, Platform } from 'react-native';
 import api from '../services/api';
 import { API_ENDPOINTS } from '../config/apiConfig';
-import * as SecureStore from 'expo-secure-store';
+import SecureStore from '../utils/secureStorage';
 import UserNotificationService from '../services/userNotificationService';
 
 export default function UserRegistrationScreen({ navigation, route }) {

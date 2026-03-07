@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, ActivityIndicator, Modal, FlatList, RefreshControl } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, ActivityIndicator, Modal, FlatList, RefreshControl, Platform } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import { useFocusEffect } from '@react-navigation/native';
-import QRCode from 'react-native-qrcode-svg';
+import QRCode from '../components/QRCodeWrapper';
 import * as MediaLibrary from 'expo-media-library';
 import * as FileSystem from 'expo-file-system';
 import ViewShot from 'react-native-view-shot';
@@ -130,7 +130,31 @@ export default function QuickBookingQR({ route, navigation }) {
     try {
       setDownloading(true);
       
-      // Request media library permissions
+      if (Platform.OS === 'web') {
+        // Web: Download using canvas/blob
+        try {
+          const qrUrl = generateBookingURL(selectedWorkplace);
+          const canvas = document.createElement('canvas');
+          const QRCodeLib = require('qrcode');
+          await QRCodeLib.toCanvas(canvas, qrUrl, { width: 400 });
+          
+          canvas.toBlob((blob) => {
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `qr-${selectedWorkplace.workplaceName || 'booking'}.png`;
+            link.click();
+            URL.revokeObjectURL(url);
+            Alert.alert('Success', 'QR code downloaded!');
+          });
+        } catch (err) {
+          console.log('Web download error:', err);
+          Alert.alert('Info', 'Please right-click on the QR code to save it.');
+        }
+        return;
+      }
+      
+      // Native: Request media library permissions
       const { status } = await MediaLibrary.requestPermissionsAsync();
       if (status !== 'granted') {
         Alert.alert('Permission Required', 'Please grant media library permission to download QR codes.');

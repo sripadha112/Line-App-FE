@@ -1,8 +1,9 @@
 import React, {useEffect, useState, useRef} from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert, Modal, TextInput, ScrollView, RefreshControl, ActivityIndicator, Linking } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert, Modal, TextInput, ScrollView, RefreshControl, ActivityIndicator, Linking, Platform } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
-import * as SecureStore from 'expo-secure-store';
+import SecureStore from '../utils/secureStorage';
 import { format } from 'date-fns';
+import { showAlert, showPrompt } from '../utils/alertUtils';
 
 // Import components
 import TopBar from '../components/TopBar';
@@ -122,7 +123,7 @@ export default function DoctorHome({ navigation, route }) {
         authErrorHandling.current = true;
         console.log('Token invalidated, redirecting to login');
         
-        Alert.alert(
+        showAlert(
           'Session Expired',
           'Your session has expired. Please log in again.',
           [{ text: 'OK', onPress: () => {
@@ -130,8 +131,7 @@ export default function DoctorHome({ navigation, route }) {
               index: 0,
               routes: [{ name: 'Auth' }],
             });
-          }}],
-          { cancelable: false }
+          }}]
         );
         return true; // Indicates auth error was handled
       }
@@ -375,7 +375,7 @@ export default function DoctorHome({ navigation, route }) {
         return;
       }
       
-      Alert.alert('Error', 'Failed to update appointment status');
+      showAlert('Error', 'Failed to update appointment status');
     }
   };
 
@@ -422,7 +422,7 @@ Dr. ${name || 'Neext App Doctor'}`;
     const mailto = `mailto:${email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
     
     Linking.openURL(mailto).catch(err => {
-      Alert.alert('Error', 'Could not open email app. Please ensure you have an email app installed.');
+      showAlert('Error', 'Could not open email app. Please ensure you have an email app installed.');
       console.error('Error opening email:', err);
     });
   };
@@ -434,7 +434,7 @@ Dr. ${name || 'Neext App Doctor'}`;
       setSelectedUser(res.data);
       setUserDetailsModalVisible(true);
     } catch (e) {
-      Alert.alert('Error', 'Failed to fetch user details: ' + (e.response?.data?.error || e.message));
+      showAlert('Error', 'Failed to fetch user details: ' + (e.response?.data?.error || e.message));
     } finally {
       setLoading(false);
     }
@@ -454,42 +454,54 @@ Dr. ${name || 'Neext App Doctor'}`;
       const response = await api.put('/api/doctor/profile', updatedData);
       setDoctorProfile(response.data);
       setEditMode(false);
-      Alert.alert('Success', 'Profile updated successfully');
+      showAlert('Success', 'Profile updated successfully');
     } catch (error) {
-      Alert.alert('Error', 'Failed to update profile: ' + (error.response?.data?.error || error.message));
+      showAlert('Error', 'Failed to update profile: ' + (error.response?.data?.error || error.message));
     }
   };
 
   const handleLogout = async () => {
-    Alert.alert(
-      'Logout',
-      'Are you sure you want to logout?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Logout',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await api.post('/api/auth/logout');
-              await SecureStore.deleteItemAsync('accessToken');
-              await SecureStore.deleteItemAsync('role');
-              await SecureStore.deleteItemAsync('userId');
-              await SecureStore.deleteItemAsync('fullName');
-              navigation.reset({ index: 0, routes: [{ name: 'Auth' }] });
-            } catch (e) {
-              console.log('logout error', e);
-              // Force logout even if API fails
-              await SecureStore.deleteItemAsync('accessToken');
-              await SecureStore.deleteItemAsync('role');
-              await SecureStore.deleteItemAsync('userId');
-              await SecureStore.deleteItemAsync('fullName');
-              navigation.reset({ index: 0, routes: [{ name: 'Auth' }] });
-            }
+    const confirmLogout = Platform.OS === 'web' 
+      ? window.confirm('Are you sure you want to logout?')
+      : true;
+    
+    const performLogout = async () => {
+      try {
+        await api.post('/api/auth/logout');
+        await SecureStore.deleteItemAsync('accessToken');
+        await SecureStore.deleteItemAsync('role');
+        await SecureStore.deleteItemAsync('userId');
+        await SecureStore.deleteItemAsync('fullName');
+        navigation.reset({ index: 0, routes: [{ name: 'Auth' }] });
+      } catch (e) {
+        console.log('logout error', e);
+        // Force logout even if API fails
+        await SecureStore.deleteItemAsync('accessToken');
+        await SecureStore.deleteItemAsync('role');
+        await SecureStore.deleteItemAsync('userId');
+        await SecureStore.deleteItemAsync('fullName');
+        navigation.reset({ index: 0, routes: [{ name: 'Auth' }] });
+      }
+    };
+
+    if (Platform.OS === 'web') {
+      if (confirmLogout) {
+        await performLogout();
+      }
+    } else {
+      showAlert(
+        'Logout',
+        'Are you sure you want to logout?',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Logout',
+            style: 'destructive',
+            onPress: performLogout
           }
-        }
-      ]
-    );
+        ]
+      );
+    }
   };
 
   const handleSaveProfile = async () => {
@@ -556,7 +568,7 @@ Dr. ${name || 'Neext App Doctor'}`;
 
       // Only make API call if there are changes
       if (Object.keys(dataToSave).length === 0) {
-        Alert.alert('No Changes', 'No changes detected to save.');
+        showAlert('No Changes', 'No changes detected to save.');
         setEditingProfile(false);
         return;
       }
@@ -567,11 +579,11 @@ Dr. ${name || 'Neext App Doctor'}`;
       await fetchDetailedProfile(doctorId);
       
       setEditingProfile(false);
-      Alert.alert('Success', 'Profile updated successfully!');
+      showAlert('Success', 'Profile updated successfully!');
       
     } catch (error) {
       console.error('Error saving profile:', error);
-      Alert.alert('Error', 'Failed to update profile. Please try again.');
+      showAlert('Error', 'Failed to update profile. Please try again.');
     } finally {
       setProfileLoading(false);
     }
@@ -581,15 +593,15 @@ Dr. ${name || 'Neext App Doctor'}`;
     try {
       // Validate required fields
       if (!newWorkplace.workplaceName || !newWorkplace.workplaceName.trim()) {
-        Alert.alert('Validation Error', 'Workplace name is required');
+        showAlert('Validation Error', 'Workplace name is required');
         return;
       }
       if (!newWorkplace.address || !newWorkplace.address.trim()) {
-        Alert.alert('Validation Error', 'Address is required');
+        showAlert('Validation Error', 'Address is required');
         return;
       }
       if (!newWorkplace.checkingDurationMinutes || newWorkplace.checkingDurationMinutes <= 0) {
-        Alert.alert('Validation Error', 'Valid checking duration is required');
+        showAlert('Validation Error', 'Valid checking duration is required');
         return;
       }
 
@@ -651,11 +663,11 @@ Dr. ${name || 'Neext App Doctor'}`;
       setAddWorkplaceModalVisible(false);
       closeAllTimeDropdowns();
       
-      Alert.alert('Success', 'Workplace added successfully!');
+      showAlert('Success', 'Workplace added successfully!');
       
     } catch (error) {
       console.error('Error adding workplace:', error);
-      Alert.alert('Error', 'Failed to add workplace. Please try again.');
+      showAlert('Error', 'Failed to add workplace. Please try again.');
     } finally {
       setProfileLoading(false);
     }
@@ -664,17 +676,17 @@ Dr. ${name || 'Neext App Doctor'}`;
   const handleEditWorkplace = async () => {
     try {
       if (!selectedWorkplaceForEdit) {
-        Alert.alert('Error', 'No workplace selected for editing');
+        showAlert('Error', 'No workplace selected for editing');
         return;
       }
 
       // Validate required fields
       if (!selectedWorkplaceForEdit.workplaceName.trim()) {
-        Alert.alert('Validation Error', 'Workplace name is required');
+        showAlert('Validation Error', 'Workplace name is required');
         return;
       }
       if (!selectedWorkplaceForEdit.address.trim()) {
-        Alert.alert('Validation Error', 'Address is required');
+        showAlert('Validation Error', 'Address is required');
         return;
       }
 
@@ -713,11 +725,11 @@ Dr. ${name || 'Neext App Doctor'}`;
       setEditWorkplaceModalVisible(false);
       setSelectedWorkplaceForEdit(null);
       
-      Alert.alert('Success', 'Workplace updated successfully!');
+      showAlert('Success', 'Workplace updated successfully!');
       
     } catch (error) {
       console.error('Error editing workplace:', error);
-      Alert.alert('Error', 'Failed to update workplace. Please try again.');
+      showAlert('Error', 'Failed to update workplace. Please try again.');
     } finally {
       setProfileLoading(false);
     }
@@ -1173,7 +1185,7 @@ Dr. ${name || 'Neext App Doctor'}`;
 
   const handleReschedule = async () => {
     if (!shiftMinutes || isNaN(shiftMinutes)) {
-      Alert.alert('Error', 'Please enter valid minutes');
+      showAlert('Error', 'Please enter valid minutes');
       return;
     }
 
@@ -1187,19 +1199,19 @@ Dr. ${name || 'Neext App Doctor'}`;
         maxShiftMinutes: 1440
       });
       
-      Alert.alert('Success', 'Appointments rescheduled successfully');
+      showAlert('Success', 'Appointments rescheduled successfully');
       setRescheduleModalVisible(false);
       setShiftMinutes('');
       fetchTodayAppointments(doctorId);
     } catch (e) {
-      Alert.alert('Error', 'Failed to reschedule: ' + (e.response?.data?.error || e.message));
+      showAlert('Error', 'Failed to reschedule: ' + (e.response?.data?.error || e.message));
     }
   };
 
   const handleCancelDay = async () => {
     // This function should probably use the separate CancelDay screen instead of inline reason
     // But for now, let's make it work with a simple text input
-    Alert.prompt(
+    showPrompt(
       'Cancel Day',
       'Please provide a reason for cancelling all appointments today:',
       [
@@ -1208,7 +1220,7 @@ Dr. ${name || 'Neext App Doctor'}`;
           text: 'Confirm', 
           onPress: async (reason) => {
             if (!reason || !reason.trim()) {
-              Alert.alert('Error', 'Please provide a reason for cancellation');
+              showAlert('Error', 'Please provide a reason for cancellation');
               return;
             }
 
@@ -1221,11 +1233,11 @@ Dr. ${name || 'Neext App Doctor'}`;
                 reason: reason.trim()
               });
               
-              Alert.alert('Success', `${res.data.cancelledCount} appointments cancelled successfully`);
+              showAlert('Success', `${res.data.cancelledCount} appointments cancelled successfully`);
               setCancelDayModalVisible(false);
               fetchTodayAppointments(doctorId);
             } catch (e) {
-              Alert.alert('Error', 'Failed to cancel appointments: ' + (e.response?.data?.error || e.message));
+              showAlert('Error', 'Failed to cancel appointments: ' + (e.response?.data?.error || e.message));
             }
           }
         }
@@ -1262,12 +1274,12 @@ Dr. ${name || 'Neext App Doctor'}`;
 
   const confirmCancelAppointment = async () => {
     if (!selectedCancelReason) {
-      Alert.alert('Error', 'Please select a reason for cancellation');
+      showAlert('Error', 'Please select a reason for cancellation');
       return;
     }
 
     if (selectedCancelReason === 'Other' && !customCancelReason.trim()) {
-      Alert.alert('Error', 'Please specify your reason for cancellation');
+      showAlert('Error', 'Please specify your reason for cancellation');
       return;
     }
 
@@ -1277,12 +1289,12 @@ Dr. ${name || 'Neext App Doctor'}`;
       // You can include the reason in the API call if your backend supports it
       await api.delete(`/api/user/${appointmentToCancel.userId}/appointments/${appointmentToCancel.appointmentId}`);
       
-      Alert.alert('Success', 'Appointment cancelled successfully');
+      showAlert('Success', 'Appointment cancelled successfully');
       setCancelReasonModalVisible(false);
       fetchTodayAppointments(doctorId);
       fetchUpcomingAppointments(doctorId);
     } catch (e) {
-      Alert.alert('Error', 'Failed to cancel appointment: ' + (e.response?.data?.error || e.message));
+      showAlert('Error', 'Failed to cancel appointment: ' + (e.response?.data?.error || e.message));
     }
   };
 
@@ -1292,11 +1304,11 @@ Dr. ${name || 'Neext App Doctor'}`;
       await api.put(`/api/appointments/${appointment.id}/reschedule`, {
         newTime: newTime.toISOString()
       });
-      Alert.alert('Success', 'Appointment rescheduled successfully');
+      showAlert('Success', 'Appointment rescheduled successfully');
       fetchTodayAppointments(doctorId);
       fetchUpcomingAppointments(doctorId);
     } catch (e) {
-      Alert.alert('Error', 'Failed to reschedule appointment: ' + (e.response?.data?.error || e.message));
+      showAlert('Error', 'Failed to reschedule appointment: ' + (e.response?.data?.error || e.message));
     }
   };
 
@@ -1310,7 +1322,7 @@ Dr. ${name || 'Neext App Doctor'}`;
       const res = await api.get(`/api/doctor/${doctorId}/appointments/history?from=${from}&to=${to}`);
       setHistoryAppointments(res.data || []);
     } catch (e) {
-      Alert.alert('Error', 'Failed to fetch history: ' + (e.response?.data?.error || e.message));
+      showAlert('Error', 'Failed to fetch history: ' + (e.response?.data?.error || e.message));
     } finally {
       setLoading(false);
     }

@@ -1,6 +1,6 @@
 import * as Notifications from 'expo-notifications';
 import * as Device from 'expo-device';
-import * as SecureStore from 'expo-secure-store';
+import SecureStore from '../utils/secureStorage';
 import { Platform, Alert } from 'react-native';
 import Constants from 'expo-constants';
 import API_BASE_URL from '../config';
@@ -19,8 +19,10 @@ class ExpoPushService {
         this.isInitialized = false;
         this.baseURL = API_BASE_URL;
         
-        // Configure notification behavior
-        this.setupNotificationBehavior();
+        // Only configure notifications on native platforms
+        if (Platform.OS !== 'web') {
+            this.setupNotificationBehavior();
+        }
         
         console.log('🔧 [ExpoPush] Initialized with backend URL:', this.baseURL);
     }
@@ -29,6 +31,11 @@ class ExpoPushService {
      * Configure how notifications are handled when received
      */
     setupNotificationBehavior() {
+        if (Platform.OS === 'web') {
+            console.log('⚠️ [ExpoPush] Notifications not supported on web');
+            return;
+        }
+        
         Notifications.setNotificationHandler({
             handleNotification: async (notification) => {
                 console.log('📬 [ExpoPush] Notification received:', notification.request.content.title);
@@ -46,6 +53,11 @@ class ExpoPushService {
      * Initialize Expo Push service - call this on app startup
      */
     async initialize() {
+        if (Platform.OS === 'web') {
+            console.log('⚠️ [ExpoPush] Skipping initialization on web platform');
+            return { success: false, message: 'Web platform not supported' };
+        }
+        
         try {
             console.log('🔔 [ExpoPush] Initializing Expo Push Service...');
             

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Alert, KeyboardAvoidingView, Platform, Modal } from 'react-native';
 import api from '../services/api';
 import { API_ENDPOINTS } from '../config/apiConfig';
-import * as SecureStore from 'expo-secure-store';
+import SecureStore from '../utils/secureStorage';
 
 // Helper function to convert time object to string format for Java LocalTime
 const formatTimeForAPI = (timeObj) => {
