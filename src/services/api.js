@@ -1,5 +1,5 @@
 import axios from 'axios';
-import * as SecureStore from 'expo-secure-store';
+import SecureStore from '../utils/secureStorage';
 import { Alert } from 'react-native';
 import API_BASE_URL from '../config';
 

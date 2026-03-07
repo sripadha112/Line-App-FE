@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import MedicineSearchModal from '../components/MedicineSearchModal';
 import API_BASE_URL from '../config';
-import * as SecureStore from 'expo-secure-store';
+import SecureStore from '../utils/secureStorage';
 
 export default function PrescriptionEditor({
   userId,

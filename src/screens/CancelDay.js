@@ -10,12 +10,14 @@ import {
   ActivityIndicator,
   TextInput,
   Modal,
-  ScrollView
+  ScrollView,
+  Platform
 } from 'react-native';
 import { DoctorAPIService } from '../services/doctorApiService';
 import TopBar from '../components/TopBar';
 import BottomNavigation from '../components/BottomNavigation';
 import DatePicker from '../components/DatePicker';
+import { showAlert } from '../utils/alertUtils';
 
 const REASONS = [
   'Personal emergency',
@@ -92,7 +94,7 @@ export default function CancelDay({ route, navigation }) {
       setWorkplaces(response || []);
     } catch (error) {
       console.error('Error fetching workplaces:', error);
-      Alert.alert('Error', 'Failed to fetch workplaces');
+      showAlert('Error', 'Failed to fetch workplaces');
     } finally {
       setLoading(false);
     }
@@ -169,23 +171,23 @@ export default function CancelDay({ route, navigation }) {
 
   const validateForm = () => {
     if (formData.dateOption === 'custom' && !formData.customDateText.trim()) {
-      Alert.alert('Validation Error', 'Please select a date');
+      showAlert('Validation Error', 'Please select a date');
       return false;
     }
 
     if (!formData.selectedReason) {
-      Alert.alert('Validation Error', 'Please select a reason');
+      showAlert('Validation Error', 'Please select a reason');
       return false;
     }
 
     if (formData.selectedReason === 'Other' && !formData.customReason.trim()) {
-      Alert.alert('Validation Error', 'Please specify your reason');
+      showAlert('Validation Error', 'Please specify your reason');
       return false;
     }
 
     if (mode === 'block' && formData.blockType === 'timeRange') {
       if (!formData.startTime || !formData.endTime) {
-        Alert.alert('Validation Error', 'Please specify start and end time for blocking');
+        showAlert('Validation Error', 'Please specify start and end time for blocking');
         return false;
       }
     }
@@ -202,7 +204,7 @@ export default function CancelDay({ route, navigation }) {
       ? 'the entire day' 
       : `${formData.startTime} to ${formData.endTime}`;
     
-    Alert.alert(
+    showAlert(
       '⚠️ Confirm Block Action',
       `You are about to block ${timeInfo} on ${targetDate}.\n\n` +
       `IMPORTANT: Any existing appointments during this blocked time will be automatically CANCELLED and patients will be notified.\n\n` +
@@ -248,14 +250,14 @@ export default function CancelDay({ route, navigation }) {
         successMessage += `\n\n${response.cancelledAppointments} existing appointment(s) were cancelled and patients have been notified.`;
       }
       
-      Alert.alert(
+      showAlert(
         'Success',
         response.message || successMessage,
         [{ text: 'OK', onPress: () => { setModalVisible(false); fetchWorkplaces(); } }]
       );
     } catch (error) {
       console.error('Error blocking:', error);
-      Alert.alert(
+      showAlert(
         'Error',
         error.response?.data?.message || 'Failed to block appointments. Please try again.'
       );
@@ -289,14 +291,21 @@ export default function CancelDay({ route, navigation }) {
       console.log('[CancelDay] Cancelling appointments:', payload);
       const response = await DoctorAPIService.cancelWorkspaceDayAppointments(selectedWorkplace.id, payload);
       
-      Alert.alert(
+      showAlert(
         'Success',
         response.message || 'All appointments for the selected date have been cancelled successfully',
-        [{ text: 'OK', onPress: () => { setModalVisible(false); navigation.goBack(); } }]
+        [{ text: 'OK', onPress: () => { 
+          setModalVisible(false); 
+          if (Platform.OS === 'web') {
+            window.history.back();
+          } else {
+            navigation.goBack();
+          }
+        } }]
       );
     } catch (error) {
       console.error('Error:', error);
-      Alert.alert(
+      showAlert(
         'Error',
         error.response?.data?.message || 'Failed to cancel appointments. Please try again.'
       );
@@ -324,7 +333,7 @@ export default function CancelDay({ route, navigation }) {
       setExistingBlocks(filteredBlocks);
     } catch (error) {
       console.error('Error fetching blocks:', error);
-      Alert.alert('Error', 'Failed to fetch existing blocks');
+      showAlert('Error', 'Failed to fetch existing blocks');
     } finally {
       setLoadingBlocks(false);
     }
@@ -342,11 +351,11 @@ export default function CancelDay({ route, navigation }) {
 
   const handleUnblock = async () => {
     if (selectedBlocks.length === 0) {
-      Alert.alert('Selection Required', 'Please select at least one block to remove');
+      showAlert('Selection Required', 'Please select at least one block to remove');
       return;
     }
 
-    Alert.alert(
+    showAlert(
       'Confirm Unblock',
       `Are you sure you want to remove ${selectedBlocks.length} blocked slot(s)?`,
       [
@@ -359,14 +368,14 @@ export default function CancelDay({ route, navigation }) {
               for (const blockId of selectedBlocks) {
                 await DoctorAPIService.removeBlockedSlot(blockId);
               }
-              Alert.alert(
+              showAlert(
                 'Success',
                 `${selectedBlocks.length} blocked slot(s) have been removed successfully`,
                 [{ text: 'OK', onPress: () => { setUnblockModalVisible(false); fetchWorkplaces(); } }]
               );
             } catch (error) {
               console.error('Error unblocking:', error);
-              Alert.alert('Error', 'Failed to unblock slots. Please try again.');
+              showAlert('Error', 'Failed to unblock slots. Please try again.');
             } finally {
               setSubmitting(false);
             }

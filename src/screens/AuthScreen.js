@@ -1,9 +1,10 @@
 import React, {useState} from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
 import api from '../services/api';
-import * as SecureStore from 'expo-secure-store';
+import SecureStore from '../utils/secureStorage';
 import { API_ENDPOINTS } from '../config/apiConfig';
 import UserNotificationService from '../services/userNotificationService';
+import { showAlert } from '../utils/alertUtils';
 
 export default function AuthScreen({navigation}) {
   // const [mobile, setMobile] = useState('');
@@ -211,7 +212,7 @@ export default function AuthScreen({navigation}) {
     // Validate mobile number
     const validation = validateMobileNumber(mobile);
     if (!validation.isValid) {
-      Alert.alert('Error', validation.message);
+      showAlert('Error', validation.message);
       return;
     }
 
@@ -311,7 +312,7 @@ export default function AuthScreen({navigation}) {
       } else {
         // Other errors (network, server, etc.)
         const displayMessage = e.response?.data?.error || e.message || 'Unknown error';
-        Alert.alert('Error', 'Verification failed: ' + displayMessage);
+        showAlert('Error', 'Verification failed: ' + displayMessage);
       }
     }
     setLoading(false);

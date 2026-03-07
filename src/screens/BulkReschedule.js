@@ -10,12 +10,14 @@ import {
   ActivityIndicator,
   TextInput,
   Modal,
-  ScrollView
+  ScrollView,
+  Platform
 } from 'react-native';
 import { DoctorAPIService } from '../services/doctorApiService';
 import TopBar from '../components/TopBar';
 import BottomNavigation from '../components/BottomNavigation';
 import DatePicker from '../components/DatePicker';
+import { showAlert } from '../utils/alertUtils';
 
 const BULK_RESCHEDULE_REASONS = [
   'Schedule change',
@@ -63,7 +65,7 @@ export default function BulkReschedule({ route, navigation }) {
       setWorkplaces(data);
     } catch (error) {
       console.error('Error fetching workplaces:', error);
-      Alert.alert('Error', 'Failed to fetch workplaces');
+      showAlert('Error', 'Failed to fetch workplaces');
     } finally {
       setLoading(false);
     }
@@ -143,7 +145,7 @@ export default function BulkReschedule({ route, navigation }) {
         dateOption: 'custom'
       }));
     } else {
-      Alert.alert('Invalid Date', 'Please select a future date');
+      showAlert('Invalid Date', 'Please select a future date');
     }
   };
 
@@ -155,22 +157,22 @@ export default function BulkReschedule({ route, navigation }) {
     const hasDateChange = rescheduleData.dateOption !== 'none';
     
     if (!hasTimeExtension && !hasDateChange) {
-      Alert.alert('Validation Error', 'Please specify either time extension or date change');
+      showAlert('Validation Error', 'Please specify either time extension or date change');
       return;
     }
 
     if (rescheduleData.dateOption === 'custom' && !rescheduleData.customDateText.trim()) {
-      Alert.alert('Validation Error', 'Please select a custom date');
+      showAlert('Validation Error', 'Please select a custom date');
       return;
     }
 
     if (!rescheduleData.selectedReason) {
-      Alert.alert('Validation Error', 'Please select a reason for rescheduling');
+      showAlert('Validation Error', 'Please select a reason for rescheduling');
       return;
     }
 
     if (rescheduleData.selectedReason === 'Other' && !rescheduleData.customReason.trim()) {
-      Alert.alert('Validation Error', 'Please specify your reason for rescheduling');
+      showAlert('Validation Error', 'Please specify your reason for rescheduling');
       return;
     }
 
@@ -180,7 +182,7 @@ export default function BulkReschedule({ route, navigation }) {
       // Prepare payload  
       const workspaceId = selectedWorkplace.id || selectedWorkplace.workplaceId;
       if (!workspaceId) {
-        Alert.alert('Error', 'Invalid workplace selected');
+        showAlert('Error', 'Invalid workplace selected');
         return;
       }
       
@@ -204,7 +206,7 @@ export default function BulkReschedule({ route, navigation }) {
       const response = await DoctorAPIService.bulkRescheduleAppointments(doctorId, payload);
       
       // Show success message
-      Alert.alert(
+      showAlert(
         'Success',
         response.message || 'Appointments have been rescheduled successfully',
         [
@@ -212,7 +214,11 @@ export default function BulkReschedule({ route, navigation }) {
             text: 'OK',
             onPress: () => {
               setRescheduleModalVisible(false);
-              navigation.goBack(); // Go back to previous screen
+              if (Platform.OS === 'web') {
+                window.history.back();
+              } else {
+                navigation.goBack();
+              }
             }
           }
         ]
@@ -220,7 +226,7 @@ export default function BulkReschedule({ route, navigation }) {
       
     } catch (error) {
       console.error('Error bulk rescheduling:', error);
-      Alert.alert(
+      showAlert(
         'Error',
         error.response?.data?.message || 'Failed to reschedule appointments. Please try again.'
       );

@@ -10,7 +10,7 @@ import {
   Modal,
 } from 'react-native';
 import API_BASE_URL from '../config';
-import * as SecureStore from 'expo-secure-store';
+import SecureStore from '../utils/secureStorage';
 
 export default function MedicineSearchModal({ visible, onClose, onSelectMedicine }) {
   const [searchQuery, setSearchQuery] = useState('');

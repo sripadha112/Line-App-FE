@@ -256,16 +256,21 @@ export default function EditProfile({ route, navigation }) {
       
       console.log('Profile update response:', response);
 
-      Alert.alert(
-        'Success',
-        'Profile updated successfully!',
-        [
-          {
-            text: 'OK',
-            onPress: () => navigation.goBack()
-          }
-        ]
-      );
+      if (Platform.OS === 'web') {
+        alert('Profile updated successfully!');
+        navigation.goBack();
+      } else {
+        Alert.alert(
+          'Success',
+          'Profile updated successfully!',
+          [
+            {
+              text: 'OK',
+              onPress: () => navigation.goBack()
+            }
+          ]
+        );
+      }
 
     } catch (error) {
       console.error('Error updating profile:', error);

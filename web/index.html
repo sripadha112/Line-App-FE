@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta httpEquiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+  
+  <title>Neext App - Healthcare Appointment Management</title>
+  <meta name="description" content="Neext App - Manage your healthcare appointments efficiently" />
+  
+  <!-- SEO Meta Tags -->
+  <meta name="keywords" content="healthcare, appointments, doctor, medical, neext" />
+  <meta name="author" content="Neext App" />
+  
+  <!-- Open Graph / Facebook -->
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://neextapp.com/" />
+  <meta property="og:title" content="Neext App - Healthcare Appointment Management" />
+  <meta property="og:description" content="Manage your healthcare appointments efficiently" />
+  
+  <!-- Twitter -->
+  <meta property="twitter:card" content="summary_large_image" />
+  <meta property="twitter:url" content="https://neextapp.com/" />
+  <meta property="twitter:title" content="Neext App" />
+  <meta property="twitter:description" content="Manage your healthcare appointments efficiently" />
+  
+  <!-- Favicon -->
+  <link rel="icon" type="image/jpeg" href="/assets/Logo.jpeg" />
+  <link rel="apple-touch-icon" href="/assets/Logo.jpeg" />
+  
+  <!-- PWA Manifest -->
+  <link rel="manifest" href="/manifest.json" />
+  
+  <!-- Theme Color -->
+  <meta name="theme-color" content="#2196F3" />
+  
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+    
+    html, body {
+      height: 100%;
+      margin: 0;
+      padding: 0;
+    }
+    
+    body {
+      overflow: hidden;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+    
+    #root {
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+    }
+    
+    /* Loading screen */
+    .loading-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      background-color: #ffffff;
+    }
+    
+    .loading-spinner {
+      width: 50px;
+      height: 50px;
+      border: 5px solid #f3f3f3;
+      border-top: 5px solid #2196F3;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+    
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    
+    .loading-text {
+      margin-top: 20px;
+      color: #2196F3;
+      font-size: 16px;
+      font-weight: 500;
+    }
+    
+    /* Disable text selection for better mobile feel */
+    * {
+      -webkit-touch-callout: none;
+      -webkit-user-select: none;
+      -khtml-user-select: none;
+      -moz-user-select: none;
+      -ms-user-select: none;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+    
+    /* But allow text selection in input fields */
+    input, textarea {
+      -webkit-user-select: text;
+      -khtml-user-select: text;
+      -moz-user-select: text;
+      -ms-user-select: text;
+      user-select: text;
+    }
+    
+    /* Mobile responsive adjustments */
+    @media only screen and (max-width: 768px) {
+      body {
+        overflow-y: auto;
+      }
+    }
+  </style>
+</head>
+<body>
+  <noscript>You need to enable JavaScript to run this app.</noscript>
+  
+  <div id="root">
+    <div class="loading-container">
+      <div class="loading-spinner"></div>
+      <div class="loading-text">Loading Neext App...</div>
+    </div>
+  </div>
+  
+  <!-- App bundle will be injected here -->
+</body>
+</html>

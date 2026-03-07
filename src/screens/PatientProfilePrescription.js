@@ -14,10 +14,11 @@ import {
 } from 'react-native';
 import { DoctorAPIService } from '../services/doctorApiService';
 import TopBar from '../components/TopBar';
-import * as SecureStore from 'expo-secure-store';
+import SecureStore from '../utils/secureStorage';
 import API_BASE_URL from '../config';
 import MedicineSearchModal from '../components/MedicineSearchModal';
 import PrescriptionEditor from '../components/PrescriptionEditor';
+import { showAlert } from '../utils/alertUtils';
 
 export default function PatientProfilePrescription({ route, navigation }) {
   const { appointment, doctorId } = route.params;
@@ -114,6 +115,37 @@ export default function PatientProfilePrescription({ route, navigation }) {
   };
 
   const handlePreviewPrescription = async (prescriptionId) => {
+    if (Platform.OS === 'web') {
+      // Web: Open PDF in new tab
+      try {
+        setPdfLoading(true);
+        const token = await SecureStore.getItemAsync('accessToken');
+        const url = `${API_BASE_URL}/api/prescriptions/${prescriptionId}/pdf`;
+        
+        const response = await fetch(url, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+        });
+
+        if (!response.ok) throw new Error('Failed to generate PDF');
+
+        const htmlContent = await response.text();
+        
+        // Open in new window
+        const printWindow = window.open('', '_blank');
+        printWindow.document.write(htmlContent);
+        printWindow.document.close();
+      } catch (error) {
+        console.error('Error previewing prescription:', error);
+        alert('Failed to preview prescription');
+      } finally {
+        setPdfLoading(false);
+      }
+      return;
+    }
+
+    // Native platforms
     try {
       setPdfLoading(true);
       
@@ -168,13 +200,44 @@ export default function PatientProfilePrescription({ route, navigation }) {
       }
     } catch (error) {
       console.error('Error previewing prescription:', error);
-      Alert.alert('Error', 'Failed to preview prescription');
+      showAlert('Error', 'Failed to preview prescription');
     } finally {
       setPdfLoading(false);
     }
   };
 
   const handlePrintPrescription = async (prescriptionId) => {
+    if (Platform.OS === 'web') {
+      // On web, open in new tab and use browser print
+      try {
+        const token = await SecureStore.getItemAsync('accessToken');
+        const url = `${API_BASE_URL}/api/prescriptions/${prescriptionId}/pdf`;
+        
+        const response = await fetch(url, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+        });
+
+        if (!response.ok) throw new Error('Failed to generate PDF');
+
+        const htmlContent = await response.text();
+        
+        // Open in new window and trigger print
+        const printWindow = window.open('', '_blank');
+        printWindow.document.write(htmlContent);
+        printWindow.document.close();
+        printWindow.onload = () => {
+          printWindow.print();
+        };
+      } catch (error) {
+        console.error('Error printing prescription:', error);
+        alert('Failed to print prescription');
+      }
+      return;
+    }
+
+    // Native platforms
     try {
       const token = await SecureStore.getItemAsync('accessToken');
       const response = await fetch(`${API_BASE_URL}/api/prescriptions/${prescriptionId}/pdf`, {
@@ -192,7 +255,7 @@ export default function PatientProfilePrescription({ route, navigation }) {
       await Print.printAsync({ html: htmlContent });
     } catch (error) {
       console.error('Error printing prescription:', error);
-      Alert.alert('Error', 'Failed to print prescription');
+      showAlert('Error', 'Failed to print prescription');
     }
   };
 
@@ -201,7 +264,7 @@ export default function PatientProfilePrescription({ route, navigation }) {
       setLoading(true);
       const userId = appointment.userId || appointment.patientId;
       if (!userId) {
-        Alert.alert('Error', 'Patient ID not found');
+        showAlert('Error', 'Patient ID not found');
         navigation.goBack();
         return;
       }
@@ -210,7 +273,7 @@ export default function PatientProfilePrescription({ route, navigation }) {
       setUserProfile(profile);
     } catch (error) {
       console.error('Error fetching user profile:', error);
-      Alert.alert('Error', 'Failed to load patient profile');
+      showAlert('Error', 'Failed to load patient profile');
       navigation.goBack();
     } finally {
       setLoading(false);
@@ -290,7 +353,7 @@ export default function PatientProfilePrescription({ route, navigation }) {
   const handleSaveAndComplete = async () => {
     // Check if prescription was added in the Prescription Management section
     if (!prescriptionAddedInSession) {
-      Alert.alert(
+      showAlert(
         'No Prescription Added',
         'You have not added a prescription for this patient. What would you like to do?',
         [
@@ -313,7 +376,7 @@ export default function PatientProfilePrescription({ route, navigation }) {
       return;
     }
 
-    Alert.alert(
+    showAlert(
       'Save & Complete',
       'This will save all changes and mark the appointment as completed. Continue?',
       [
@@ -347,19 +410,25 @@ export default function PatientProfilePrescription({ route, navigation }) {
       // Complete appointment
       await DoctorAPIService.completeAppointment(appointment.appointmentId);
 
-      Alert.alert(
+      showAlert(
         'Success',
         'Appointment completed successfully (offline prescription given)!',
         [
           {
             text: 'OK',
-            onPress: () => navigation.goBack()
+            onPress: () => {
+              if (Platform.OS === 'web') {
+                window.history.back();
+              } else {
+                navigation.goBack();
+              }
+            }
           }
         ]
       );
     } catch (error) {
       console.error('Error completing appointment:', error);
-      Alert.alert('Error', 'Failed to complete appointment. Please try again.');
+      showAlert('Error', 'Failed to complete appointment. Please try again.');
     } finally {
       setSaving(false);
     }
@@ -386,19 +455,25 @@ export default function PatientProfilePrescription({ route, navigation }) {
       // Complete appointment
       await DoctorAPIService.completeAppointment(appointment.appointmentId);
 
-      Alert.alert(
+      showAlert(
         'Success',
         'Patient profile updated and appointment completed successfully!',
         [
           {
             text: 'OK',
-            onPress: () => navigation.goBack()
+            onPress: () => {
+              if (Platform.OS === 'web') {
+                window.history.back();
+              } else {
+                navigation.goBack();
+              }
+            }
           }
         ]
       );
     } catch (error) {
       console.error('Error saving and completing:', error);
-      Alert.alert('Error', 'Failed to save changes. Please try again.');
+      showAlert('Error', 'Failed to save changes. Please try again.');
     } finally {
       setSaving(false);
     }
@@ -464,7 +539,7 @@ export default function PatientProfilePrescription({ route, navigation }) {
         }));
       } else {
         // For individual field editing (backward compatibility)
-        handleFieldEdit(fieldName, displayValue);
+        setEditedFields(prev => ({ ...prev, [fieldName]: displayValue }));
       }
     };
 
@@ -603,7 +678,13 @@ export default function PatientProfilePrescription({ route, navigation }) {
   if (loading) {
     return (
       <View style={styles.container}>
-        <TopBar title="Patient Profile" onBack={() => navigation.goBack()} />
+        <TopBar title="Patient Profile" onBack={() => {
+          if (Platform.OS === 'web') {
+            window.history.back();
+          } else {
+            navigation.goBack();
+          }
+        }} />
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#3498db" />
           <Text style={styles.loadingText}>Loading patient profile...</Text>
@@ -615,7 +696,13 @@ export default function PatientProfilePrescription({ route, navigation }) {
   if (!userProfile) {
     return (
       <View style={styles.container}>
-        <TopBar title="Patient Profile" onBack={() => navigation.goBack()} />
+        <TopBar title="Patient Profile" onBack={() => {
+          if (Platform.OS === 'web') {
+            window.history.back();
+          } else {
+            navigation.goBack();
+          }
+        }} />
         <View style={styles.errorContainer}>
           <Text style={styles.errorText}>Failed to load patient profile</Text>
         </View>

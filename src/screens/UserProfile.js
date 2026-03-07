@@ -8,16 +8,18 @@ import {
   Alert,
   RefreshControl,
   ActivityIndicator,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { useFocusEffect } from '@react-navigation/native';
-import * as SecureStore from 'expo-secure-store';
+import SecureStore from '../utils/secureStorage';
 import { UserAPIService } from '../services/doctorApiService';
 import { api } from '../services/api';
 import API_BASE_URL from '../config';
 import BottomNavigation from '../components/BottomNavigation';
 import { Modal, TextInput } from 'react-native';
+import { showAlert } from '../utils/alertUtils';
 
 export default function UserProfile({ route, navigation }) {
   const { userId } = route.params;
@@ -164,7 +166,7 @@ export default function UserProfile({ route, navigation }) {
   };
 
   const deletePrescription = async (prescriptionId) => {
-    Alert.alert(
+    showAlert(
       'Delete Prescription',
       'Are you sure you want to delete this prescription?',
       [
@@ -184,11 +186,11 @@ export default function UserProfile({ route, navigation }) {
 
               if (!response.ok) throw new Error('Failed to delete prescription');
 
-              Alert.alert('Success', 'Prescription deleted successfully');
+              showAlert('Success', 'Prescription deleted successfully');
               fetchPrescriptions(); // Refresh the list
             } catch (error) {
               console.error('Error deleting prescription:', error);
-              Alert.alert('Error', 'Failed to delete prescription');
+              showAlert('Error', 'Failed to delete prescription');
             }
           },
         },
@@ -240,6 +242,34 @@ export default function UserProfile({ route, navigation }) {
   };
 
   const previewPrescription = async (prescriptionId) => {
+    if (Platform.OS === 'web') {
+      // Web: Open PDF in new tab
+      try {
+        const token = await SecureStore.getItemAsync('accessToken');
+        const url = `${API_BASE_URL}/api/prescriptions/${prescriptionId}/pdf`;
+        
+        const response = await fetch(url, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+        });
+
+        if (!response.ok) throw new Error('Failed to generate PDF');
+
+        const htmlContent = await response.text();
+        
+        // Open in new window
+        const printWindow = window.open('', '_blank');
+        printWindow.document.write(htmlContent);
+        printWindow.document.close();
+      } catch (error) {
+        console.error('Error previewing prescription:', error);
+        alert('Failed to preview prescription');
+      }
+      return;
+    }
+
+    // Native platforms
     try {
       setPdfLoading(true);
       
@@ -361,36 +391,48 @@ export default function UserProfile({ route, navigation }) {
   //   Alert.alert('Change Password', 'Change password functionality will be added soon.');
   // };
 
-  const handleLogout = () => {
-    Alert.alert(
-      'Logout',
-      'Are you sure you want to logout?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Logout',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await api.post('/api/auth/logout');
-              await SecureStore.deleteItemAsync('accessToken');
-              await SecureStore.deleteItemAsync('role');
-              await SecureStore.deleteItemAsync('userId');
-              await SecureStore.deleteItemAsync('fullName');
-              navigation.reset({ index: 0, routes: [{ name: 'Auth' }] });
-            } catch (e) {
-              console.log('logout error', e);
-              // Force logout even if API fails
-              await SecureStore.deleteItemAsync('accessToken');
-              await SecureStore.deleteItemAsync('role');
-              await SecureStore.deleteItemAsync('userId');
-              await SecureStore.deleteItemAsync('fullName');
-              navigation.reset({ index: 0, routes: [{ name: 'Auth' }] });
-            }
+  const handleLogout = async () => {
+    const confirmLogout = Platform.OS === 'web' 
+      ? window.confirm('Are you sure you want to logout?')
+      : true;
+    
+    const performLogout = async () => {
+      try {
+        await api.post('/api/auth/logout');
+        await SecureStore.deleteItemAsync('accessToken');
+        await SecureStore.deleteItemAsync('role');
+        await SecureStore.deleteItemAsync('userId');
+        await SecureStore.deleteItemAsync('fullName');
+        navigation.reset({ index: 0, routes: [{ name: 'Auth' }] });
+      } catch (e) {
+        console.log('logout error', e);
+        // Force logout even if API fails
+        await SecureStore.deleteItemAsync('accessToken');
+        await SecureStore.deleteItemAsync('role');
+        await SecureStore.deleteItemAsync('userId');
+        await SecureStore.deleteItemAsync('fullName');
+        navigation.reset({ index: 0, routes: [{ name: 'Auth' }] });
+      }
+    };
+
+    if (Platform.OS === 'web') {
+      if (confirmLogout) {
+        await performLogout();
+      }
+    } else {
+      Alert.alert(
+        'Logout',
+        'Are you sure you want to logout?',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Logout',
+            style: 'destructive',
+            onPress: performLogout
           }
-        }
-      ]
-    );
+        ]
+      );
+    }
   };
 
   const toggleSection = (sectionName) => {
@@ -826,20 +868,22 @@ export default function UserProfile({ route, navigation }) {
                         )}
                       </View>
                       <View style={{ flexDirection: 'row', gap: 8, marginLeft: 8 }}>
-                        <TouchableOpacity
-                          style={{
-                            backgroundColor: '#e3f2fd',
-                            padding: 8,
-                            borderRadius: 6,
-                            width: 36,
-                            height: 36,
-                            justifyContent: 'center',
-                            alignItems: 'center',
-                          }}
-                          onPress={() => sharePrescription(prescription.id)}
-                        >
-                          <Text style={{ fontSize: 16 }}>🔀</Text>
-                        </TouchableOpacity>
+                        {Platform.OS !== 'web' && (
+                          <TouchableOpacity
+                            style={{
+                              backgroundColor: '#e3f2fd',
+                              padding: 8,
+                              borderRadius: 6,
+                              width: 36,
+                              height: 36,
+                              justifyContent: 'center',
+                              alignItems: 'center',
+                            }}
+                            onPress={() => sharePrescription(prescription.id)}
+                          >
+                            <Text style={{ fontSize: 16 }}>🔀</Text>
+                          </TouchableOpacity>
+                        )}
                         <TouchableOpacity
                           style={{
                             backgroundColor: '#f3e5f5',

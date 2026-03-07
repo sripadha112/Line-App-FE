@@ -1,0 +1,22 @@
+{
+  "short_name": "Neext",
+  "name": "Neext App - Healthcare Appointments",
+  "description": "Manage your healthcare appointments efficiently",
+  "icons": [
+    {
+      "src": "/assets/Logo.jpeg",
+      "type": "image/jpeg",
+      "sizes": "192x192"
+    },
+    {
+      "src": "/assets/Logo.jpeg",
+      "type": "image/jpeg",
+      "sizes": "512x512"
+    }
+  ],
+  "start_url": "/",
+  "display": "standalone",
+  "theme_color": "#2196F3",
+  "background_color": "#ffffff",
+  "orientation": "portrait"
+}

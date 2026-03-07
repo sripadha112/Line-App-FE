@@ -8,14 +8,16 @@ import {
   RefreshControl,
   Alert,
   ActivityIndicator,
-  ScrollView
+  ScrollView,
+  Platform
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { DoctorAPIService } from '../services/doctorApiService';
 import TopBar from '../components/TopBar';
 import BottomNavigation from '../components/BottomNavigation';
 import API_BASE_URL from '../config';
-import * as SecureStore from 'expo-secure-store';
+import SecureStore from '../utils/secureStorage';
+import { showAlert } from '../utils/alertUtils';
 
 export default function AllBookings({ route, navigation }) {
   const { doctorId, workplaceId, workplaceName, refresh } = route.params;
@@ -49,7 +51,7 @@ export default function AllBookings({ route, navigation }) {
       await fetchFamilyMembersForAppointments(data);
     } catch (error) {
       console.error('Error fetching appointments:', error);
-      Alert.alert('Error', 'Failed to fetch appointments');
+      showAlert('Error', 'Failed to fetch appointments');
     } finally {
       setLoading(false);
     }
@@ -125,7 +127,7 @@ export default function AllBookings({ route, navigation }) {
 
   const handleViewProfile = (appointment) => {
     // Navigate to patient profile or show modal
-    Alert.alert('View Profile', `Viewing profile for ${appointment.patientName}`);
+    showAlert('View Profile', `Viewing profile for ${appointment.patientName}`);
   };
 
   const handleReschedule = (appointment) => {
@@ -140,7 +142,7 @@ export default function AllBookings({ route, navigation }) {
   };
 
   const handleComplete = async (appointment) => {
-    Alert.alert(
+    showAlert(
       'Complete Appointment',
       'Please continue if an offline prescription has been given to the user, if not please give the prescription.',
       [
@@ -151,12 +153,12 @@ export default function AllBookings({ route, navigation }) {
             try {
               setLoading(true);
               await DoctorAPIService.completeAppointment(appointment.appointmentId);
-              Alert.alert('Success', 'Appointment marked as completed');
+              showAlert('Success', 'Appointment marked as completed');
               // Refresh the appointments list
               await fetchAppointments();
             } catch (error) {
               console.error('Error completing appointment:', error);
-              Alert.alert('Error', 'Failed to complete appointment. Please try again.');
+              showAlert('Error', 'Failed to complete appointment. Please try again.');
             } finally {
               setLoading(false);
             }
@@ -182,7 +184,7 @@ export default function AllBookings({ route, navigation }) {
     console.log('🔍 Appointment ID:', appointment.appointmentId);
     console.log('🔍 Appointment fields:', Object.keys(appointment));
     
-    Alert.alert(
+    showAlert(
       'Cancel Appointment',
       `Are you sure you want to cancel the appointment with ${appointment.patientName}?`,
       [
@@ -195,12 +197,12 @@ export default function AllBookings({ route, navigation }) {
               setLoading(true);
               console.log('🚀 About to cancel appointment with ID:', appointment.appointmentId);
               await DoctorAPIService.cancelAppointment(appointment.appointmentId);
-              Alert.alert('Success', 'Appointment has been cancelled successfully');
+              showAlert('Success', 'Appointment has been cancelled successfully');
               // Refresh the appointments list
               await fetchAppointments();
             } catch (error) {
               console.error('Error cancelling appointment:', error);
-              Alert.alert('Error', 'Failed to cancel appointment. Please try again.');
+              showAlert('Error', 'Failed to cancel appointment. Please try again.');
             } finally {
               setLoading(false);
             }

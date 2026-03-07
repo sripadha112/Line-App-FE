@@ -1,5 +1,5 @@
 import fcmService from './fcmService';
-import * as SecureStore from 'expo-secure-store';
+import SecureStore from '../utils/secureStorage';
 import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
 import API_BASE_URL from '../config';
@@ -37,6 +37,12 @@ class UserNotificationService {
      * This should be called after user login/registration
      */
     static async registerUserForNotifications() {
+        // Skip notification registration on web
+        if (Platform.OS === 'web') {
+            console.log('⚠️ [UserNotification] Notifications not supported on web');
+            return { success: false, message: 'Web platform not supported' };
+        }
+        
         try {
             // Initialize Expo Push service first
             console.log('🔔 [UserNotification] Initializing Expo Push service...');
