@@ -63,7 +63,7 @@ export default function QuickBookingQR({ route, navigation }) {
   const generateBookingURL = (workplace) => {
     // const baseURL = 'http://localhost:8000/';
     // const baseURL = 'https://sripadha112.github.io/QuickBooking/';
-    const baseURL = 'https://neextapp.com/';
+    const baseURL = 'https://neextapp.com/booking/';
     const params = new URLSearchParams();
     
     // Required parameters
