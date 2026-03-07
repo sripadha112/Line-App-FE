@@ -31,6 +31,29 @@ jobs:
         env:
           NODE_ENV: production
       
+      - name: Check and fix dist structure
+        run: |
+          echo "Checking dist structure:"
+          ls -la dist/ || echo "dist not found"
+          
+          # Expo might create index.html in a subdirectory
+          if [ ! -f "dist/index.html" ] && [ -d "dist/_expo" ]; then
+            echo "Found _expo directory, checking for static files"
+            find dist/_expo -name "index.html" -type f
+            if [ -d "dist/_expo/static/js/web" ]; then
+              echo "Moving files from _expo/static/js/web to root"
+              cp -r dist/_expo/static/js/web/* dist/
+            fi
+          fi
+          
+          # Ensure index.html exists at root
+          if [ ! -f "dist/index.html" ]; then
+            echo "ERROR: index.html not found in dist/"
+            find dist/ -name "index.html" -type f
+          else
+            echo "SUCCESS: index.html found at dist/index.html"
+          fi
+      
       - name: Copy CNAME to dist
         run: cp CNAME dist/CNAME
       
