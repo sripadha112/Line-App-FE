@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SEO Verification - NeextApp</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+      max-width: 900px;
+      margin: 40px auto;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+    .container {
+      background: white;
+      padding: 30px;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    h1 {
+      color: #2196F3;
+      margin-bottom: 10px;
+    }
+    .status {
+      padding: 15px;
+      margin: 10px 0;
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .success {
+      background: #e8f5e9;
+      border-left: 4px solid #4caf50;
+    }
+    .warning {
+      background: #fff3e0;
+      border-left: 4px solid #ff9800;
+    }
+    .error {
+      background: #ffebee;
+      border-left: 4px solid #f44336;
+    }
+    .check-button {
+      background: #2196F3;
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 16px;
+      margin: 10px 5px;
+    }
+    .check-button:hover {
+      background: #1976D2;
+    }
+    .results {
+      margin-top: 20px;
+    }
+    .icon {
+      font-size: 24px;
+      margin-right: 10px;
+    }
+    code {
+      background: #f5f5f5;
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-family: monospace;
+    }
+    .section {
+      margin: 30px 0;
+    }
+    .test-list {
+      list-style: none;
+      padding: 0;
+    }
+    .test-list li {
+      padding: 10px;
+      margin: 5px 0;
+      background: #fafafa;
+      border-radius: 4px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🔍 SEO Verification Tool</h1>
+    <p>Check if your NeextApp SEO implementation is working correctly</p>
+
+    <div class="section">
+      <h2>Quick Tests</h2>
+      <button class="check-button" onclick="checkMetaTags()">Check Meta Tags</button>
+      <button class="check-button" onclick="checkFiles()">Check Files</button>
+      <button class="check-button" onclick="checkStructuredData()">Check Structured Data</button>
+      <button class="check-button" onclick="checkAll()">Check All</button>
+    </div>
+
+    <div id="results" class="results"></div>
+
+    <div class="section">
+      <h2>Manual Verification Links</h2>
+      <ul class="test-list">
+        <li><a href="https://search.google.com/test/rich-results" target="_blank">📊 Google Rich Results Test</a></li>
+        <li><a href="https://search.google.com/test/mobile-friendly" target="_blank">📱 Mobile-Friendly Test</a></li>
+        <li><a href="https://pagespeed.web.dev/" target="_blank">⚡ PageSpeed Insights</a></li>
+        <li><a href="https://validator.w3.org/" target="_blank">✅ HTML Validator</a></li>
+        <li><a href="https://search.google.com/search-console" target="_blank">🔍 Google Search Console</a></li>
+        <li><a href="https://www.bing.com/webmasters" target="_blank">🔍 Bing Webmaster Tools</a></li>
+      </ul>
+    </div>
+
+    <div class="section">
+      <h2>Quick SEO Checklist</h2>
+      <ul class="test-list">
+        <li>✅ Meta tags optimized</li>
+        <li>✅ Structured data added (JSON-LD)</li>
+        <li>✅ robots.txt created</li>
+        <li>✅ sitemap.xml created</li>
+        <li>✅ Manifest.json enhanced</li>
+        <li>✅ .htaccess optimized</li>
+        <li>⏳ Submit to Google Search Console</li>
+        <li>⏳ Submit to Bing Webmaster Tools</li>
+        <li>⏳ Create proper favicon files</li>
+        <li>⏳ Set up Google Analytics</li>
+      </ul>
+    </div>
+  </div>
+
+  <script>
+    function showResult(title, status, message) {
+      const resultsDiv = document.getElementById('results');
+      const statusClass = status === 'success' ? 'success' : status === 'warning' ? 'warning' : 'error';
+      const icon = status === 'success' ? '✅' : status === 'warning' ? '⚠️' : '❌';
+      
+      resultsDiv.innerHTML += `
+        <div class="status ${statusClass}">
+          <div><span class="icon">${icon}</span><strong>${title}</strong>: ${message}</div>
+        </div>
+      `;
+    }
+
+    function checkMetaTags() {
+      document.getElementById('results').innerHTML = '<h3>Checking Meta Tags...</h3>';
+      
+      // Check title
+      const title = document.querySelector('title');
+      if (title && title.textContent.length > 30) {
+        showResult('Title Tag', 'success', 'Present and optimized');
+      } else {
+        showResult('Title Tag', 'error', 'Missing or too short');
+      }
+
+      // Check description
+      const description = document.querySelector('meta[name="description"]');
+      if (description && description.content.length > 100) {
+        showResult('Meta Description', 'success', 'Present and detailed');
+      } else {
+        showResult('Meta Description', 'error', 'Missing or too short');
+      }
+
+      // Check keywords
+      const keywords = document.querySelector('meta[name="keywords"]');
+      if (keywords && keywords.content.includes('neextapp')) {
+        showResult('Keywords', 'success', 'Includes target keywords');
+      } else {
+        showResult('Keywords', 'warning', 'Keywords missing or incomplete');
+      }
+
+      // Check Open Graph
+      const ogTitle = document.querySelector('meta[property="og:title"]');
+      if (ogTitle) {
+        showResult('Open Graph', 'success', 'Facebook sharing optimized');
+      } else {
+        showResult('Open Graph', 'error', 'Missing Open Graph tags');
+      }
+
+      // Check Twitter Card
+      const twitterCard = document.querySelector('meta[name="twitter:card"]');
+      if (twitterCard) {
+        showResult('Twitter Card', 'success', 'Twitter sharing optimized');
+      } else {
+        showResult('Twitter Card', 'error', 'Missing Twitter Card tags');
+      }
+
+      // Check canonical
+      const canonical = document.querySelector('link[rel="canonical"]');
+      if (canonical) {
+        showResult('Canonical URL', 'success', 'Canonical tag present');
+      } else {
+        showResult('Canonical URL', 'warning', 'Consider adding canonical tag');
+      }
+    }
+
+    function checkFiles() {
+      document.getElementById('results').innerHTML = '<h3>Checking Essential Files...</h3>';
+      
+      // Check robots.txt
+      fetch('/robots.txt')
+        .then(response => {
+          if (response.ok) {
+            showResult('robots.txt', 'success', 'File exists and accessible');
+          } else {
+            showResult('robots.txt', 'error', 'File not found');
+          }
+        })
+        .catch(() => showResult('robots.txt', 'error', 'Cannot access file'));
+
+      // Check sitemap.xml
+      fetch('/sitemap.xml')
+        .then(response => {
+          if (response.ok) {
+            showResult('sitemap.xml', 'success', 'File exists and accessible');
+          } else {
+            showResult('sitemap.xml', 'error', 'File not found');
+          }
+        })
+        .catch(() => showResult('sitemap.xml', 'error', 'Cannot access file'));
+
+      // Check manifest.json
+      fetch('/manifest.json')
+        .then(response => {
+          if (response.ok) {
+            showResult('manifest.json', 'success', 'PWA manifest present');
+          } else {
+            showResult('manifest.json', 'error', 'Manifest not found');
+          }
+        })
+        .catch(() => showResult('manifest.json', 'error', 'Cannot access manifest'));
+    }
+
+    function checkStructuredData() {
+      document.getElementById('results').innerHTML = '<h3>Checking Structured Data...</h3>';
+      
+      const scripts = document.querySelectorAll('script[type="application/ld+json"]');
+      if (scripts.length > 0) {
+        showResult('JSON-LD Structured Data', 'success', `Found ${scripts.length} structured data blocks`);
+        
+        scripts.forEach((script, index) => {
+          try {
+            const data = JSON.parse(script.textContent);
+            showResult(`Schema ${index + 1}`, 'success', `Type: ${data['@type']}`);
+          } catch (e) {
+            showResult(`Schema ${index + 1}`, 'error', 'Invalid JSON');
+          }
+        });
+      } else {
+        showResult('Structured Data', 'error', 'No structured data found');
+      }
+    }
+
+    function checkAll() {
+      document.getElementById('results').innerHTML = '<h2>Running All Checks...</h2>';
+      checkMetaTags();
+      setTimeout(() => {
+        checkFiles();
+        setTimeout(() => {
+          checkStructuredData();
+        }, 500);
+      }, 500);
+    }
+
+    // Run initial check
+    window.addEventListener('load', () => {
+      setTimeout(checkAll, 1000);
+    });
+  </script>
+</body>
+</html>

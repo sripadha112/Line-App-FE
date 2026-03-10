@@ -19,6 +19,7 @@ import { UserAPIService } from '../services/doctorApiService';
 import BottomNavigation from '../components/BottomNavigation';
 import ActiveBookings from '../components/user/ActiveBookings';
 import UserNotificationService from '../services/userNotificationService';
+import APIErrorHelper from '../utils/apiErrorHelper';
 
 export default function UserHome({ route, navigation }) {
   // Safely extract userId with fallback to SecureStore
@@ -107,6 +108,8 @@ export default function UserHome({ route, navigation }) {
     try {
       setLoading(true);
       console.log('🔍 Fetching profile for userId:', userIdToFetch);
+      
+      // Fetch profile first
       const profile = await UserAPIService.fetchUserProfile(userIdToFetch);
       console.log('✅ Profile received:', profile);
       console.log('👤 Full name from profile:', profile?.fullName);
@@ -117,11 +120,29 @@ export default function UserHome({ route, navigation }) {
         setUserFullName(profile.fullName);
       }
       
-      // Fetch family members
+      // Wait a bit before fetching family members to avoid overwhelming Render
+      await new Promise(resolve => setTimeout(resolve, 300));
+      
+      // Fetch family members sequentially after profile loads
+      console.log('🔍 Now fetching family members...');
       await fetchFamilyMembers(userIdToFetch);
+      
     } catch (error) {
       console.error('❌ Error fetching user profile:', error);
-      Alert.alert('Error', 'Failed to load user profile');
+      
+      // Use error helper for user-friendly messages
+      const errorInfo = APIErrorHelper.getUserFriendlyMessage(error);
+      APIErrorHelper.logError('UserHome.fetchUserProfile', error);
+      
+      // Show appropriate error message
+      Alert.alert(
+        errorInfo.title,
+        errorInfo.message,
+        errorInfo.canRetry ? [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Retry', onPress: () => fetchUserProfile(userIdToFetch) }
+        ] : [{ text: 'OK' }]
+      );
     } finally {
       setLoading(false);
     }
@@ -129,10 +150,14 @@ export default function UserHome({ route, navigation }) {
   
   const fetchFamilyMembers = async (userIdToFetch = userId) => {
     try {
+      console.log('🔍 Fetching family members for userId:', userIdToFetch);
       const members = await UserAPIService.getFamilyMembers(userIdToFetch);
+      console.log('✅ Family members received:', members?.length || 0);
       setFamilyMembers(members || []);
     } catch (error) {
-      console.log('Failed to fetch family members:', error.message);
+      console.log('⚠️ Failed to fetch family members:', error.message);
+      // Don't show alert for family members error - it's not critical
+      setFamilyMembers([]);
     }
   };
   
@@ -185,7 +210,11 @@ export default function UserHome({ route, navigation }) {
 
   const onRefresh = React.useCallback(async () => {
     setRefreshing(true);
+    console.log('🔄 Manual refresh triggered');
+    // Sequential refresh to avoid overwhelming the server
     await fetchUserProfile();
+    // Small delay before triggering appointments refresh
+    await new Promise(resolve => setTimeout(resolve, 200));
     // Trigger appointments refresh by incrementing the trigger
     setAppointmentsRefreshTrigger(prev => prev + 1);
     setRefreshing(false);

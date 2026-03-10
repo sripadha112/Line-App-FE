@@ -3,8 +3,11 @@ import api from './api';
 import { format, startOfDay, endOfDay, addDays } from 'date-fns';
 
 export class DoctorAPIService {
+  // @deprecated - Use fetchAppointmentHistory instead
+  // This API endpoint with date ranges is no longer used
   // Fetch today's appointments
   static async fetchTodayAppointments(doctorId) {
+    console.warn('⚠️ fetchTodayAppointments is deprecated. Use fetchAppointmentHistory instead.');
     try {
       const today = new Date();
       const from = startOfDay(today).toISOString();
@@ -28,8 +31,11 @@ export class DoctorAPIService {
     }
   }
 
+  // @deprecated - Use fetchAppointmentHistory instead
+  // This API endpoint with date ranges is no longer used
   // Fetch upcoming appointments
   static async fetchUpcomingAppointments(doctorId, daysAhead = 2) {
+    console.warn('⚠️ fetchUpcomingAppointments is deprecated. Use fetchAppointmentHistory instead.');
     try {
       const startDate = new Date();
       const endDate = addDays(startDate, daysAhead);
@@ -404,6 +410,11 @@ export class UserAPIService {
       return response.data;
     } catch (error) {
       console.log('Error fetching user profile:', error.message);
+      if (error.code === 'ECONNABORTED') {
+        console.log('⚠️ Request timeout - Server may be cold starting');
+      } else if (error.code === 'ECONNREFUSED' || error.code === 'ETIMEDOUT') {
+        console.log('⚠️ Connection failed - Server unavailable');
+      }
       console.log('Error response:', error.response?.data);
       console.log('Error status:', error.response?.status);
       throw error;
@@ -453,6 +464,9 @@ export class UserAPIService {
       return response.data || [];
     } catch (error) {
       console.log('Error fetching family members:', error.message);
+      if (error.code === 'ECONNABORTED' || error.code === 'ETIMEDOUT') {
+        console.log('⚠️ Family members request timeout - retrying...');
+      }
       throw error;
     }
   }
@@ -486,6 +500,11 @@ export class UserAPIService {
       return response.data || { appointmentsByDate: {}, totalAppointments: 0 };
     } catch (error) {
       console.log('Error fetching all user appointments:', error.message);
+      if (error.code === 'ECONNABORTED') {
+        console.log('⚠️ Appointments request timeout - Server may be waking up');
+      } else if (!error.response) {
+        console.log('⚠️ Network error - Check internet connection');
+      }
       console.log('Error response:', error.response?.data);
       throw error;
     }

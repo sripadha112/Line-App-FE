@@ -20,13 +20,36 @@ try {
 
 const api = axios.create({
   baseURL: API_BASE_URL || undefined, // undefined allows relative paths when running in environments where host is same origin
-  timeout: 10000,
+  timeout: 30000, // Increased to 30s for Render cold starts
+  headers: {
+    'Content-Type': 'application/json',
+  },
 });
 
+// Request queue to prevent race conditions on Render free tier
+const requestQueue = [];
+let isProcessingQueue = false;
+const MAX_CONCURRENT_REQUESTS = 2; // Limit concurrent requests
+let activeRequests = 0;
+
+// Retry configuration for failed requests
+const MAX_RETRIES = 3;
+const INITIAL_RETRY_DELAY = 1000; // 1 second
+
+// Helper to delay execution
+const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
 // Request logger - helps show which full URL is being requested
-api.interceptors.request.use((cfg) => {
+api.interceptors.request.use(async (cfg) => {
+  // Wait if too many concurrent requests
+  while (activeRequests >= MAX_CONCURRENT_REQUESTS) {
+    await delay(100);
+  }
+  activeRequests++;
+  
   try { 
     console.log('[api] request', cfg.method, cfg.baseURL ? cfg.baseURL + cfg.url : cfg.url);
+    console.log('[api] Active requests:', activeRequests);
     // Log request body for workplace related requests
     if (cfg.url && cfg.url.includes('add-workplaces') && cfg.data) {
       // console.log('[api] request body:', JSON.stringify(cfg.data, null, 2));
@@ -52,14 +75,44 @@ api.interceptors.request.use((cfg) => {
   } catch (e) {}
   return cfg;
 }, (err) => {
+  activeRequests--;
   try { console.log('[api] request err', err && err.message); } catch (e) {}
   return Promise.reject(err);
 });
 
 // Response logger and centralized error augmentation
 api.interceptors.response.use((res) => {
+  activeRequests--;
   return res;
 }, async (err) => {
+  activeRequests--;
+  const originalRequest = err.config;
+  
+  // Check if we should retry
+  const isRetryable = 
+    !err.response || // Network errors
+    err.code === 'ECONNABORTED' || // Timeout
+    err.code === 'ECONNREFUSED' || // Connection refused (cold start)
+    err.code === 'ETIMEDOUT' || // Connection timeout
+    (err.response && [502, 503, 504, 408].includes(err.response.status)); // Server errors
+  
+  // Add retry count to config
+  originalRequest._retryCount = originalRequest._retryCount || 0;
+  
+  // Retry if eligible
+  if (isRetryable && originalRequest._retryCount < MAX_RETRIES) {
+    originalRequest._retryCount++;
+    const delayMs = INITIAL_RETRY_DELAY * Math.pow(2, originalRequest._retryCount - 1);
+    
+    console.log(`[api] Retrying request (${originalRequest._retryCount}/${MAX_RETRIES}) after ${delayMs}ms...`);
+    console.log(`[api] Error was: ${err.message}`);
+    
+    await delay(delayMs);
+    
+    // Retry the request
+    return api(originalRequest);
+  }
+  
   try {
     const cfg = err.config || {};
     console.log('[api] response error:', {

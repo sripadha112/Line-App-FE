@@ -2,6 +2,14 @@
   RewriteEngine On
   RewriteBase /
   
+  # Force HTTPS (for SEO and security)
+  RewriteCond %{HTTPS} off
+  RewriteRule ^(.*)$ https://%{HTTP_HOST}/$1 [R=301,L]
+  
+  # Remove www (optional - choose one canonical domain)
+  RewriteCond %{HTTP_HOST} ^www\.(.*)$ [NC]
+  RewriteRule ^(.*)$ https://%1/$1 [R=301,L]
+  
   # Don't rewrite files or directories
   RewriteCond %{REQUEST_FILENAME} !-f
   RewriteCond %{REQUEST_FILENAME} !-d
@@ -13,8 +21,15 @@
 # Security Headers
 <IfModule mod_headers.c>
   Header set X-Content-Type-Options "nosniff"
-  Header set X-Frame-Options "DENY"
+  Header set X-Frame-Options "SAMEORIGIN"
   Header set X-XSS-Protection "1; mode=block"
+  Header set Referrer-Policy "strict-origin-when-cross-origin"
+  Header set Permissions-Policy "geolocation=(), microphone=(), camera=()"
+  
+  # Enable CORS for API calls
+  Header set Access-Control-Allow-Origin "*"
+  Header set Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS"
+  Header set Access-Control-Allow-Headers "Content-Type, Authorization"
 </IfModule>
 
 # Cache static assets
@@ -25,14 +40,19 @@
   ExpiresByType image/gif "access plus 1 year"
   ExpiresByType image/png "access plus 1 year"
   ExpiresByType image/svg+xml "access plus 1 year"
+  ExpiresByType image/webp "access plus 1 year"
+  ExpiresByType image/x-icon "access plus 1 year"
   ExpiresByType text/css "access plus 1 year"
   ExpiresByType application/javascript "access plus 1 year"
   ExpiresByType application/x-javascript "access plus 1 year"
+  ExpiresByType application/json "access plus 1 week"
+  ExpiresByType application/manifest+json "access plus 1 week"
 </IfModule>
 
 # Gzip Compression
 <IfModule mod_deflate.c>
   AddOutputFilterByType DEFLATE text/html
+  AddOutputFilterByType DEFLATE text/plain
   AddOutputFilterByType DEFLATE text/css
   AddOutputFilterByType DEFLATE text/javascript
   AddOutputFilterByType DEFLATE application/javascript
@@ -40,4 +60,11 @@
   AddOutputFilterByType DEFLATE application/json
   AddOutputFilterByType DEFLATE application/xml
   AddOutputFilterByType DEFLATE text/xml
+  AddOutputFilterByType DEFLATE image/svg+xml
+</IfModule>
+
+# Set UTF-8 encoding
+AddDefaultCharset UTF-8
+<IfModule mod_mime.c>
+  AddCharset UTF-8 .html .css .js .json .xml
 </IfModule>

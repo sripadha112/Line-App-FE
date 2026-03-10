@@ -1,0 +1,4 @@
+Contact: mailto:security@neextapp.com
+Expires: 2027-03-10T00:00:00.000Z
+Preferred-Languages: en
+Canonical: https://neextapp.com/.well-known/security.txt

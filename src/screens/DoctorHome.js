@@ -173,17 +173,19 @@ export default function DoctorHome({ navigation, route }) {
     React.useCallback(() => {
       console.log('DoctorHome screen focused - refreshing data...');
       if (doctorId) {
-        // Refresh key data without full reload
-        Promise.all([
-          fetchTodayAppointments(doctorId),
-          fetchRecentHistory(doctorId),
-          fetchUpcomingAppointments(doctorId),
-          fetchWorkplaces(doctorId)
-        ]).then(() => {
-          fetchTodayStats(doctorId);
-        }).catch(error => {
-          console.log('Error refreshing data:', error);
-        });
+        // Sequential loading: Profile → Workplaces → History
+        (async () => {
+          try {
+            await fetchDoctorProfile();
+            await new Promise(resolve => setTimeout(resolve, 200));
+            await fetchWorkplaces(doctorId);
+            await new Promise(resolve => setTimeout(resolve, 200));
+            await fetchRecentHistory(doctorId);
+            fetchTodayStats(doctorId);
+          } catch (error) {
+            console.log('Error refreshing data:', error);
+          }
+        })();
       }
     }, [doctorId])
   );
@@ -216,17 +218,25 @@ export default function DoctorHome({ navigation, route }) {
       setDoctorId(id);
       
       if (id) {
-        await Promise.all([
-          fetchTodayAppointments(id),
-          fetchRecentHistory(id),
-          fetchUpcomingAppointments(id),
-          fetchDoctorProfile(),
-          fetchDetailedProfile(id)
-        ]);
+        // Sequential loading: Profile first, then workplaces, then history
+        console.log('🔍 Step 1: Fetching doctor profile...');
+        await fetchDoctorProfile();
+        await fetchDetailedProfile(id);
         
-        // Calculate stats and set workplaces after profile is loaded
+        console.log('⏳ Waiting 200ms before workplaces...');
+        await new Promise(resolve => setTimeout(resolve, 200));
+        
+        console.log('🔍 Step 2: Fetching workplaces...');
+        await fetchWorkplaces(id);
+        
+        console.log('⏳ Waiting 200ms before history...');
+        await new Promise(resolve => setTimeout(resolve, 200));
+        
+        console.log('🔍 Step 3: Fetching appointments history...');
+        await fetchRecentHistory(id);
+        
+        // Calculate stats after data is loaded
         fetchTodayStats(id);
-        fetchWorkplaces(id);
       }
     } catch (e) {
       console.log('load data err', e.message);
@@ -237,25 +247,39 @@ export default function DoctorHome({ navigation, route }) {
     }
   };
 
-  const fetchTodayAppointments = async (id) => {
-    try {
-      const data = await DoctorAPIService.fetchTodayAppointments(id);
-      setAppointments(data);
-    } catch (e) {
-      console.log('fetch appts err', e.message);
-      // Handle authentication errors
-      if (handleAuthError(e)) {
-        return;
-      }
-    }
-  };
+  // Removed: fetchTodayAppointments - using history API instead
 
   const fetchRecentHistory = async (id) => {
     try {
+      console.log('📥 Fetching appointments history...');
       const data = await DoctorAPIService.fetchAppointmentHistory(id);
+      console.log('✅ History data received:', data?.length || 0, 'appointments');
+      
       setHistoryAppointments(data);
+      
+      // Extract today's and upcoming appointments from history
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const todayEnd = new Date();
+      todayEnd.setHours(23, 59, 59, 999);
+      
+      const todayAppts = data.filter(apt => {
+        const aptDate = new Date(apt.appointmentDate);
+        return aptDate >= today && aptDate <= todayEnd;
+      });
+      
+      const upcomingAppts = data.filter(apt => {
+        const aptDate = new Date(apt.appointmentDate);
+        return aptDate > todayEnd && apt.status === 'BOOKED';
+      });
+      
+      setAppointments(todayAppts);
+      setUpcomingAppointments(upcomingAppts);
+      
+      console.log('✅ Today appointments:', todayAppts.length);
+      console.log('✅ Upcoming appointments:', upcomingAppts.length);
     } catch (e) {
-      console.log('fetch history err', e.message);
+      console.log('❌ fetch history err', e.message);
       // Handle authentication errors
       if (handleAuthError(e)) {
         return;
@@ -263,18 +287,7 @@ export default function DoctorHome({ navigation, route }) {
     }
   };
 
-  const fetchUpcomingAppointments = async (id) => {
-    try {
-      const data = await DoctorAPIService.fetchUpcomingAppointments(id);
-      setUpcomingAppointments(data);
-    } catch (e) {
-      console.log('fetch upcoming err', e.message);
-      // Handle authentication errors
-      if (handleAuthError(e)) {
-        return;
-      }
-    }
-  };
+  // Removed: fetchUpcomingAppointments - using history API instead
 
   const fetchTodayStats = async (id) => {
     try {
@@ -1202,7 +1215,7 @@ Dr. ${name || 'Neext App Doctor'}`;
       showAlert('Success', 'Appointments rescheduled successfully');
       setRescheduleModalVisible(false);
       setShiftMinutes('');
-      fetchTodayAppointments(doctorId);
+      fetchRecentHistory(doctorId);
     } catch (e) {
       showAlert('Error', 'Failed to reschedule: ' + (e.response?.data?.error || e.message));
     }
@@ -1235,7 +1248,7 @@ Dr. ${name || 'Neext App Doctor'}`;
               
               showAlert('Success', `${res.data.cancelledCount} appointments cancelled successfully`);
               setCancelDayModalVisible(false);
-              fetchTodayAppointments(doctorId);
+              fetchRecentHistory(doctorId);
             } catch (e) {
               showAlert('Error', 'Failed to cancel appointments: ' + (e.response?.data?.error || e.message));
             }
@@ -1291,8 +1304,7 @@ Dr. ${name || 'Neext App Doctor'}`;
       
       showAlert('Success', 'Appointment cancelled successfully');
       setCancelReasonModalVisible(false);
-      fetchTodayAppointments(doctorId);
-      fetchUpcomingAppointments(doctorId);
+      fetchRecentHistory(doctorId);
     } catch (e) {
       showAlert('Error', 'Failed to cancel appointment: ' + (e.response?.data?.error || e.message));
     }
@@ -1305,8 +1317,7 @@ Dr. ${name || 'Neext App Doctor'}`;
         newTime: newTime.toISOString()
       });
       showAlert('Success', 'Appointment rescheduled successfully');
-      fetchTodayAppointments(doctorId);
-      fetchUpcomingAppointments(doctorId);
+      fetchRecentHistory(doctorId);
     } catch (e) {
       showAlert('Error', 'Failed to reschedule appointment: ' + (e.response?.data?.error || e.message));
     }

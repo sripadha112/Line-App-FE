@@ -23,6 +23,7 @@ import React, {useEffect, useState} from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { Platform } from 'react-native';
 import AuthScreen from './src/screens/AuthScreen';
 import OtpVerifyScreen from './src/screens/OtpVerifyScreen';
 import RoleSelectionScreen from './src/screens/RoleSelectionScreen';
@@ -49,8 +50,38 @@ import API_BASE_URL from './src/config';
 import { ActivityIndicator, View, Modal, Text, TextInput, Button, TouchableOpacity, StyleSheet, Alert } from 'react-native';
 import fcmService from './src/services/fcmService';
 import UserNotificationService from './src/services/userNotificationService';
+import WarmupService from './src/services/warmupService';
 
 const Stack = createNativeStackNavigator();
+
+// Linking configuration for web browser navigation
+const linking = {
+  prefixes: ['https://neextapp.com', 'http://localhost:19006'],
+  config: {
+    screens: {
+      Auth: 'auth',
+      OtpVerify: 'otp-verify',
+      RoleSelection: 'role-selection',
+      DoctorRegistration: 'doctor-registration',
+      UserRegistration: 'user-registration',
+      DoctorHome: 'doctor/home',
+      UserHome: 'user/home',
+      UserCalendar: 'user/calendar',
+      UserProfile: 'user/profile',
+      EditProfile: 'user/edit-profile',
+      BookAppointment: 'user/book-appointment',
+      RescheduleAppointment: 'user/reschedule',
+      CancelAppointment: 'user/cancel',
+      AllBookings: 'doctor/bookings',
+      PatientProfilePrescription: 'doctor/patient/:patientId',
+      AppointmentHistory: 'doctor/history',
+      BulkReschedule: 'doctor/bulk-reschedule',
+      CancelDay: 'doctor/cancel-day',
+      QuickBookingQR: 'quick-booking/:doctorId',
+      FCMTest: 'fcm-test',
+    },
+  },
+};
 
 export default function App() {
   const [initialRoute, setInitialRoute] = useState(null);
@@ -58,35 +89,53 @@ export default function App() {
   const [manualUrl, setManualUrl] = useState('');
   const [resolvedBase, setResolvedBase] = useState(API_BASE_URL || '');
   const navigationRef = React.useRef();
+  const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
     (async () => {
-      const token = await SecureStore.getItemAsync('accessToken');
-      const role = await SecureStore.getItemAsync('role');
-      await setAuthHeaderFromStore();
-      
-      // Set navigation reference for API service
-      if (navigationRef.current) {
-        setNavigationRef(navigationRef.current);
-      }
-      
-      // Initialize User Notification Service (only for users, not doctors)
       try {
-        console.log('🔔 [App] Initializing User Notification Service...');
-        const notificationResult = await UserNotificationService.registerUserForNotifications();
-        if (notificationResult.success) {
-          console.log('✅ [App] User notifications initialized successfully');
+        // Start backend warmup immediately (non-blocking)
+        console.log('🔥 [App] Starting backend warmup...');
+        WarmupService.warmupSilently().then(result => {
+          if (result.success) {
+            console.log(`✅ [App] Backend warmed up in ${result.duration}ms`);
+          } else {
+            console.log('⚠️ [App] Backend warmup failed, but app will continue');
+          }
+        });
+
+        const token = await SecureStore.getItemAsync('accessToken');
+        const role = await SecureStore.getItemAsync('role');
+        await setAuthHeaderFromStore();
+      
+        // Set navigation reference for API service
+        if (navigationRef.current) {
+          setNavigationRef(navigationRef.current);
+        }
+      
+        // Initialize User Notification Service (only for users, not doctors)
+        try {
+          console.log('🔔 [App] Initializing User Notification Service...');
+          const notificationResult = await UserNotificationService.registerUserForNotifications();
+          if (notificationResult.success) {
+            console.log('✅ [App] User notifications initialized successfully');
+          } else {
+            console.log('ℹ️ [App] User notifications:', notificationResult.message);
+          }
+        } catch (error) {
+          console.error('❌ [App] Notification initialization error:', error);
+        }
+      
+        if (token && role) {
+          setInitialRoute(role === 'DOCTOR' ? 'DoctorHome' : 'UserHome');
         } else {
-          console.log('ℹ️ [App] User notifications:', notificationResult.message);
+          setInitialRoute('Auth');
         }
       } catch (error) {
-        console.error('❌ [App] Notification initialization error:', error);
-      }
-      
-      if (token && role) {
-        setInitialRoute(role === 'DOCTOR' ? 'DoctorHome' : 'UserHome');
-      } else {
+        console.error('Error initializing app:', error);
         setInitialRoute('Auth');
+      } finally {
+        setIsReady(true);
       }
     })();
   }, []);
@@ -110,74 +159,91 @@ export default function App() {
     }
   };
 
-  if (!initialRoute) return <View style={{flex:1,justifyContent:'center',alignItems:'center'}}><ActivityIndicator/></View>;
+  if (!isReady || !initialRoute) {
+    return (
+      <View style={{flex:1,justifyContent:'center',alignItems:'center',backgroundColor:'#fff'}}>
+        <ActivityIndicator size="large" color="#007AFF" />
+      </View>
+    );
+  }
 
   return (
     <SafeAreaProvider>
       <NavigationContainer 
         ref={navigationRef}
+        linking={Platform.OS === 'web' ? linking : undefined}
+        fallback={<View style={{flex:1,justifyContent:'center',alignItems:'center'}}><ActivityIndicator/></View>}
+        documentTitle={{
+          formatter: (options, route) => 
+            options?.title ? `${options.title} - NeextApp` : 'NeextApp - Healthcare Appointments'
+        }}
         onReady={() => {
           // Set navigation reference when container is ready
           setNavigationRef(navigationRef.current);
         }}
       >
       <Stack.Navigator initialRouteName={initialRoute}>
-        <Stack.Screen name="Auth" component={AuthScreen} options={{headerShown:false}} />
-        <Stack.Screen name="OtpVerify" component={OtpVerifyScreen} options={{title:'Verify OTP'}} />
+        <Stack.Screen name="Auth" component={AuthScreen} options={{headerShown:false, title:'Login'}} />
+        <Stack.Screen name="OtpVerify" component={OtpVerifyScreen} options={{title:'Verify OTP', headerShown: Platform.OS !== 'web'}} />
         <Stack.Screen 
           name="RoleSelection" 
           component={RoleSelectionScreen} 
           options={{
             title:'Choose Role',
             headerBackVisible: false,
+            headerShown: Platform.OS !== 'web',
           }} 
         />
         <Stack.Screen 
           name="DoctorRegistration" 
           component={DoctorRegistrationScreen} 
-          options={{title:'Doctor Registration'}} 
+          options={{title:'Doctor Registration', headerShown: Platform.OS !== 'web'}} 
         />
         <Stack.Screen 
           name="UserRegistration" 
           component={UserRegistrationScreen} 
-          options={{title:'User Registration'}} 
+          options={{title:'User Registration', headerShown: Platform.OS !== 'web'}} 
         />
-        <Stack.Screen name="DoctorHome" component={DoctorHome} options={{headerShown:false}} />
-        <Stack.Screen name="UserHome" component={UserHome} options={{headerShown:false}} />
-        <Stack.Screen name="UserCalendar" component={UserCalendar} options={{headerShown:false}} />
-        <Stack.Screen name="UserProfile" component={UserProfile} options={{headerShown:false}} />
-        <Stack.Screen name="EditProfile" component={EditProfile} options={{headerShown:false}} />
-        <Stack.Screen name="BookAppointment" component={BookAppointment} options={{headerShown:false}} />
-        <Stack.Screen name="RescheduleAppointment" component={RescheduleAppointment} options={{headerShown:false}} />
-        <Stack.Screen name="CancelAppointment" component={CancelAppointment} options={{headerShown:false}} />
-        <Stack.Screen name="AllBookings" component={AllBookings} options={{headerShown:false}} />
-        <Stack.Screen name="PatientProfilePrescription" component={PatientProfilePrescription} options={{headerShown:false}} />
-        <Stack.Screen name="AppointmentHistory" component={AppointmentHistory} options={{headerShown:false}} />
-        <Stack.Screen name="BulkReschedule" component={BulkReschedule} options={{headerShown:false}} />
-        <Stack.Screen name="CancelDay" component={CancelDay} options={{headerShown:false}} />
-        <Stack.Screen name="QuickBookingQR" component={QuickBookingQR} options={{headerShown:false}} />
-        <Stack.Screen name="FCMTest" component={FCMTestScreen} options={{headerShown:false}} />
+        <Stack.Screen name="DoctorHome" component={DoctorHome} options={{headerShown:false, title:'Doctor Dashboard'}} />
+        <Stack.Screen name="UserHome" component={UserHome} options={{headerShown:false, title:'Home'}} />
+        <Stack.Screen name="UserCalendar" component={UserCalendar} options={{headerShown:false, title:'My Calendar'}} />
+        <Stack.Screen name="UserProfile" component={UserProfile} options={{headerShown:false, title:'My Profile'}} />
+        <Stack.Screen name="EditProfile" component={EditProfile} options={{headerShown:false, title:'Edit Profile'}} />
+        <Stack.Screen name="BookAppointment" component={BookAppointment} options={{headerShown:false, title:'Book Appointment'}} />
+        <Stack.Screen name="RescheduleAppointment" component={RescheduleAppointment} options={{headerShown:false, title:'Reschedule Appointment'}} />
+        <Stack.Screen name="CancelAppointment" component={CancelAppointment} options={{headerShown:false, title:'Cancel Appointment'}} />
+        <Stack.Screen name="AllBookings" component={AllBookings} options={{headerShown:false, title:'All Bookings'}} />
+        <Stack.Screen name="PatientProfilePrescription" component={PatientProfilePrescription} options={{headerShown:false, title:'Patient Details'}} />
+        <Stack.Screen name="AppointmentHistory" component={AppointmentHistory} options={{headerShown:false, title:'Appointment History'}} />
+        <Stack.Screen name="BulkReschedule" component={BulkReschedule} options={{headerShown:false, title:'Bulk Reschedule'}} />
+        <Stack.Screen name="CancelDay" component={CancelDay} options={{headerShown:false, title:'Cancel Day'}} />
+        <Stack.Screen name="QuickBookingQR" component={QuickBookingQR} options={{headerShown:false, title:'Quick Booking'}} />
+        <Stack.Screen name="FCMTest" component={FCMTestScreen} options={{headerShown:false, title:'Notification Test'}} />
       </Stack.Navigator>
 
-      {/* Debug overlay: toggleable modal to override/test API base URL on device */}
-      <Modal visible={debugVisible} transparent animationType="slide">
-        <View style={styles.modalBackdrop}>
-          <View style={styles.modalCard}>
-            <Text style={{fontWeight:'700',marginBottom:6}}>Debug: API Base</Text>
-            <Text style={{marginBottom:8}}>Resolved: {resolvedBase || '(none)'}</Text>
-            <TextInput placeholder="http://192.168.1.75:8080" value={manualUrl} onChangeText={setManualUrl} style={styles.input} />
-            <View style={{flexDirection:'row',justifyContent:'space-between'}}>
-              <Button title="Apply" onPress={()=>applyManualBase(manualUrl)} />
-              <Button title="Test" onPress={()=>testConnectivity(manualUrl || resolvedBase)} />
-              <Button title="Close" onPress={()=>setDebugVisible(false)} />
+      {/* Debug overlay: only show in development mode */}
+      {__DEV__ && (
+        <>
+          <Modal visible={debugVisible} transparent animationType="slide">
+            <View style={styles.modalBackdrop}>
+              <View style={styles.modalCard}>
+                <Text style={{fontWeight:'700',marginBottom:6}}>Debug: API Base</Text>
+                <Text style={{marginBottom:8}}>Resolved: {resolvedBase || '(none)'}</Text>
+                <TextInput placeholder="http://192.168.1.75:8080" value={manualUrl} onChangeText={setManualUrl} style={styles.input} />
+                <View style={{flexDirection:'row',justifyContent:'space-between'}}>
+                  <Button title="Apply" onPress={()=>applyManualBase(manualUrl)} />
+                  <Button title="Test" onPress={()=>testConnectivity(manualUrl || resolvedBase)} />
+                  <Button title="Close" onPress={()=>setDebugVisible(false)} />
+                </View>
+              </View>
             </View>
-          </View>
-        </View>
-      </Modal>
+          </Modal>
 
-      <TouchableOpacity style={styles.debugButton} onPress={()=>setDebugVisible(true)}>
-        <Text style={{color:'#fff',fontWeight:'700'}}>DBG</Text>
-      </TouchableOpacity>
+          <TouchableOpacity style={styles.debugButton} onPress={()=>setDebugVisible(true)}>
+            <Text style={{color:'#fff',fontWeight:'700'}}>DBG</Text>
+          </TouchableOpacity>
+        </>
+      )}
       </NavigationContainer>
     </SafeAreaProvider>
   );
