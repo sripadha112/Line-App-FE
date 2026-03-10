@@ -61,7 +61,21 @@ jobs:
         run: cp .nojekyll dist/.nojekyll
       
       - name: Copy booking folder to dist
-        run: cp -r web/booking dist/booking
+        run: |
+          if [ -d "web/booking" ]; then
+            cp -r web/booking dist/booking
+            echo "✅ Copied booking folder"
+          else
+            echo "⚠️  Booking folder not found, skipping"
+          fi
+      
+      - name: Verify SEO files
+        run: |
+          echo "Checking for SEO files in dist:"
+          ls -la dist/ | grep -E "robots.txt|sitemap.xml|.htaccess|browserconfig.xml"
+          if [ -f "dist/robots.txt" ]; then echo "✅ robots.txt"; fi
+          if [ -f "dist/sitemap.xml" ]; then echo "✅ sitemap.xml"; fi
+          if [ -f "dist/.htaccess" ]; then echo "✅ .htaccess"; fi
       
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v4
