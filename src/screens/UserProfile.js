@@ -399,20 +399,31 @@ export default function UserProfile({ route, navigation }) {
     const performLogout = async () => {
       try {
         await api.post('/api/auth/logout');
-        await SecureStore.deleteItemAsync('accessToken');
-        await SecureStore.deleteItemAsync('role');
-        await SecureStore.deleteItemAsync('userId');
-        await SecureStore.deleteItemAsync('fullName');
-        navigation.reset({ index: 0, routes: [{ name: 'Auth' }] });
       } catch (e) {
         console.log('logout error', e);
-        // Force logout even if API fails
-        await SecureStore.deleteItemAsync('accessToken');
-        await SecureStore.deleteItemAsync('role');
-        await SecureStore.deleteItemAsync('userId');
-        await SecureStore.deleteItemAsync('fullName');
-        navigation.reset({ index: 0, routes: [{ name: 'Auth' }] });
+        // Continue with logout even if API fails
       }
+      
+      // Clear all stored data
+      await SecureStore.deleteItemAsync('accessToken');
+      await SecureStore.deleteItemAsync('role');
+      await SecureStore.deleteItemAsync('userId');
+      await SecureStore.deleteItemAsync('fullName');
+      
+      // Clear API authorization header
+      delete api.defaults.headers.common['Authorization'];
+      
+      // For web, also clear any cached data
+      if (Platform.OS === 'web') {
+        try {
+          localStorage.clear();
+        } catch (err) {
+          console.warn('Error clearing localStorage:', err);
+        }
+      }
+      
+      // Reset navigation to Auth screen
+      navigation.reset({ index: 0, routes: [{ name: 'Auth' }] });
     };
 
     if (Platform.OS === 'web') {
