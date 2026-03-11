@@ -7,7 +7,8 @@ const filesToCopy = [
   'sitemap.xml',
   '.htaccess',
   'browserconfig.xml',
-  'seo-check.html'
+  'seo-check.html',
+  '404.html'
 ];
 
 // Directories to copy
