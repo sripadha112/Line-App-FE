@@ -383,6 +383,55 @@ export default function AuthScreen({navigation}) {
             </Text>
           </View> */}
         </View>
+
+        {/* App Download Section - Only on Web */}
+        {Platform.OS === 'web' && (
+          <View style={styles.appPromotionSection}>
+            <View style={styles.appPromotionCard}>
+              <Text style={styles.appPromotionIcon}>📱</Text>
+              <Text style={styles.appPromotionTitle}>For Better Experience, Download Our Mobile App!</Text>
+              <Text style={styles.appPromotionDescription}>
+                Get the full NeextApp experience with our mobile app:
+              </Text>
+              
+              <View style={styles.featuresList}>
+                <View style={styles.featureItem}>
+                  <Text style={styles.featureBullet}>✓</Text>
+                  <Text style={styles.featureText}>Book appointments instantly</Text>
+                </View>
+                <View style={styles.featureItem}>
+                  <Text style={styles.featureBullet}>✓</Text>
+                  <Text style={styles.featureText}>Real-time notifications & reminders</Text>
+                </View>
+                <View style={styles.featureItem}>
+                  <Text style={styles.featureBullet}>✓</Text>
+                  <Text style={styles.featureText}>Manage family appointments</Text>
+                </View>
+                <View style={styles.featureItem}>
+                  <Text style={styles.featureBullet}>✓</Text>
+                  <Text style={styles.featureText}>Access digital prescriptions</Text>
+                </View>
+                <View style={styles.featureItem}>
+                  <Text style={styles.featureBullet}>✓</Text>
+                  <Text style={styles.featureText}>QR code quick check-in</Text>
+                </View>
+              </View>
+
+              <TouchableOpacity 
+                style={styles.downloadButton}
+                onPress={() => {
+                  if (Platform.OS === 'web') {
+                    window.open('https://neextapp.com', '_blank');
+                  }
+                }}
+              >
+                <Text style={styles.downloadButtonText}>📲 Download NeextApp</Text>
+              </TouchableOpacity>
+              
+              <Text style={styles.appPromotionNote}>Available on Android & iOS</Text>
+            </View>
+          </View>
+        )}
       </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -511,5 +560,88 @@ const styles = StyleSheet.create({
     fontSize: 12,
     textAlign: 'center',
     fontWeight: '500',
+  },
+  // App Promotion Section - Web Only
+  appPromotionSection: {
+    marginTop: 32,
+    marginBottom: 20,
+  },
+  appPromotionCard: {
+    backgroundColor: '#ffffff',
+    borderRadius: 16,
+    padding: 24,
+    alignItems: 'center',
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    borderWidth: 2,
+    borderColor: '#3498db',
+  },
+  appPromotionIcon: {
+    fontSize: 48,
+    marginBottom: 12,
+  },
+  appPromotionTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#2c3e50',
+    textAlign: 'center',
+    marginBottom: 12,
+    lineHeight: 28,
+  },
+  appPromotionDescription: {
+    fontSize: 15,
+    color: '#7f8c8d',
+    textAlign: 'center',
+    marginBottom: 20,
+    lineHeight: 22,
+  },
+  featuresList: {
+    width: '100%',
+    marginBottom: 24,
+  },
+  featureItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+    paddingLeft: 8,
+  },
+  featureBullet: {
+    fontSize: 16,
+    color: '#27ae60',
+    fontWeight: '700',
+    marginRight: 12,
+    width: 20,
+  },
+  featureText: {
+    fontSize: 15,
+    color: '#2c3e50',
+    flex: 1,
+    lineHeight: 22,
+  },
+  downloadButton: {
+    backgroundColor: '#27ae60',
+    borderRadius: 12,
+    padding: 16,
+    width: '100%',
+    alignItems: 'center',
+    marginBottom: 12,
+    shadowColor: '#27ae60',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  downloadButtonText: {
+    color: '#ffffff',
+    fontSize: 18,
+    fontWeight: '700',
+  },
+  appPromotionNote: {
+    fontSize: 13,
+    color: '#95a5a6',
+    fontStyle: 'italic',
   },
 });

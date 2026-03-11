@@ -95,14 +95,14 @@ export default function App() {
     (async () => {
       try {
         // Start backend warmup immediately (non-blocking)
-        console.log('🔥 [App] Starting backend warmup...');
-        WarmupService.warmupSilently().then(result => {
-          if (result.success) {
-            console.log(`✅ [App] Backend warmed up in ${result.duration}ms`);
-          } else {
-            console.log('⚠️ [App] Backend warmup failed, but app will continue');
-          }
-        });
+        // console.log('🔥 [App] Starting backend warmup...');
+        // WarmupService.warmupSilently().then(result => {
+        //   if (result.success) {
+        //     console.log(`✅ [App] Backend warmed up in ${result.duration}ms`);
+        //   } else {
+        //     console.log('⚠️ [App] Backend warmup failed, but app will continue');
+        //   }
+        // });
 
         const token = await SecureStore.getItemAsync('accessToken');
         const role = await SecureStore.getItemAsync('role');

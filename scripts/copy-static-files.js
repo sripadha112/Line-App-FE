@@ -8,7 +8,8 @@ const filesToCopy = [
   '.htaccess',
   'browserconfig.xml',
   'seo-check.html',
-  '404.html'
+  '404.html',
+  'manifest.json'
 ];
 
 // Directories to copy
@@ -101,6 +102,41 @@ dirsToCopy.forEach(dir => {
     console.log(`⚠️  Directory not found: ${dir}`);
   }
 });
+
+// Copy assets folder from project root to dist/assets
+console.log('\n📁 Copying assets folder...');
+const assetsDir = path.join(__dirname, '..', 'assets');
+const distAssetsDir = path.join(distDir, 'assets');
+
+if (fs.existsSync(assetsDir)) {
+  try {
+    // Ensure dist/assets exists
+    if (!fs.existsSync(distAssetsDir)) {
+      fs.mkdirSync(distAssetsDir, { recursive: true });
+    }
+    
+    // Copy all files from assets
+    const assetFiles = fs.readdirSync(assetsDir);
+    let copiedCount = 0;
+    
+    assetFiles.forEach(file => {
+      const srcFile = path.join(assetsDir, file);
+      const destFile = path.join(distAssetsDir, file);
+      
+      // Only copy files, not directories
+      if (fs.statSync(srcFile).isFile()) {
+        fs.copyFileSync(srcFile, destFile);
+        copiedCount++;
+      }
+    });
+    
+    console.log(`✅ Copied assets folder (${copiedCount} files)`);
+  } catch (error) {
+    console.log(`⚠️  Failed to copy assets: ${error.message}`);
+  }
+} else {
+  console.log('⚠️  Assets folder not found');
+}
 
 // Smart merge of index.html: Keep Expo's script tags but add our SEO content
 console.log('\n🔧 Merging SEO content into index.html...');
