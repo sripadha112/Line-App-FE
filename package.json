@@ -13,6 +13,7 @@
     "web": "expo start --web",
     "web:prod": "cross-env EXPO_PUBLIC_API_ENV=prod expo start --web",
     "build:web": "expo export --platform web && node scripts/copy-static-files.js",
+    "serve": "npx serve dist -s -l 3000",
     "build:android": "eas build --platform android",
     "build:ios": "eas build --platform ios",
     "build:preview": "eas build --profile preview --platform android",

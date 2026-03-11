@@ -12,7 +12,9 @@ const filesToCopy = [
 
 // Directories to copy
 const dirsToCopy = [
-  '.well-known'
+  '.well-known',
+  'booking',
+  'home'
 ];
 
 const webDir = path.join(__dirname, '..', 'web');
@@ -55,15 +57,43 @@ dirsToCopy.forEach(dir => {
         fs.mkdirSync(dest, { recursive: true });
       }
       
-      // Copy all files in directory
-      const files = fs.readdirSync(src);
-      files.forEach(file => {
-        const srcFile = path.join(src, file);
-        const destFile = path.join(dest, file);
-        fs.copyFileSync(srcFile, destFile);
-      });
+      // Recursively copy all files and subdirectories
+      function copyRecursive(srcDir, destDir) {
+        const entries = fs.readdirSync(srcDir, { withFileTypes: true });
+        
+        entries.forEach(entry => {
+          const srcPath = path.join(srcDir, entry.name);
+          const destPath = path.join(destDir, entry.name);
+          
+          if (entry.isDirectory()) {
+            if (!fs.existsSync(destPath)) {
+              fs.mkdirSync(destPath, { recursive: true });
+            }
+            copyRecursive(srcPath, destPath);
+          } else {
+            fs.copyFileSync(srcPath, destPath);
+          }
+        });
+      }
       
-      console.log(`✅ Copied directory: ${dir}/ (${files.length} files)`);
+      copyRecursive(src, dest);
+      
+      // Count total files
+      function countFiles(dir) {
+        let count = 0;
+        const entries = fs.readdirSync(dir, { withFileTypes: true });
+        entries.forEach(entry => {
+          if (entry.isDirectory()) {
+            count += countFiles(path.join(dir, entry.name));
+          } else {
+            count++;
+          }
+        });
+        return count;
+      }
+      
+      const fileCount = countFiles(dest);
+      console.log(`✅ Copied directory: ${dir}/ (${fileCount} files)`);
     } catch (error) {
       console.log(`⚠️  Failed to copy ${dir}: ${error.message}`);
     }
