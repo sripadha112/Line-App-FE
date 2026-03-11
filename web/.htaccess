@@ -20,11 +20,17 @@
 
 # Security Headers
 <IfModule mod_headers.c>
+  # Force HTTPS with HSTS
+  Header always set Strict-Transport-Security "max-age=31536000; includeSubDomains; preload" env=HTTPS
+  
   Header set X-Content-Type-Options "nosniff"
   Header set X-Frame-Options "SAMEORIGIN"
   Header set X-XSS-Protection "1; mode=block"
   Header set Referrer-Policy "strict-origin-when-cross-origin"
   Header set Permissions-Policy "geolocation=(), microphone=(), camera=()"
+  
+  # Content Security Policy to enforce HTTPS
+  Header set Content-Security-Policy "upgrade-insecure-requests"
   
   # Enable CORS for API calls
   Header set Access-Control-Allow-Origin "*"

@@ -15,7 +15,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useFocusEffect } from '@react-navigation/native';
 import SecureStore from '../utils/secureStorage';
 import { UserAPIService } from '../services/doctorApiService';
-import { api } from '../services/api';
+import api from '../services/api';
 import API_BASE_URL from '../config';
 import BottomNavigation from '../components/BottomNavigation';
 import { Modal, TextInput } from 'react-native';
