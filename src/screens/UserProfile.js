@@ -392,45 +392,70 @@ export default function UserProfile({ route, navigation }) {
   // };
 
   const handleLogout = async () => {
+    console.log('🚪 Logout button clicked');
+    
     const confirmLogout = Platform.OS === 'web' 
       ? window.confirm('Are you sure you want to logout?')
       : true;
     
+    console.log('Confirm logout result:', confirmLogout, 'Platform:', Platform.OS);
+    
     const performLogout = async () => {
+      console.log('🔄 Starting logout process...');
+      
       try {
+        console.log('📡 Calling logout API...');
         await api.post('/api/auth/logout');
+        console.log('✅ Logout API call successful');
       } catch (e) {
-        console.log('logout error', e);
+        console.log('⚠️ Logout API error:', e);
         // Continue with logout even if API fails
       }
       
-      // Clear all stored data
-      await SecureStore.deleteItemAsync('accessToken');
-      await SecureStore.deleteItemAsync('role');
-      await SecureStore.deleteItemAsync('userId');
-      await SecureStore.deleteItemAsync('fullName');
-      
-      // Clear API authorization header
-      delete api.defaults.headers.common['Authorization'];
-      
-      // For web, also clear any cached data
-      if (Platform.OS === 'web') {
-        try {
-          localStorage.clear();
-        } catch (err) {
-          console.warn('Error clearing localStorage:', err);
+      try {
+        console.log('🗑️ Clearing stored data...');
+        // Clear all stored data
+        await SecureStore.deleteItemAsync('accessToken');
+        await SecureStore.deleteItemAsync('role');
+        await SecureStore.deleteItemAsync('userId');
+        await SecureStore.deleteItemAsync('fullName');
+        console.log('✅ Stored data cleared');
+        
+        // Clear API authorization header
+        console.log('🔓 Clearing API auth header...');
+        delete api.defaults.headers.common['Authorization'];
+        
+        // For web, also clear any cached data
+        if (Platform.OS === 'web') {
+          console.log('🌐 Clearing localStorage...');
+          try {
+            localStorage.clear();
+            console.log('✅ localStorage cleared');
+          } catch (err) {
+            console.warn('⚠️ Error clearing localStorage:', err);
+          }
         }
+        
+        console.log('🔀 Navigating to Auth screen...');
+        // Reset navigation to Auth screen
+        navigation.reset({ index: 0, routes: [{ name: 'Auth' }] });
+        console.log('✅ Navigation reset complete');
+      } catch (error) {
+        console.error('❌ Error during logout cleanup:', error);
+        // Still try to navigate even if cleanup fails
+        navigation.reset({ index: 0, routes: [{ name: 'Auth' }] });
       }
-      
-      // Reset navigation to Auth screen
-      navigation.reset({ index: 0, routes: [{ name: 'Auth' }] });
     };
 
     if (Platform.OS === 'web') {
       if (confirmLogout) {
+        console.log('✅ User confirmed logout on web');
         await performLogout();
+      } else {
+        console.log('❌ User cancelled logout on web');
       }
     } else {
+      console.log('📱 Showing logout alert on mobile');
       Alert.alert(
         'Logout',
         'Are you sure you want to logout?',
