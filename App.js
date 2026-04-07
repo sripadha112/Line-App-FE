@@ -29,6 +29,7 @@ import OtpVerifyScreen from './src/screens/OtpVerifyScreen';
 import RoleSelectionScreen from './src/screens/RoleSelectionScreen';
 import DoctorRegistrationScreen from './src/screens/DoctorRegistrationScreen';
 import UserRegistrationScreen from './src/screens/UserRegistrationScreen';
+import LandingPage from './src/screens/LandingPage';
 import DoctorHome from './src/screens/DoctorHome';
 import UserHome from './src/screens/UserHome';
 import UserCalendar from './src/screens/UserCalendar';
@@ -59,6 +60,7 @@ const linking = {
   prefixes: ['https://neextapp.com', 'http://localhost:19006'],
   config: {
     screens: {
+      Landing: '',
       Auth: 'auth',
       OtpVerify: 'otp-verify',
       RoleSelection: 'role-selection',
@@ -129,11 +131,12 @@ export default function App() {
         if (token && role) {
           setInitialRoute(role === 'DOCTOR' ? 'DoctorHome' : 'UserHome');
         } else {
-          setInitialRoute('Auth');
+          // Show Landing page for web, Auth for mobile
+          setInitialRoute(Platform.OS === 'web' ? 'Landing' : 'Auth');
         }
       } catch (error) {
         console.error('Error initializing app:', error);
-        setInitialRoute('Auth');
+        setInitialRoute(Platform.OS === 'web' ? 'Landing' : 'Auth');
       } finally {
         setIsReady(true);
       }
@@ -183,6 +186,11 @@ export default function App() {
         }}
       >
       <Stack.Navigator initialRouteName={initialRoute}>
+        <Stack.Screen 
+          name="Landing" 
+          component={LandingPage} 
+          options={{headerShown:false, title:'NeextApp - Healthcare Made Simple'}} 
+        />
         <Stack.Screen name="Auth" component={AuthScreen} options={{headerShown:false, title:'Login'}} />
         <Stack.Screen name="OtpVerify" component={OtpVerifyScreen} options={{title:'Verify OTP', headerShown: Platform.OS !== 'web'}} />
         <Stack.Screen 
