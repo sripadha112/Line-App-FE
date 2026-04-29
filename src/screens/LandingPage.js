@@ -18,6 +18,40 @@ export default function LandingPage({ navigation }) {
   const [activeFeature, setActiveFeature] = useState(0);
   const [activeGallery, setActiveGallery] = useState(0);
   const [windowWidth, setWindowWidth] = useState(Dimensions.get('window').width);
+  
+  // Create animated values for gallery transitions with proper initial values
+  const galleryAnimations = useRef(
+    Array(6).fill(0).map((_, index) => {
+      // Initialize based on starting position (activeGallery = 0)
+      const isActive = index === 0;
+      const isPrev = index === 5; // (0 - 1 + 6) % 6 = 5
+      const isNext = index === 1;
+      
+      let initialX = 0;
+      let initialScale = 0.5;
+      let initialOpacity = 0;
+      
+      if (isActive) {
+        initialX = 0;
+        initialScale = 1;
+        initialOpacity = 1;
+      } else if (isPrev) {
+        initialX = -180;
+        initialScale = 0.85;
+        initialOpacity = 0.5;
+      } else if (isNext) {
+        initialX = 180;
+        initialScale = 0.85;
+        initialOpacity = 0.5;
+      }
+      
+      return {
+        translateX: new Animated.Value(initialX),
+        scale: new Animated.Value(initialScale),
+        opacity: new Animated.Value(initialOpacity),
+      };
+    })
+  ).current;
 
   // Pan responder for swipe gestures on mobile
   const panResponder = useRef(
@@ -46,6 +80,61 @@ export default function LandingPage({ navigation }) {
 
     return () => subscription?.remove();
   }, []);
+
+  // Animate gallery transitions
+  useEffect(() => {
+    const screenWidth = windowWidth;
+    galleryImages.forEach((_, index) => {
+      // Safety check to ensure animation values exist
+      if (!galleryAnimations[index]) {
+        return;
+      }
+      
+      const isActive = index === activeGallery;
+      const isPrev = index === (activeGallery - 1 + galleryImages.length) % galleryImages.length;
+      const isNext = index === (activeGallery + 1) % galleryImages.length;
+      
+      let targetX = 0;
+      let targetScale = 1;
+      let targetOpacity = 1;
+      
+      if (isActive) {
+        targetX = 0;
+        targetScale = 1;
+        targetOpacity = 1;
+      } else if (isPrev) {
+        targetX = screenWidth > 768 ? -180 : -140;
+        targetScale = 0.85;
+        targetOpacity = 0.5;
+      } else if (isNext) {
+        targetX = screenWidth > 768 ? 180 : 140;
+        targetScale = 0.85;
+        targetOpacity = 0.5;
+      } else {
+        targetX = 0;
+        targetScale = 0.5;
+        targetOpacity = 0;
+      }
+      
+      Animated.parallel([
+        Animated.timing(galleryAnimations[index].translateX, {
+          toValue: targetX,
+          duration: 500,
+          useNativeDriver: false,
+        }),
+        Animated.timing(galleryAnimations[index].scale, {
+          toValue: targetScale,
+          duration: 500,
+          useNativeDriver: false,
+        }),
+        Animated.timing(galleryAnimations[index].opacity, {
+          toValue: targetOpacity,
+          duration: 500,
+          useNativeDriver: false,
+        }),
+      ]).start();
+    });
+  }, [activeGallery, windowWidth]);
 
   useEffect(() => {
     // Fade in and slide up animation
@@ -110,6 +199,7 @@ export default function LandingPage({ navigation }) {
     require('../../assets/image-04.jpeg'),
     require('../../assets/image-05.jpeg'),
     require('../../assets/image-06.jpeg'),
+    require('../../assets/image-07.jpeg'),
   ];
 
   const styles = getStyles(windowWidth);
@@ -313,27 +403,34 @@ export default function LandingPage({ navigation }) {
               const isPrev = index === (activeGallery - 1 + galleryImages.length) % galleryImages.length;
               const isNext = index === (activeGallery + 1) % galleryImages.length;
               
-              let cardStyle = styles.galleryCardHidden;
-              if (isActive) {
-                cardStyle = styles.galleryCardActive;
-              } else if (isPrev) {
-                cardStyle = styles.galleryCardLeft;
-              } else if (isNext) {
-                cardStyle = styles.galleryCardRight;
+              // Safety check to ensure animated values exist
+              if (!galleryAnimations[index]) {
+                return null;
               }
+              
+              const animatedStyle = {
+                transform: [
+                  { translateX: galleryAnimations[index].translateX },
+                  { scale: galleryAnimations[index].scale },
+                ],
+                opacity: galleryAnimations[index].opacity,
+                zIndex: isActive ? 10 : (isPrev || isNext) ? 2 : 1,
+              };
               
               return (
                 <TouchableOpacity
                   key={index}
-                  style={[styles.galleryCardBase, cardStyle]}
+                  style={[styles.galleryCardWrapper, { zIndex: isActive ? 10 : (isPrev || isNext) ? 2 : 1 }]}
                   onPress={() => setActiveGallery(index)}
-                  activeOpacity={0.9}
+                  activeOpacity={1}
                 >
-                  <Image 
-                    source={image}
-                    style={styles.galleryImage}
-                    resizeMode="contain"
-                  />
+                  <Animated.View style={[styles.galleryCardBase, animatedStyle]}>
+                    <Image 
+                      source={image}
+                      style={[styles.galleryImage, isActive && { opacity: 1 }]}
+                      resizeMode="contain"
+                    />
+                  </Animated.View>
                 </TouchableOpacity>
               );
             })}
@@ -389,7 +486,7 @@ export default function LandingPage({ navigation }) {
       <View style={styles.footerInfoSection}>
         <View style={styles.footerInfoContainer}>
           {/* About Us - Left Side */}
-          <View style={styles.footerInfoCard}>
+          <View style={[styles.footerInfoCard, styles.footerAboutCard]}>
             <Text style={styles.footerInfoTitle}>About Us</Text>
             <Text style={styles.footerInfoText}>
               <Text style={styles.footerInfoBrand}>NeextApp</Text> is your trusted healthcare companion, revolutionizing the way you book and manage medical appointments.
@@ -403,7 +500,7 @@ export default function LandingPage({ navigation }) {
           </View>
 
           {/* Contact Us - Right Side */}
-          <View style={styles.footerInfoCard}>
+          <View style={[styles.footerInfoCard, styles.footerContactCard]}>
             <Text style={styles.footerInfoTitle}>Contact Us</Text>
             <Text style={styles.footerInfoText}>
               Have questions? We'd love to hear from you.
@@ -827,8 +924,14 @@ const getStyles = (width) => StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  galleryCardBase: {
+  galleryCardWrapper: {
     position: 'absolute',
+    width: '100%',
+    height: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  galleryCardBase: {
     width: width > 768 ? 280 : 280,
     height: width > 768 ? 420 : 520,
     backgroundColor: '#ffffff',
@@ -842,33 +945,6 @@ const getStyles = (width) => StyleSheet.create({
     borderWidth: 2,
     borderColor: '#4f46e5',
     overflow: 'hidden',
-    transition: 'all 0.5s ease',
-  },
-  galleryCardActive: {
-    transform: [{ scale: 1 }, { translateX: 0 }],
-    opacity: 1,
-    zIndex: 3,
-  },
-  galleryCardLeft: {
-    transform: [
-      { scale: 0.85 },
-      { translateX: width > 768 ? -180 : -140 },
-    ],
-    opacity: 0.5,
-    zIndex: 2,
-  },
-  galleryCardRight: {
-    transform: [
-      { scale: 0.85 },
-      { translateX: width > 768 ? 180 : 140 },
-    ],
-    opacity: 0.5,
-    zIndex: 2,
-  },
-  galleryCardHidden: {
-    opacity: 0,
-    transform: [{ scale: 0.5 }],
-    zIndex: 1,
   },
   galleryImage: {
     width: '100%',
@@ -912,21 +988,24 @@ const getStyles = (width) => StyleSheet.create({
     paddingTop: width > 768 ? 60 : 40,
   },
   footerInfoContainer: {
-    paddingHorizontal: width > 768 ? 60 : 20,
+    paddingHorizontal: 20,
     paddingBottom: width > 768 ? 50 : 40,
     flexDirection: width > 768 ? 'row' : 'column',
     justifyContent: 'space-between',
-    alignItems: width > 768 ? 'flex-start' : 'stretch',
+    alignItems: 'flex-start',
     gap: width > 768 ? 40 : 40,
     width: '100%',
-    maxWidth: width > 768 ? 1400 : '100%',
+    maxWidth: 1200,
     alignSelf: 'center',
   },
   footerInfoCard: {
-    flex: width > 768 ? 1 : 1,
-    width: width > 768 ? undefined : '100%',
-    maxWidth: width > 768 ? '48%' : '100%',
+    width: width > 768 ? '60%' : '100%',
     paddingBottom: width > 768 ? 0 : 20,
+  },
+  footerAboutCard: {
+  },
+  footerContactCard: {
+    marginLeft: width > 768 ? 30 : 0,
   },
   footerInfoTitle: {
     fontSize: width > 768 ? 24 : 20,
