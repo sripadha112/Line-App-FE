@@ -170,25 +170,26 @@ export default function DoctorHome({ navigation, route }) {
   }, [route?.params?.initialTab]);
 
   // Auto-refresh when screen comes into focus (after returning from other screens)
+  // OPTIMIZED: Priority-based loading
   useFocusEffect(
     React.useCallback(() => {
       console.log('DoctorHome screen focused - refreshing data...');
       if (doctorId) {
-        // Sequential loading: Profile → Workplaces → History
-        (async () => {
-          try {
-            await fetchDoctorProfile();
-            await new Promise(resolve => setTimeout(resolve, 200));
-            await fetchWorkplaces(doctorId);
-            await new Promise(resolve => setTimeout(resolve, 200));
-            await fetchRecentHistory(doctorId);
-            fetchTodayStats(doctorId);
-          } catch (error) {
-            console.log('Error refreshing data:', error);
-          }
-        })();
+        // PRIORITY 1: Load workplaces first (main data)
+        fetchWorkplaces(doctorId).then(() => {
+          // PRIORITY 2: Load profile in background (less critical)
+          fetchDoctorProfile().catch(err => console.log('Profile load error:', err));
+          fetchDetailedProfile(doctorId).catch(err => console.log('Detailed profile error:', err));
+        });
+        
+        // PRIORITY 3: Load history ONLY when history tab is active
+        if (activeTab === 'history') {
+          fetchRecentHistory(doctorId);
+        }
+        
+        fetchTodayStats(doctorId);
       }
-    }, [doctorId])
+    }, [doctorId, activeTab])
   );
 
   useFocusEffect(
@@ -235,24 +236,31 @@ export default function DoctorHome({ navigation, route }) {
       setDoctorId(id);
       
       if (id) {
-        // Sequential loading: Profile first, then workplaces, then history
-        console.log('🔍 Step 1: Fetching doctor profile...');
-        await fetchDoctorProfile();
-        await fetchDetailedProfile(id);
+        // OPTIMIZED: Priority-based loading strategy
+        console.log('🚀 Starting optimized data load...');
         
-        console.log('⏳ Waiting 200ms before workplaces...');
-        await new Promise(resolve => setTimeout(resolve, 200));
-        
-        console.log('🔍 Step 2: Fetching workplaces...');
+        // PRIORITY 1: Load workplaces FIRST (essential for UI, cached 5min)
+        console.log('🔴 PRIORITY 1: Loading workplaces (MAIN DATA)...');
         await fetchWorkplaces(id);
+        console.log('✅ Workplaces loaded - page is now interactive!');
         
-        console.log('⏳ Waiting 200ms before history...');
-        await new Promise(resolve => setTimeout(resolve, 200));
+        // PRIORITY 2: Load profiles in background (secondary data, cached 5min)
+        console.log('🟡 PRIORITY 2: Loading profiles in background...');
+        Promise.all([
+          fetchDoctorProfile().catch(err => console.log('Profile error:', err)),
+          fetchDetailedProfile(id).catch(err => console.log('Detailed profile error:', err))
+        ]).then(() => console.log('✅ Profiles loaded'));
         
-        console.log('🔍 Step 3: Fetching appointments history...');
-        await fetchRecentHistory(id);
+        // PRIORITY 3: Load history ONLY if on history tab (lazy load)
+        if (activeTab === 'history') {
+          console.log('🟢 PRIORITY 3: Loading history (user requested)...');
+          await fetchRecentHistory(id);
+          console.log('✅ History loaded');
+        } else {
+          console.log('⏭️ Skipping history load (not on history tab)');
+        }
         
-        // Calculate stats after data is loaded
+        // Calculate stats
         fetchTodayStats(id);
       }
     } catch (e) {
@@ -2053,6 +2061,13 @@ Dr. ${name || 'Neext App Doctor'}`;
         activeTab={activeTab}
         onTabChange={(tab) => {
           setActiveTab(tab);
+          
+          // LAZY LOAD: Load history only when history tab is clicked
+          if (tab === 'history' && historyAppointments.length === 0 && doctorId) {
+            console.log('🟢 Loading history on demand (user clicked History tab)...');
+            fetchRecentHistory(doctorId);
+          }
+          
           if (tab === 'appointments') onRefresh();
         }}
       />

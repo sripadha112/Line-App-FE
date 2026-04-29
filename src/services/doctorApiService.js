@@ -21,9 +21,12 @@ export class DoctorAPIService {
   }
 
   // Fetch appointment history
-  static async fetchAppointmentHistory(doctorId, daysBack = 14) {
+  // OPTIMIZED: Added limit parameter to reduce data transfer
+  static async fetchAppointmentHistory(doctorId, limit = 100) {
     try {
-      const response = await api.get(API_ENDPOINTS.DOCTOR.APPOINTMENTS_HISTORY(doctorId));
+      const response = await api.get(
+        `${API_ENDPOINTS.DOCTOR.APPOINTMENTS_HISTORY(doctorId)}?limit=${limit}`
+      );
       return response.data || [];
     } catch (error) {
       console.log('Error fetching appointment history:', error.message);
