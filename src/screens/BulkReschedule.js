@@ -18,6 +18,7 @@ import TopBar from '../components/TopBar';
 import BottomNavigation from '../components/BottomNavigation';
 import DatePicker from '../components/DatePicker';
 import { showAlert } from '../utils/alertUtils';
+import { SkeletonWorkplaceList } from '../components/skeletons';
 
 const BULK_RESCHEDULE_REASONS = [
   'Schedule change',
@@ -35,7 +36,7 @@ export default function BulkReschedule({ route, navigation }) {
   const { doctorId } = route.params;
   
   const [workplaces, setWorkplaces] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [rescheduleModalVisible, setRescheduleModalVisible] = useState(false);
   const [selectedWorkplace, setSelectedWorkplace] = useState(null);
@@ -274,10 +275,7 @@ export default function BulkReschedule({ route, navigation }) {
       <TopBar title="Bulk Reschedule" onBack={() => navigation.goBack()} />
       
       {loading ? (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#3498db" />
-          <Text style={styles.loadingText}>Loading workplaces...</Text>
-        </View>
+        <SkeletonWorkplaceList count={4} showMultipleButtons={false} />
       ) : (
         <FlatList
           data={workplaces}

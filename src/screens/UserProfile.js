@@ -20,6 +20,7 @@ import API_BASE_URL from '../config';
 import BottomNavigation from '../components/BottomNavigation';
 import { Modal, TextInput } from 'react-native';
 import { showAlert } from '../utils/alertUtils';
+import { SkeletonProfileHeader, SkeletonProfileInfo } from '../components/skeletons';
 
 export default function UserProfile({ route, navigation }) {
   const { userId } = route.params;
@@ -243,8 +244,9 @@ export default function UserProfile({ route, navigation }) {
 
   const previewPrescription = async (prescriptionId) => {
     if (Platform.OS === 'web') {
-      // Web: Open PDF in new tab
+      // Web: Open PDF in new tab using Blob URL (Safari/Firefox compatible)
       try {
+        setPdfLoading(true);
         const token = await SecureStore.getItemAsync('accessToken');
         const url = `${API_BASE_URL}/api/prescriptions/${prescriptionId}/pdf`;
         
@@ -258,13 +260,27 @@ export default function UserProfile({ route, navigation }) {
 
         const htmlContent = await response.text();
         
-        // Open in new window
-        const printWindow = window.open('', '_blank');
-        printWindow.document.write(htmlContent);
-        printWindow.document.close();
+        // Create a Blob with the HTML content (cross-browser compatible)
+        const blob = new Blob([htmlContent], { type: 'text/html' });
+        const blobUrl = URL.createObjectURL(blob);
+        
+        // Open in new window/tab
+        const printWindow = window.open(blobUrl, '_blank');
+        
+        if (!printWindow) {
+          // Fallback if popup blocked
+          alert('Please allow popups for this site to preview prescriptions');
+        }
+        
+        // Clean up the blob URL after a delay
+        setTimeout(() => {
+          URL.revokeObjectURL(blobUrl);
+        }, 10000);
       } catch (error) {
         console.error('Error previewing prescription:', error);
         alert('Failed to preview prescription');
+      } finally {
+        setPdfLoading(false);
       }
       return;
     }
@@ -480,11 +496,12 @@ export default function UserProfile({ route, navigation }) {
 
   if (loading) {
     return (
-      <View style={styles.container}>
-        <View style={styles.loadingContainer}>
-          <Text style={styles.loadingText}>Loading profile...</Text>
-        </View>
-      </View>
+      <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
+        <ScrollView>
+          <SkeletonProfileHeader />
+          <SkeletonProfileInfo />
+        </ScrollView>
+      </SafeAreaView>
     );
   }
 

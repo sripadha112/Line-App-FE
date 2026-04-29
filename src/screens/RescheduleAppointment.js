@@ -16,6 +16,7 @@ import TopBar from '../components/TopBar';
 import BottomNavigation from '../components/BottomNavigation';
 import DatePicker from '../components/DatePicker';
 import { showAlert } from '../utils/alertUtils';
+import { SkeletonTimeSlotSelection, SkeletonAppointmentList, SkeletonRescheduleDetails } from '../components/skeletons';
 
 const RESCHEDULE_REASONS = [
   'Schedule conflict',
@@ -581,9 +582,10 @@ export default function RescheduleAppointment({ route, navigation }) {
           paddingBottom: 20
         }
       ]}>
-        <View style={styles.loadingContainer}>
-          <Text style={styles.loadingText}>Loading appointment details...</Text>
-        </View>
+        <ScrollView showsVerticalScrollIndicator={false}>
+          <SkeletonRescheduleDetails />
+          <SkeletonTimeSlotSelection />
+        </ScrollView>
       </View>
     );
   }
@@ -639,9 +641,7 @@ export default function RescheduleAppointment({ route, navigation }) {
           )}
           
           {loading ? (
-            <View style={styles.loadingContainer}>
-              <Text style={styles.loadingText}>Loading appointments...</Text>
-            </View>
+            <SkeletonAppointmentList />
           ) : allAppointments.length === 0 ? (
             <View style={styles.emptyContainer}>
               <Text style={styles.emptyIcon}>📋</Text>
@@ -754,9 +754,7 @@ export default function RescheduleAppointment({ route, navigation }) {
           </View>
           
           {loading ? (
-            <View style={styles.loadingContainer}>
-              <Text style={styles.loadingText}>Loading slots...</Text>
-            </View>
+            <SkeletonTimeSlotSelection />
           ) : availableDates.length === 0 ? (
             <View style={styles.noSlotsContainer}>
               <Text style={styles.noSlotsIcon}>⚠️</Text>

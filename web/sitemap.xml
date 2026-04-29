@@ -26,6 +26,24 @@
     <mobile:mobile/>
   </url>
   
+  <!-- Privacy Policy -->
+  <url>
+    <loc>https://neextapp.com/privacy-policy</loc>
+    <lastmod>2026-04-19</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+    <mobile:mobile/>
+  </url>
+  
+  <!-- Terms and Conditions -->
+  <url>
+    <loc>https://neextapp.com/terms-and-conditions</loc>
+    <lastmod>2026-04-19</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+    <mobile:mobile/>
+  </url>
+  
   <!-- Add more pages as your site grows -->
   
 </urlset>

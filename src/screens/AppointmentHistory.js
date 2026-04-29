@@ -13,12 +13,13 @@ import {
 import { DoctorAPIService } from '../services/doctorApiService';
 import TopBar from '../components/TopBar';
 import BottomNavigation from '../components/BottomNavigation';
+import { SkeletonAllBookings } from '../components/skeletons';
 
 export default function AppointmentHistory({ route, navigation }) {
   const { doctorId } = route.params;
   
   const [historyByWorkplace, setHistoryByWorkplace] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [collapsedWorkplaces, setCollapsedWorkplaces] = useState({});
 
@@ -158,10 +159,7 @@ export default function AppointmentHistory({ route, navigation }) {
       <TopBar title="Appointment History" onBack={() => navigation.goBack()} />
       
       {loading ? (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#3498db" />
-          <Text style={styles.loadingText}>Loading appointment history...</Text>
-        </View>
+        <SkeletonAllBookings count={6} />
       ) : (
         <FlatList
           data={historyByWorkplace}

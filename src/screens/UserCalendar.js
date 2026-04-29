@@ -13,6 +13,7 @@ import { StatusBar } from 'expo-status-bar';
 import { UserAPIService } from '../services/doctorApiService';
 import { format, addDays, startOfDay, endOfDay } from 'date-fns';
 import BottomNavigation from '../components/BottomNavigation';
+import { SkeletonCalendar, SkeletonCalendarAppointments } from '../components/skeletons';
 
 export default function UserCalendar({ route, navigation }) {
   const { userId, status, title } = route.params;

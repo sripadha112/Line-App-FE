@@ -18,6 +18,7 @@ import BottomNavigation from '../components/BottomNavigation';
 import API_BASE_URL from '../config';
 import SecureStore from '../utils/secureStorage';
 import { showAlert } from '../utils/alertUtils';
+import { SkeletonAllBookings } from '../components/skeletons';
 
 export default function AllBookings({ route, navigation }) {
   const { doctorId, workplaceId, workplaceName, refresh } = route.params;
@@ -449,10 +450,7 @@ export default function AllBookings({ route, navigation }) {
       <TopBar title={getPageTitle()} onBack={() => navigation.goBack()} />
       
       {loading ? (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#3498db" />
-          <Text style={styles.loadingText}>Loading appointments...</Text>
-        </View>
+        <SkeletonAllBookings count={6} />
       ) : (
         <ScrollView
           style={styles.scrollView}

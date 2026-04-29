@@ -1,5 +1,5 @@
 import React, {useEffect, useState, useRef} from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert, Modal, TextInput, ScrollView, RefreshControl, ActivityIndicator, Linking, Platform } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert, Modal, TextInput, ScrollView, RefreshControl, ActivityIndicator, Linking, Platform, BackHandler } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import SecureStore from '../utils/secureStorage';
 import { format } from 'date-fns';
@@ -10,6 +10,7 @@ import TopBar from '../components/TopBar';
 import Card from '../components/Card';
 import TodaySchedule from '../components/TodaySchedule';
 import BottomNavigation from '../components/BottomNavigation';
+import { SkeletonDoctorHome, SkeletonDoctorProfile } from '../components/skeletons';
 
 // Import services
 import { DoctorAPIService, UserAPIService, AuthAPIService } from '../services/doctorApiService';
@@ -188,6 +189,22 @@ export default function DoctorHome({ navigation, route }) {
         })();
       }
     }, [doctorId])
+  );
+
+  useFocusEffect(
+    React.useCallback(() => {
+      const onBackPress = () => {
+        if (activeTab === 'profile') {
+          setActiveTab('appointments');
+          return true; 
+        }
+        return false;
+      };
+
+      const backHandler = BackHandler.addEventListener('hardwareBackPress', onBackPress);
+
+      return () => backHandler.remove();
+    }, [activeTab])
   );
 
   // Check authentication status periodically
@@ -592,7 +609,7 @@ Dr. ${name || 'Neext App Doctor'}`;
 
       // Only make API call if there are changes
       if (Object.keys(dataToSave).length === 0) {
-        showAlert('No Changes', 'No changes detected to save.');
+        Alert.alert('No Changes', 'No changes detected to save.', [{ text: 'OK' }]);
         setEditingProfile(false);
         return;
       }
@@ -603,11 +620,11 @@ Dr. ${name || 'Neext App Doctor'}`;
       await fetchDetailedProfile(doctorId);
       
       setEditingProfile(false);
-      showAlert('Success', 'Profile updated successfully!');
+      Alert.alert('Success', 'Profile updated successfully!', [{ text: 'OK' }]);
       
     } catch (error) {
       console.error('Error saving profile:', error);
-      showAlert('Error', 'Failed to update profile. Please try again.');
+      Alert.alert('Error', 'Failed to update profile. Please try again.', [{ text: 'OK' }]);
     } finally {
       setProfileLoading(false);
     }
@@ -1445,23 +1462,29 @@ Dr. ${name || 'Neext App Doctor'}`;
     </TouchableOpacity>
   );
 
+  // Show skeleton on initial loading
+  if (loading && !doctorId) {
+    return <SkeletonDoctorHome />;
+  }
+
   return (
     <View style={styles.container}>
-      {activeTab !== 'profile' && <TopBar name={name} />}
-      
       {activeTab === 'profile' ? (
         // Profile View
-        <ScrollView 
-          style={styles.profileContainer}
-          showsVerticalScrollIndicator={false}
-          refreshControl={<RefreshControl refreshing={profileLoading} onRefresh={() => fetchDetailedProfile(doctorId)} />}
-        >
+        <>
+          <TopBar 
+            title="Profile" 
+            onBack={() => setActiveTab('appointments')}
+          />
           {profileLoading ? (
-            <View style={styles.loadingContainer}>
-              <ActivityIndicator size="large" color="#3498db" />
-              <Text style={styles.loadingText}>Loading profile...</Text>
-            </View>
-          ) : detailedProfile ? (
+            <SkeletonDoctorProfile />
+          ) : (
+            <ScrollView 
+              style={styles.profileContainer}
+              showsVerticalScrollIndicator={false}
+              refreshControl={<RefreshControl refreshing={profileLoading} onRefresh={() => fetchDetailedProfile(doctorId)} />}
+            >
+              {detailedProfile ? (
             <>
               
               <View style={styles.profileCard}>
@@ -1484,9 +1507,19 @@ Dr. ${name || 'Neext App Doctor'}`;
               </View>
               
               {/* Personal Information */}
-              <View style={styles.profileSection}>
+              <View style={styles.sectionTitleRow}>
                 <Text style={styles.profileSectionTitle}>Personal Information</Text>
-                
+                {!editingProfile && (
+                  <TouchableOpacity 
+                    style={styles.editButton} 
+                    onPress={() => setEditingProfile(true)}
+                  >
+                    <Text style={styles.editButtonText}>✏️ Edit</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+              
+              <View style={styles.profileInfoCard}>
                 <View style={styles.profileItem}>
                   <Text style={styles.profileLabel}>Full Name</Text>
                   {editingProfile ? (
@@ -1613,39 +1646,40 @@ Dr. ${name || 'Neext App Doctor'}`;
                   )}
                 </View>
               </View>
-              
-              {/* Edit Profile and Save Buttons */}
-              <View style={styles.profileActions}>
-                {editingProfile ? (
-                  <>
-                    <TouchableOpacity style={styles.cancelEditButton} onPress={() => {
+                
+              {/* Edit Mode Action Buttons */}
+              {editingProfile && (
+                <View style={styles.editModeActions}>
+                  <TouchableOpacity 
+                    style={styles.cancelEditButton} 
+                    onPress={() => {
                       setEditingProfile(false);
                       setEditedProfile({ ...detailedProfile });
-                    }}>
-                      <Text style={styles.cancelEditButtonText}>Cancel</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity style={styles.saveButton} onPress={handleSaveProfile}>
-                      <Text style={styles.saveButtonText}>Save</Text>
-                    </TouchableOpacity>
-                  </>
-                ) : (
-                  <TouchableOpacity style={styles.editProfileMainButton} onPress={() => setEditingProfile(true)}>
-                    <Text style={styles.editProfileMainButtonText}>✏️ Edit Profile</Text>
-                  </TouchableOpacity>
-                )}
-              </View>
-              
-              {/* Workplaces Section */}
-              <View style={styles.profileSection}>
-                <View style={styles.sectionTitleRow}>
-                  <Text style={styles.profileSectionTitle}>Workplaces ({detailedProfile.workplaces?.length || 0})</Text>
-                  <TouchableOpacity 
-                    style={styles.addWorkplaceButton}
-                    onPress={() => setAddWorkplaceModalVisible(true)}
+                    }}
                   >
-                    <Text style={styles.addWorkplaceButtonText}>+ Add Workplace</Text>
+                    <Text style={styles.cancelEditButtonText}>Cancel</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity 
+                    style={styles.saveButton} 
+                    onPress={handleSaveProfile}
+                  >
+                    <Text style={styles.saveButtonText}>Save</Text>
                   </TouchableOpacity>
                 </View>
+              )}
+              
+              {/* Workplaces Section */}
+              <View style={styles.sectionTitleRow}>
+                <Text style={styles.profileSectionTitle}>Workplaces ({detailedProfile.workplaces?.length || 0})</Text>
+                <TouchableOpacity 
+                  style={styles.addWorkplaceButton}
+                  onPress={() => setAddWorkplaceModalVisible(true)}
+                >
+                  <Text style={styles.addWorkplaceButtonText}>+ Add</Text>
+                </TouchableOpacity>
+              </View>
+              
+              <View style={styles.profileInfoCard}>
                 
                 {(!detailedProfile.workplaces || detailedProfile.workplaces.length === 0) ? (
                   <View style={styles.emptyWorkplaces}>
@@ -1788,12 +1822,16 @@ Dr. ${name || 'Neext App Doctor'}`;
           
           {/* Bottom Spacing for Profile */}
           <View style={styles.bottomSpacing} />
-        </ScrollView>
+            </ScrollView>
+          )}
+        </>
       ) : (
         // Home View
-        <ScrollView 
-          style={styles.content}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+        <>
+          <TopBar name={name} />
+          <ScrollView 
+            style={styles.content}
+            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
           showsVerticalScrollIndicator={false}
         >
         {/* Today's Schedule Section - Moved to Top */}
@@ -1924,6 +1962,7 @@ Dr. ${name || 'Neext App Doctor'}`;
         {/* Bottom Spacing to prevent navigation overlap */}
         <View style={styles.bottomSpacing} />
       </ScrollView>
+        </>
       )}
 
       {/* Cancel Reason Modal */}
@@ -4291,13 +4330,24 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '700',
     color: '#2c3e50',
-    marginBottom: 16,
   },
   sectionTitleRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: 12,
+    marginTop: 16,
+  },
+  profileInfoCard: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 8,
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
   },
   profileField: {
     marginBottom: 16,
@@ -4612,21 +4662,20 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#ecf0f1',
+    marginBottom: 10,
+    paddingVertical: 6,
   },
   profileLabel: {
     fontSize: 14,
     fontWeight: '600',
     color: '#7f8c8d',
+    flex: 1,
   },
   profileValue: {
-    fontSize: 14,
+    fontSize: 15,
     color: '#2c3e50',
+    flex: 2,
     textAlign: 'right',
-    flex: 1,
-    marginLeft: 16,
   },
   emptyWorkplaces: {
     padding: 20,
@@ -4639,13 +4688,13 @@ const styles = StyleSheet.create({
   },
   addWorkplaceButton: {
     backgroundColor: '#3498db',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
     borderRadius: 8,
   },
   addWorkplaceButtonText: {
     color: '#fff',
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '600',
   },
   workplaceItem: {
@@ -4697,19 +4746,30 @@ const styles = StyleSheet.create({
   },
   editButton: {
     backgroundColor: '#3498db',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
     borderRadius: 8,
+    elevation: 2,
+    shadowColor: '#3498db',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
   },
   editButtonText: {
     color: '#fff',
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: '600',
   },
+  editModeActions: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 16,
+    marginBottom: 8,
+  },
   cancelEditButton: {
-    backgroundColor: '#95a5a6',
+    backgroundColor: '#e74c3c',
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingVertical: 10,
     borderRadius: 8,
     marginRight: 8,
     flex: 1,
@@ -4723,7 +4783,7 @@ const styles = StyleSheet.create({
   saveButton: {
     backgroundColor: '#27ae60',
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingVertical: 10,
     borderRadius: 8,
     flex: 1,
     alignItems: 'center',
@@ -4739,24 +4799,26 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   profileInput: {
-    borderWidth: 1,
-    borderColor: '#ddd',
+    borderWidth: 1.5,
+    borderColor: '#3498db',
     borderRadius: 8,
-    padding: 12,
-    fontSize: 14,
+    padding: 10,
+    fontSize: 15,
     color: '#2c3e50',
-    flex: 1,
-    marginLeft: 16,
+    backgroundColor: '#f8f9fa',
+    flex: 2,
+    textAlign: 'right',
   },
   addressInput: {
-    minHeight: 60,
+    minHeight: 80,
     textAlignVertical: 'top',
+    textAlign: 'left',
   },
   nonEditableText: {
     fontSize: 12,
     color: '#95a5a6',
     fontStyle: 'italic',
-    marginLeft: 8,
+    marginTop: 4,
   },
   workplaceProfileCard: {
     backgroundColor: '#fff',

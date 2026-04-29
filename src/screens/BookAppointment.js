@@ -10,11 +10,13 @@ import {
   FlatList,
   ActivityIndicator,
   Platform,
+  BackHandler,
 } from 'react-native';
 import { UserAPIService, DoctorAPIService, SlotsAPIService } from '../services/doctorApiService';
 import TopBar from '../components/TopBar';
 import BottomNavigation from '../components/BottomNavigation';
 import DatePicker from '../components/DatePicker';
+import { SkeletonDoctorSearch, SkeletonTimeSlotSelection } from '../components/skeletons';
 
 export default function BookAppointment({ route, navigation }) {
   const { userId, familyMemberId, familyMemberName } = route.params;
@@ -33,6 +35,7 @@ export default function BookAppointment({ route, navigation }) {
   const [blockedDates, setBlockedDates] = useState({}); // Store blocked dates info
   const [recentDoctors, setRecentDoctors] = useState([]); // Store recent doctors for quick access
   const [loading, setLoading] = useState(false);
+  const [slotsLoading, setSlotsLoading] = useState(false);
   const [step, setStep] = useState('search'); // 'search', 'workplaces', 'slots'
   const [noWorkplacesInfo, setNoWorkplacesInfo] = useState(null); // Info about doctors with no workplaces
   const [customSelectedDate, setCustomSelectedDate] = useState(null); // Date selected from calendar picker
@@ -264,6 +267,7 @@ export default function BookAppointment({ route, navigation }) {
 
   const loadSlotsForWorkplace = async (workplace, selectedDateForSlots) => {
     try {
+      setSlotsLoading(true);
       const params = {};
       if (selectedDateForSlots) {
         params.date = selectedDateForSlots;
@@ -368,6 +372,8 @@ export default function BookAppointment({ route, navigation }) {
     } catch (error) {
       console.error('Error loading slots for workplace:', error);
       throw error;
+    } finally {
+      setSlotsLoading(false);
     }
   };
 
@@ -506,6 +512,19 @@ export default function BookAppointment({ route, navigation }) {
       }
     };
   }, []);
+
+  // Handle hardware back button
+  useEffect(() => {
+    const backHandler = BackHandler.addEventListener('hardwareBackPress', () => {
+      if (step === 'slots') {
+        setStep('search');
+        return true; // Prevent default back behavior
+      }
+      return false; // Allow default back behavior for other steps
+    });
+
+    return () => backHandler.remove();
+  }, [step]);
 
   // No create handler here — user can only select existing family members. Adding is in Profile.
 
@@ -663,10 +682,7 @@ export default function BookAppointment({ route, navigation }) {
 
           {/* Initial Loading State */}
           {initialLoading ? (
-            <View style={styles.initialLoadingContainer}>
-              <ActivityIndicator size="large" color="#3498db" />
-              <Text style={styles.loadingText}>Loading doctors...</Text>
-            </View>
+            <SkeletonDoctorSearch />
           ) : (
             /* Doctor List with Infinite Scroll */
             <FlatList
@@ -874,10 +890,8 @@ export default function BookAppointment({ route, navigation }) {
               </View>
             )}
 
-            {loading ? (
-              <View style={styles.loadingContainer}>
-                <Text style={styles.loadingText}>Loading slots...</Text>
-              </View>
+            {loading || slotsLoading ? (
+              <SkeletonTimeSlotSelection />
             ) : (blockedDates[selectedDate]?.isFullDay || blockedDates[selectedDate]?.fullDay) ? (
               <View style={styles.blockedDayContainer}>
                 <Text style={styles.blockedDayIcon}>🚫</Text>

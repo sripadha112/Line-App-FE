@@ -19,6 +19,7 @@ import API_BASE_URL from '../config';
 import MedicineSearchModal from '../components/MedicineSearchModal';
 import PrescriptionEditor from '../components/PrescriptionEditor';
 import { showAlert } from '../utils/alertUtils';
+import { SkeletonProfileInfo } from '../components/skeletons';
 
 export default function PatientProfilePrescription({ route, navigation }) {
   const { appointment, doctorId } = route.params;
@@ -116,7 +117,7 @@ export default function PatientProfilePrescription({ route, navigation }) {
 
   const handlePreviewPrescription = async (prescriptionId) => {
     if (Platform.OS === 'web') {
-      // Web: Open PDF in new tab
+      // Web: Open PDF in new tab using Blob URL (Safari/Firefox compatible)
       try {
         setPdfLoading(true);
         const token = await SecureStore.getItemAsync('accessToken');
@@ -132,10 +133,22 @@ export default function PatientProfilePrescription({ route, navigation }) {
 
         const htmlContent = await response.text();
         
-        // Open in new window
-        const printWindow = window.open('', '_blank');
-        printWindow.document.write(htmlContent);
-        printWindow.document.close();
+        // Create a Blob with the HTML content (cross-browser compatible)
+        const blob = new Blob([htmlContent], { type: 'text/html' });
+        const blobUrl = URL.createObjectURL(blob);
+        
+        // Open in new window/tab
+        const printWindow = window.open(blobUrl, '_blank');
+        
+        if (!printWindow) {
+          // Fallback if popup blocked
+          alert('Please allow popups for this site to preview prescriptions');
+        }
+        
+        // Clean up the blob URL after a delay
+        setTimeout(() => {
+          URL.revokeObjectURL(blobUrl);
+        }, 10000);
       } catch (error) {
         console.error('Error previewing prescription:', error);
         alert('Failed to preview prescription');
@@ -685,10 +698,10 @@ export default function PatientProfilePrescription({ route, navigation }) {
             navigation.goBack();
           }
         }} />
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#3498db" />
-          <Text style={styles.loadingText}>Loading patient profile...</Text>
-        </View>
+        <ScrollView showsVerticalScrollIndicator={false}>
+          <SkeletonProfileInfo />
+          <SkeletonProfileInfo />
+        </ScrollView>
       </View>
     );
   }

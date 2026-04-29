@@ -18,6 +18,7 @@ import TopBar from '../components/TopBar';
 import BottomNavigation from '../components/BottomNavigation';
 import DatePicker from '../components/DatePicker';
 import { showAlert } from '../utils/alertUtils';
+import { SkeletonWorkplaceList } from '../components/skeletons';
 
 const REASONS = [
   'Personal emergency',
@@ -52,7 +53,7 @@ export default function CancelDay({ route, navigation }) {
   const { doctorId } = route.params;
   
   const [workplaces, setWorkplaces] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedWorkplace, setSelectedWorkplace] = useState(null);
@@ -485,10 +486,7 @@ export default function CancelDay({ route, navigation }) {
       <TopBar title="Manage Availability" onBack={() => navigation.goBack()} />
       
       {loading ? (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#3498db" />
-          <Text style={styles.loadingText}>Loading workplaces...</Text>
-        </View>
+        <SkeletonWorkplaceList count={4} showMultipleButtons={true} />
       ) : (
         <>
           <View style={styles.infoNoteContainer}>

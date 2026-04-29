@@ -8,13 +8,15 @@ import {
   Platform,
   Animated,
   Dimensions,
-  PanResponder
+  PanResponder,
+  Image
 } from 'react-native';
 
 export default function LandingPage({ navigation }) {
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(50)).current;
   const [activeFeature, setActiveFeature] = useState(0);
+  const [activeGallery, setActiveGallery] = useState(0);
   const [windowWidth, setWindowWidth] = useState(Dimensions.get('window').width);
 
   // Pan responder for swipe gestures on mobile
@@ -61,11 +63,19 @@ export default function LandingPage({ navigation }) {
     ]).start();
 
     // Auto-rotate features
-    const interval = setInterval(() => {
+    const featureInterval = setInterval(() => {
       setActiveFeature((prev) => (prev + 1) % 3);
-    }, 3000);
+    }, 5000);
 
-    return () => clearInterval(interval);
+    // Auto-rotate gallery
+    const galleryInterval = setInterval(() => {
+      setActiveGallery((prev) => (prev + 1) % 6);
+    }, 4000);
+
+    return () => {
+      clearInterval(featureInterval);
+      clearInterval(galleryInterval);
+    };
   }, []);
 
   const features = [
@@ -91,6 +101,15 @@ export default function LandingPage({ navigation }) {
     { icon: '🔒', title: 'Secure & Private', desc: 'Your health data is protected' },
     { icon: '📱', title: 'Multi-Platform', desc: 'Access from web or mobile' },
     { icon: '🔔', title: 'Smart Notifications', desc: 'Never miss an appointment' },
+  ];
+
+  const galleryImages = [
+    require('../../assets/image-01.jpeg'),
+    require('../../assets/image-02.jpeg'),
+    require('../../assets/image-03.jpeg'),
+    require('../../assets/image-04.jpeg'),
+    require('../../assets/image-05.jpeg'),
+    require('../../assets/image-06.jpeg'),
   ];
 
   const styles = getStyles(windowWidth);
@@ -282,6 +301,74 @@ export default function LandingPage({ navigation }) {
         </View>
       </View>
 
+      {/* Gallery Section */}
+      <View style={styles.gallerySection}>
+        <Text style={styles.sectionLabel}>APP GALLERY</Text>
+        <Text style={styles.sectionTitle}>Explore NeextApp's Interface</Text>
+        
+        <View style={styles.carouselContainer}>
+          <View style={styles.carouselWrapper}>
+            {galleryImages.map((image, index) => {
+              const isActive = index === activeGallery;
+              const isPrev = index === (activeGallery - 1 + galleryImages.length) % galleryImages.length;
+              const isNext = index === (activeGallery + 1) % galleryImages.length;
+              
+              let cardStyle = styles.galleryCardHidden;
+              if (isActive) {
+                cardStyle = styles.galleryCardActive;
+              } else if (isPrev) {
+                cardStyle = styles.galleryCardLeft;
+              } else if (isNext) {
+                cardStyle = styles.galleryCardRight;
+              }
+              
+              return (
+                <TouchableOpacity
+                  key={index}
+                  style={[styles.galleryCardBase, cardStyle]}
+                  onPress={() => setActiveGallery(index)}
+                  activeOpacity={0.9}
+                >
+                  <Image 
+                    source={image}
+                    style={styles.galleryImage}
+                    resizeMode="contain"
+                  />
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+          
+          {/* Navigation Arrows */}
+          <TouchableOpacity 
+            style={[styles.galleryArrow, styles.galleryArrowLeft]}
+            onPress={() => setActiveGallery((prev) => (prev - 1 + galleryImages.length) % galleryImages.length)}
+          >
+            <Text style={styles.galleryArrowText}>‹</Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity 
+            style={[styles.galleryArrow, styles.galleryArrowRight]}
+            onPress={() => setActiveGallery((prev) => (prev + 1) % galleryImages.length)}
+          >
+            <Text style={styles.galleryArrowText}>›</Text>
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.dotsContainer}>
+          {galleryImages.map((_, index) => (
+            <TouchableOpacity
+              key={index}
+              onPress={() => setActiveGallery(index)}
+              style={[
+                styles.dot,
+                activeGallery === index && styles.dotActive,
+              ]}
+            />
+          ))}
+        </View>
+      </View>
+
       {/* Final CTA Section */}
       <View style={styles.finalCTA}>
         <Text style={styles.finalCTATitle}>Ready to Get Started?</Text>
@@ -298,10 +385,61 @@ export default function LandingPage({ navigation }) {
         </TouchableOpacity>
       </View>
 
-      {/* Footer */}
-      <View style={styles.footer}>
-        <Text style={styles.footerText}>© 2026 NeextApp. Healthcare Made Simple.</Text>
-        <Text style={styles.footerSubtext}>Your health, our priority</Text>
+      {/* About Us & Contact Us in Footer */}
+      <View style={styles.footerInfoSection}>
+        <View style={styles.footerInfoContainer}>
+          {/* About Us - Left Side */}
+          <View style={styles.footerInfoCard}>
+            <Text style={styles.footerInfoTitle}>About Us</Text>
+            <Text style={styles.footerInfoText}>
+              <Text style={styles.footerInfoBrand}>NeextApp</Text> is your trusted healthcare companion, revolutionizing the way you book and manage medical appointments.
+            </Text>
+            <Text style={styles.footerInfoText}>
+              We understand that your time is valuable, and accessing healthcare should be simple and convenient. That's why we've created a seamless platform that connects patients with healthcare providers instantly.
+            </Text>
+            <Text style={styles.footerInfoText}>
+              Our mission is to make healthcare more accessible for everyone by eliminating the hassles of traditional appointment booking. With NeextApp, you can find doctors, book appointments, manage your family's healthcare, and access your medical history - all in one place.
+            </Text>
+          </View>
+
+          {/* Contact Us - Right Side */}
+          <View style={styles.footerInfoCard}>
+            <Text style={styles.footerInfoTitle}>Contact Us</Text>
+            <Text style={styles.footerInfoText}>
+              Have questions? We'd love to hear from you.
+            </Text>
+            
+            <View style={styles.footerContactList}>
+              <Text style={styles.footerContactItem}>Email: developers.neextapp@gmail.com</Text>
+              <Text style={styles.footerContactItem}>Phone: +91</Text>
+              <Text style={styles.footerContactItem}>Address: Boduppal, Hyderabad, Telangana, 500092</Text>
+            </View>
+            
+            <View style={styles.footerSocial}>
+              <Text style={styles.footerSocialText}>Follow Us:</Text>
+              <View style={styles.footerSocialIcons}>
+                <View style={styles.footerSocialIcon}>
+                  <Text style={styles.footerSocialIconText}>f</Text>
+                </View>
+                <View style={styles.footerSocialIcon}>
+                  <Text style={styles.footerSocialIconText}>𝕏</Text>
+                </View>
+                <View style={styles.footerSocialIcon}>
+                  <Text style={styles.footerSocialIconText}>📷</Text>
+                </View>
+                <View style={styles.footerSocialIcon}>
+                  <Text style={styles.footerSocialIconText}>in</Text>
+                </View>
+              </View>
+            </View>
+          </View>
+        </View>
+
+        {/* Copyright Footer */}
+        <View style={styles.footerCopyright}>
+          <Text style={styles.footerText}>© 2026 NeextApp. Healthcare Made Simple.</Text>
+          <Text style={styles.footerSubtext}>Your health, our priority</Text>
+        </View>
       </View>
     </ScrollView>
   );
@@ -666,20 +804,203 @@ const getStyles = (width) => StyleSheet.create({
     marginRight: 8,
   },
 
-  // Footer
-  footer: {
+  // Gallery Section
+  gallerySection: {
     paddingHorizontal: 20,
-    paddingVertical: 40,
-    backgroundColor: '#1e293b',
+    paddingVertical: Platform.OS === 'web' ? 80 : 60,
+    backgroundColor: '#f8f9ff',
+    maxWidth: 1200,
+    alignSelf: 'center',
+    width: '100%',
+  },
+  carouselContainer: {
+    marginTop: 40,
+    height: width > 768 ? 450 : 580,
+    position: 'relative',
     alignItems: 'center',
+    justifyContent: 'center',
+  },
+  carouselWrapper: {
+    position: 'relative',
+    width: '100%',
+    height: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  galleryCardBase: {
+    position: 'absolute',
+    width: width > 768 ? 280 : 280,
+    height: width > 768 ? 420 : 520,
+    backgroundColor: '#ffffff',
+    padding: 12,
+    borderRadius: 28,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.15,
+    shadowRadius: 16,
+    elevation: 8,
+    borderWidth: 2,
+    borderColor: '#4f46e5',
+    overflow: 'hidden',
+    transition: 'all 0.5s ease',
+  },
+  galleryCardActive: {
+    transform: [{ scale: 1 }, { translateX: 0 }],
+    opacity: 1,
+    zIndex: 3,
+  },
+  galleryCardLeft: {
+    transform: [
+      { scale: 0.85 },
+      { translateX: width > 768 ? -180 : -140 },
+    ],
+    opacity: 0.5,
+    zIndex: 2,
+  },
+  galleryCardRight: {
+    transform: [
+      { scale: 0.85 },
+      { translateX: width > 768 ? 180 : 140 },
+    ],
+    opacity: 0.5,
+    zIndex: 2,
+  },
+  galleryCardHidden: {
+    opacity: 0,
+    transform: [{ scale: 0.5 }],
+    zIndex: 1,
+  },
+  galleryImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 18,
+  },
+  galleryArrow: {
+    position: 'absolute',
+    top: '50%',
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: 'rgba(79, 70, 229, 0.9)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  galleryArrowLeft: {
+    left: width > 768 ? 50 : 10,
+    transform: [{ translateY: -25 }],
+  },
+  galleryArrowRight: {
+    right: width > 768 ? 50 : 10,
+    transform: [{ translateY: -25 }],
+  },
+  galleryArrowText: {
+    fontSize: 32,
+    color: '#ffffff',
+    fontWeight: 'bold',
+    lineHeight: 32,
+  },
+
+  // Footer Info Section (About Us & Contact Us)
+  footerInfoSection: {
+    backgroundColor: '#4f46e5',
+    paddingTop: width > 768 ? 60 : 40,
+  },
+  footerInfoContainer: {
+    paddingHorizontal: width > 768 ? 40 : 20,
+    paddingBottom: width > 768 ? 50 : 40,
+    flexDirection: width > 768 ? 'row' : 'column',
+    justifyContent: 'space-between',
+    gap: width > 768 ? 60 : 30,
+    width: '100%',
+  },
+  footerInfoCard: {
+    flex: width > 768 ? '0 0 45%' : 1,
+    maxWidth: width > 768 ? '45%' : '100%',
+  },
+  footerInfoTitle: {
+    fontSize: width > 768 ? 24 : 20,
+    fontWeight: '700',
+    color: '#ffffff',
+    marginBottom: 16,
+  },
+  footerInfoText: {
+    fontSize: width > 768 ? 15 : 14,
+    color: 'rgba(255, 255, 255, 0.9)',
+    lineHeight: width > 768 ? 24 : 22,
+    marginBottom: 14,
+  },
+  footerInfoBrand: {
+    color: '#ffffff',
+    fontWeight: '700',
+    fontSize: width > 768 ? 16 : 15,
+  },
+  
+  // Footer Contact List
+  footerContactList: {
+    marginTop: 10,
+    marginBottom: 24,
+  },
+  footerContactItem: {
+    fontSize: width > 768 ? 14 : 13,
+    color: 'rgba(255, 255, 255, 0.9)',
+    lineHeight: 24,
+    marginBottom: 8,
+  },
+  
+  // Footer Social
+  footerSocial: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+    marginTop: 20,
+  },
+  footerSocialText: {
+    fontSize: width > 768 ? 15 : 14,
+    fontWeight: '600',
+    color: '#ffffff',
+  },
+  footerSocialIcons: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  footerSocialIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
+  },
+  footerSocialIconText: {
+    fontSize: 16,
+    color: '#ffffff',
+    fontWeight: '700',
+  },
+
+  // Copyright Footer
+  footerCopyright: {
+    paddingHorizontal: 20,
+    paddingVertical: 30,
+    backgroundColor: '#3730a3',
+    alignItems: 'center',
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255, 255, 255, 0.1)',
   },
   footerText: {
     fontSize: 14,
-    color: '#94a3b8',
+    color: 'rgba(255, 255, 255, 0.9)',
     marginBottom: 4,
   },
   footerSubtext: {
     fontSize: 12,
-    color: '#64748b',
+    color: 'rgba(255, 255, 255, 0.7)',
   },
 });

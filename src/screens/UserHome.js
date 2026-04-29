@@ -20,6 +20,7 @@ import BottomNavigation from '../components/BottomNavigation';
 import ActiveBookings from '../components/user/ActiveBookings';
 import UserNotificationService from '../services/userNotificationService';
 import APIErrorHelper from '../utils/apiErrorHelper';
+import { SkeletonUserHome } from '../components/skeletons';
 
 export default function UserHome({ route, navigation }) {
   // Safely extract userId with fallback to SecureStore
@@ -293,6 +294,11 @@ ${userProfile?.fullName || 'Neext App User'}`;
       console.error('Error opening email:', err);
     });
   };
+
+  // Show skeleton while initial loading
+  if (loading && !userProfile) {
+    return <SkeletonUserHome />;
+  }
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>

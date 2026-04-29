@@ -8,12 +8,13 @@ import * as FileSystem from 'expo-file-system';
 import ViewShot from 'react-native-view-shot';
 import TopBar from '../components/TopBar';
 import api from '../services/api';
+import { SkeletonWorkplaceList } from '../components/skeletons';
 
 export default function QuickBookingQR({ route, navigation }) {
   const { doctorId } = route.params;
   const [workplaces, setWorkplaces] = useState([]);
   const [doctorProfile, setDoctorProfile] = useState(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [selectedWorkplace, setSelectedWorkplace] = useState(null);
   const [qrModalVisible, setQrModalVisible] = useState(false);
@@ -207,10 +208,7 @@ export default function QuickBookingQR({ route, navigation }) {
       <TopBar title="Quick Booking QR" onBack={() => navigation.goBack()} />
       
       {loading ? (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#3498db" />
-          <Text style={styles.loadingText}>Loading workplaces...</Text>
-        </View>
+        <SkeletonWorkplaceList count={4} showMultipleButtons={false} />
       ) : (
         <FlatList
           data={workplaces}

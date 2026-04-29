@@ -45,6 +45,8 @@ import BulkReschedule from './src/screens/BulkReschedule';
 import CancelDay from './src/screens/CancelDay';
 import QuickBookingQR from './src/screens/QuickBookingQR';
 import FCMTestScreen from './src/screens/FCMTestScreen';
+import TermsAndConditions from './src/screens/TermsAndConditions';
+import PrivacyPolicy from './src/screens/PrivacyPolicy';
 import SecureStore from './src/utils/secureStorage';
 import { setAuthHeaderFromStore, overrideApiBaseUrl, setNavigationRef } from './src/services/api';
 import API_BASE_URL from './src/config';
@@ -81,6 +83,8 @@ const linking = {
       CancelDay: 'doctor/cancel-day',
       QuickBookingQR: 'quick-booking/:doctorId',
       FCMTest: 'fcm-test',
+      TermsAndConditions: 'terms',
+      PrivacyPolicy: 'privacy',
     },
   },
 };
@@ -227,6 +231,8 @@ export default function App() {
         <Stack.Screen name="CancelDay" component={CancelDay} options={{headerShown:false, title:'Cancel Day'}} />
         <Stack.Screen name="QuickBookingQR" component={QuickBookingQR} options={{headerShown:false, title:'Quick Booking'}} />
         <Stack.Screen name="FCMTest" component={FCMTestScreen} options={{headerShown:false, title:'Notification Test'}} />
+        <Stack.Screen name="TermsAndConditions" component={TermsAndConditions} options={{headerShown:false, title:'Terms & Conditions'}} />
+        <Stack.Screen name="PrivacyPolicy" component={PrivacyPolicy} options={{headerShown:false, title:'Privacy Policy'}} />
       </Stack.Navigator>
 
       {/* Debug overlay: only show in development mode */}

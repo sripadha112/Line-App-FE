@@ -13,11 +13,11 @@ const PROFILES = {
 	prod: {
 		name: 'Production',
 		// OLD: Render deployment (commented for future use)
-		// web: 'https://line-application-latest.onrender.com',
-		// mobile: 'https://line-application-latest.onrender.com',
+		web: 'https://line-application-latest.onrender.com',
+		mobile: 'https://line-application-latest.onrender.com',
 		// NEW: AWS EC2 deployment
-		web: 'https://api.neextapp.com',
-		mobile: 'https://api.neextapp.com',
+		// web: 'https://api.neextapp.com',
+		// mobile: 'https://api.neextapp.com',
 		description: 'Production server on AWS EC2'
 	}
 };

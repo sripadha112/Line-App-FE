@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Alert, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Alert, KeyboardAvoidingView, Platform, Linking } from 'react-native';
 import api from '../services/api';
 import { API_ENDPOINTS } from '../config/apiConfig';
 import SecureStore from '../utils/secureStorage';
@@ -32,6 +32,7 @@ export default function UserRegistrationScreen({ navigation, route }) {
   });
   const [loading, setLoading] = useState(false);
   const [genderDropdownVisible, setGenderDropdownVisible] = useState(false);
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
   
   const GENDER_OPTIONS = ['Male', 'Female', 'Other'];
 
@@ -40,6 +41,12 @@ export default function UserRegistrationScreen({ navigation, route }) {
   };
 
   const handleRegister = async () => {
+    // Check terms acceptance first
+    if (!acceptedTerms) {
+      Alert.alert('Terms Required', 'Please accept the Terms & Conditions and Privacy Policy to continue');
+      return;
+    }
+
     // Validate required fields (email is now optional)
     const requiredFields = ['fullName', 'gender', 'address', 'city', 'state', 'pincode'];
     const missingFields = requiredFields.filter(field => !formData[field].trim());
@@ -245,10 +252,32 @@ export default function UserRegistrationScreen({ navigation, route }) {
           />
         </View>
 
+        {/* Terms and Conditions Checkbox */}
+        <View style={styles.termsContainer}>
+          <TouchableOpacity 
+            style={styles.checkbox}
+            onPress={() => setAcceptedTerms(!acceptedTerms)}
+          >
+            <View style={[styles.checkboxBox, acceptedTerms && styles.checkboxChecked]}>
+              {acceptedTerms && <Text style={styles.checkboxTick}>✓</Text>}
+            </View>
+          </TouchableOpacity>
+          <View style={styles.termsTextContainer}>
+            <Text style={styles.termsText}>I accept the </Text>
+            <TouchableOpacity onPress={() => navigation.navigate('TermsAndConditions')}>
+              <Text style={styles.termsLink}>Terms & Conditions</Text>
+            </TouchableOpacity>
+            <Text style={styles.termsText}> and </Text>
+            <TouchableOpacity onPress={() => navigation.navigate('PrivacyPolicy')}>
+              <Text style={styles.termsLink}>Privacy Policy</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
         <TouchableOpacity 
-          style={[styles.registerButton, loading && styles.disabledButton]} 
+          style={[styles.registerButton, (loading || !acceptedTerms) && styles.disabledButton]} 
           onPress={handleRegister}
-          disabled={loading}
+          disabled={loading || !acceptedTerms}
         >
           <Text style={styles.registerButtonText}>
             {loading ? 'Registering...' : 'Complete Registration'}
@@ -336,6 +365,50 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 18,
     fontWeight: '700',
+  },
+  termsContainer: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginTop: 20,
+    paddingHorizontal: 4,
+  },
+  checkbox: {
+    marginRight: 10,
+    marginTop: 2,
+  },
+  checkboxBox: {
+    width: 22,
+    height: 22,
+    borderWidth: 2,
+    borderColor: '#3498db',
+    borderRadius: 4,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+  },
+  checkboxChecked: {
+    backgroundColor: '#3498db',
+  },
+  checkboxTick: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  termsTextContainer: {
+    flex: 1,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+  },
+  termsText: {
+    fontSize: 14,
+    color: '#2c3e50',
+  },
+  termsLink: {
+    fontSize: 14,
+    color: '#3498db',
+    fontWeight: '600',
+    textDecorationLine: 'underline',
   },
   dropdown: {
     borderWidth: 1,
