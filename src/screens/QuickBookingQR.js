@@ -148,30 +148,25 @@ export default function QuickBookingQR({ route, navigation }) {
           ctx.fillStyle = '#ffffff';
           ctx.fillRect(0, 0, canvas.width, canvas.height);
           
-          // Add border
-          ctx.strokeStyle = '#2196F3';
-          ctx.lineWidth = 3;
-          ctx.strokeRect(20, 20, canvas.width - 40, canvas.height - 40);
-          
           // Header - Clinic/Hospital Name
           ctx.fillStyle = '#2196F3';
-          ctx.fillRect(30, 30, canvas.width - 60, 80);
+          ctx.fillRect(20, 20, canvas.width - 40, 80);
           ctx.fillStyle = '#ffffff';
           ctx.font = 'bold 32px Arial';
           ctx.textAlign = 'center';
           const workplaceName = selectedWorkplace?.workplaceName || 'Medical Center';
-          ctx.fillText(workplaceName.toUpperCase(), canvas.width / 2, 75);
+          ctx.fillText(workplaceName.toUpperCase(), canvas.width / 2, 65);
           
           // Subtitle - Book appointment text
           ctx.fillStyle = '#2c3e50';
           ctx.font = '20px Arial';
-          ctx.fillText('Book Your Next Appointment Easily With', canvas.width / 2, 150);
+          ctx.fillText('Book Your Next Appointment Easily With', canvas.width / 2, 140);
           
           // Doctor name in bold
           ctx.font = 'bold 26px Arial';
           ctx.fillStyle = '#e74c3c';
           const doctorName = doctorProfile?.fullName || 'Doctor';
-          ctx.fillText(`Dr. ${doctorName}`, canvas.width / 2, 185);
+          ctx.fillText(`Dr. ${doctorName}`, canvas.width / 2, 175);
           
           // Generate QR Code in black color
           const QRCodeLib = require('qrcode');
@@ -187,13 +182,13 @@ export default function QuickBookingQR({ route, navigation }) {
           
           // Draw QR code centered
           const qrX = (canvas.width - 300) / 2;
-          const qrY = 230;
+          const qrY = 220;
           ctx.drawImage(qrCanvas, qrX, qrY, 300, 300);
           
           // Instructions heading below QR
           ctx.font = 'bold 18px Arial';
           ctx.fillStyle = '#2c3e50';
-          ctx.fillText('📱 HOW TO BOOK:', canvas.width / 2, 560);
+          ctx.fillText('📱 HOW TO BOOK:', canvas.width / 2, 550);
           
           // Instructions below heading
           ctx.font = '15px Arial';
@@ -207,24 +202,24 @@ export default function QuickBookingQR({ route, navigation }) {
             '4. ✍️ Fill in your details and book appointment'
           ];
           
-          let yPos = 590;
+          let yPos = 580;
           instructions.forEach(line => {
             ctx.fillText(line, canvas.width / 2, yPos);
-            yPos += 28;
+            yPos += 24;
           });
           
           // App logo and branding (no background)
           ctx.fillStyle = '#2196F3';
           ctx.font = 'bold 18px Arial';
-          ctx.fillText('🏥 NeextApp - Making Healthcare Accessible', canvas.width / 2, canvas.height - 70);
+          ctx.fillText('🏥 NeextApp - Making Healthcare Accessible', canvas.width / 2, canvas.height - 60);
           ctx.font = '13px Arial';
           ctx.fillStyle = '#7f8c8d';
-          ctx.fillText('Visit: neextapp.com', canvas.width / 2, canvas.height - 48);
+          ctx.fillText('Visit: neextapp.com', canvas.width / 2, canvas.height - 40);
           
           // Platform availability
           ctx.font = 'bold 14px Arial';
           ctx.fillStyle = '#27ae60';
-          ctx.fillText('✅ Available on Android & Web', canvas.width / 2, canvas.height - 15);
+          ctx.fillText('✅ Available on Android & Web', canvas.width / 2, canvas.height - 20);
           
           // Download the canvas
           canvas.toBlob((blob) => {

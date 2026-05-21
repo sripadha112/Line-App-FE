@@ -10,7 +10,8 @@ import {
   ActivityIndicator,
   TextInput,
   ScrollView,
-  Platform
+  Platform,
+  Modal
 } from 'react-native';
 import { DoctorAPIService } from '../services/doctorApiService';
 import TopBar from '../components/TopBar';
@@ -1061,7 +1062,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     paddingTop: 20,
     paddingHorizontal: 10,
-    paddingBottom: 20,
+    paddingBottom: 30,
     justifyContent: 'space-between',
   },
   modalCancelButton: {

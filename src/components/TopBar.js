@@ -70,14 +70,14 @@ const styles = StyleSheet.create({
   topBar: {
     minHeight: Platform.OS === 'ios' ? 60 : 56,
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-end',
     justifyContent: 'flex-start',
     paddingHorizontal: 16,
-    paddingTop: Platform.OS === 'ios' ? 12 : 10,
-    paddingBottom: 8,
+    paddingTop: Platform.OS === 'ios' ? 28 : 20,
+    paddingBottom: 4,
     backgroundColor: '#fff',
     elevation: 2,
-    shadowColor: '#000',
+    shadowColor: '#0b0b0b',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
@@ -85,7 +85,7 @@ const styles = StyleSheet.create({
   backButton: {
     paddingRight: 12,
     alignSelf: 'flex-start',
-    marginTop: 5,
+    marginTop: 10,
   },
   backText: {
     fontSize: 22,
