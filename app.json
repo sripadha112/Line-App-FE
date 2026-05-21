@@ -17,7 +17,9 @@
       "bundleIdentifier": "com.santhu112.lineapp",
       "icon": "./assets/ios/iTunesArtwork@2x.png",
       "infoPlist": {
-        "UIBackgroundModes": ["remote-notification"]
+        "UIBackgroundModes": [
+          "remote-notification"
+        ]
       }
     },
     "android": {
@@ -28,7 +30,6 @@
       "edgeToEdgeEnabled": true,
       "package": "com.santhu_112.lineapp",
       "googleServicesFile": "./google-services.json",
-      "useNextNotificationsApi": true,
       "icon": "./assets/android/playstore-icon.png",
       "permissions": [
         "android.permission.POST_NOTIFICATIONS",
@@ -39,7 +40,7 @@
       ]
     },
     "web": {
-      "favicon": "./assets/favicon.ico",
+      "favicon": "./assets/favicon-96x96.png",
       "bundler": "metro"
     },
     "plugins": [
@@ -52,7 +53,8 @@
           "defaultChannel": "default",
           "sounds": []
         }
-      ]
+      ],
+      "@react-native-community/datetimepicker"
     ],
     "notification": {
       "icon": "./assets/android/mipmap-hdpi/ic_launcher.png",
