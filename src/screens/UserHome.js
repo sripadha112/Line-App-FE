@@ -270,9 +270,17 @@ export default function UserHome({ route, navigation }) {
   };
 
   const contactDevelopers = () => {
-    const email = 'developers.neextapp@gmail.com';
-    const subject = 'Feedback from Neext App User';
-    const body = `Hello Neext App Developers,
+    Alert.alert(
+      'Contact Developers',
+      'This will open your email app to send feedback to our development team at developers.neextapp@gmail.com. Do you want to continue?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Open Email',
+          onPress: () => {
+            const email = 'developers.neextapp@gmail.com';
+            const subject = 'Feedback from Neext App User';
+            const body = `Hello Neext App Developers,
 
 I am writing to provide feedback about the Neext App.
 
@@ -287,12 +295,16 @@ My feedback/issue:
 Best regards,
 ${userProfile?.fullName || 'Neext App User'}`;
 
-    const mailto = `mailto:${email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-    
-    Linking.openURL(mailto).catch(err => {
-      Alert.alert('Error', 'Could not open email app. Please ensure you have an email app installed.');
-      console.error('Error opening email:', err);
-    });
+            const mailto = `mailto:${email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+            
+            Linking.openURL(mailto).catch(err => {
+              Alert.alert('Error', 'Could not open email app. Please ensure you have an email app installed.');
+              console.error('Error opening email:', err);
+            });
+          }
+        }
+      ]
+    );
   };
 
   // Show skeleton while initial loading

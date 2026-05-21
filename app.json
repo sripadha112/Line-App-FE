@@ -4,7 +4,7 @@
     "slug": "neext-app",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/Logo.jpeg",
+    "icon": "./assets/web-app-manifest-512x512.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": false,
     "splash": {
@@ -14,11 +14,12 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.santhu112.lineapp"
+      "bundleIdentifier": "com.santhu112.lineapp",
+      "icon": "./assets/apple-touch-icon.png"
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/Logo.jpeg",
+        "foregroundImage": "./assets/web-app-manifest-512x512.png",
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,

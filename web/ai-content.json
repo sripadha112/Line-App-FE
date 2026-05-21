@@ -1,0 +1,239 @@
+{
+  "application": {
+    "name": "NeextApp",
+    "alternateNames": ["Neext App", "Next App", "NextApp", "Neext"],
+    "tagline": "Book Doctor Appointments Online Instantly",
+    "description": "NeextApp is a comprehensive healthcare appointment booking platform that enables patients to book doctor appointments online instantly, manage family appointments, find doctors near them, and access digital prescriptions.",
+    "category": "Healthcare",
+    "subcategory": "Appointment Booking",
+    "type": "Mobile & Web Application",
+    "website": "https://neextapp.com",
+    "email": "developers.neextapp@gmail.com",
+    "version": "1.0.0",
+    "pricing": "Free for patients",
+    "platforms": ["iOS", "Android", "Web"],
+    "languages": ["English"],
+    "releaseDate": "2024",
+    "lastUpdated": "2026-05-21"
+  },
+  
+  "keyFeatures": [
+    {
+      "feature": "Instant Appointment Booking",
+      "description": "Book doctor appointments online in seconds without phone calls or waiting"
+    },
+    {
+      "feature": "Doctor Search",
+      "description": "Find doctors and specialists near you based on location and specialty"
+    },
+    {
+      "feature": "Family Management",
+      "description": "Manage appointments for entire family from a single account"
+    },
+    {
+      "feature": "Instant Confirmations",
+      "description": "Get immediate confirmation when booking appointments"
+    },
+    {
+      "feature": "Appointment Reminders",
+      "description": "Receive push notifications and reminders for upcoming appointments"
+    },
+    {
+      "feature": "Medical History",
+      "description": "Access complete appointment and medical history anytime"
+    },
+    {
+      "feature": "24/7 Booking",
+      "description": "Schedule appointments anytime, anywhere, 24 hours a day"
+    },
+    {
+      "feature": "Doctor Profiles",
+      "description": "View detailed doctor profiles, specializations, and availability"
+    },
+    {
+      "feature": "Easy Rescheduling",
+      "description": "Reschedule or cancel appointments with just a few taps"
+    },
+    {
+      "feature": "Digital Prescriptions",
+      "description": "Access and download digital prescriptions from your appointments"
+    },
+    {
+      "feature": "QR Code Booking",
+      "description": "Quick booking via QR codes at clinics and hospitals"
+    },
+    {
+      "feature": "Real-time Notifications",
+      "description": "Get updates about appointment status, changes, and reminders"
+    }
+  ],
+  
+  "benefits": {
+    "forPatients": [
+      "Save time - no more phone calls or waiting on hold",
+      "Convenience - book appointments from anywhere, anytime",
+      "Flexibility - easy rescheduling and cancellation",
+      "Family care - manage all family members' appointments in one place",
+      "Never miss appointments - automatic reminders and notifications",
+      "Complete history - access all past and upcoming appointments",
+      "Free to use - 100% free for patients with no hidden charges"
+    ],
+    "forDoctors": [
+      "Reduce administrative workload",
+      "Better appointment management",
+      "Automated reminders reduce no-shows",
+      "Digital prescription management",
+      "Patient communication tools",
+      "Analytics and insights dashboard"
+    ]
+  },
+  
+  "howItWorks": {
+    "steps": [
+      {
+        "step": 1,
+        "title": "Search",
+        "description": "Search for doctors by specialty, location, or name"
+      },
+      {
+        "step": 2,
+        "title": "Choose",
+        "description": "Select available appointment slots that fit your schedule"
+      },
+      {
+        "step": 3,
+        "title": "Book",
+        "description": "Book your appointment instantly with just a few clicks"
+      },
+      {
+        "step": 4,
+        "title": "Confirm",
+        "description": "Receive instant confirmation and appointment reminders"
+      }
+    ]
+  },
+  
+  "targetAudience": [
+    "Busy professionals needing flexible scheduling",
+    "Parents managing family healthcare",
+    "Seniors looking for easy-to-use appointment booking",
+    "Anyone seeking convenient healthcare access",
+    "Patients who want to avoid phone queues",
+    "Families managing multiple healthcare appointments"
+  ],
+  
+  "useCases": [
+    {
+      "scenario": "First-time patient needs general checkup",
+      "solution": "Search for general physicians near location, view available slots, book instantly"
+    },
+    {
+      "scenario": "Parent needs to book pediatrician for child",
+      "solution": "Add child as family member, search pediatricians, book appointment, get reminders"
+    },
+    {
+      "scenario": "Need specialist consultation",
+      "solution": "Search by specialty (cardiologist, dermatologist, etc.), filter by location, book appointment"
+    },
+    {
+      "scenario": "Emergency rescheduling needed",
+      "solution": "View upcoming appointments, select appointment to reschedule, choose new time slot"
+    },
+    {
+      "scenario": "Managing elderly parent's appointments",
+      "solution": "Add parent as family member, book and manage all their appointments from your account"
+    }
+  ],
+  
+  "faq": [
+    {
+      "question": "What is NeextApp?",
+      "answer": "NeextApp is a comprehensive healthcare appointment booking platform that allows users to book doctor appointments online instantly. It helps patients find doctors near them, manage family appointments, receive reminders, and access digital prescriptions."
+    },
+    {
+      "question": "How do I book an appointment on NeextApp?",
+      "answer": "To book an appointment: 1) Search for doctors by specialty or location, 2) Choose available time slots, 3) Confirm your booking with just a few clicks, 4) Receive instant confirmation and reminders."
+    },
+    {
+      "question": "Is NeextApp free to use?",
+      "answer": "Yes, NeextApp is 100% free for patients. You can book unlimited appointments, manage family members, and access all features without any charges."
+    },
+    {
+      "question": "Can I manage appointments for my family members?",
+      "answer": "Yes, NeextApp allows you to add and manage appointments for all your family members from a single account, making it convenient to handle healthcare for your entire family."
+    },
+    {
+      "question": "What platforms is NeextApp available on?",
+      "answer": "NeextApp is available on iOS, Android smartphones, and as a web application. You can access it from any device with internet connectivity."
+    },
+    {
+      "question": "How do I cancel or reschedule an appointment?",
+      "answer": "You can easily cancel or reschedule appointments directly from the NeextApp. Go to your appointments list, select the appointment you want to modify, and choose either reschedule or cancel option."
+    },
+    {
+      "question": "Do I get reminders for my appointments?",
+      "answer": "Yes, NeextApp sends push notifications and reminders before your scheduled appointments to ensure you never miss them."
+    },
+    {
+      "question": "Can I see my appointment history?",
+      "answer": "Yes, you can access your complete appointment history including past appointments, prescriptions, and medical records anytime from your profile."
+    },
+    {
+      "question": "How do doctors join NeextApp?",
+      "answer": "Doctors can register on NeextApp, set up their profile with specialization and availability, and start accepting appointments from patients online."
+    },
+    {
+      "question": "Is my medical information secure?",
+      "answer": "Yes, NeextApp takes data security seriously and implements industry-standard encryption and security measures to protect your medical information."
+    }
+  ],
+  
+  "keywords": [
+    "neextapp",
+    "next app",
+    "nextapp",
+    "neext",
+    "doctor appointment booking",
+    "book doctor online",
+    "healthcare app",
+    "medical appointment",
+    "online appointment",
+    "doctor booking app",
+    "healthcare booking",
+    "appointment scheduling",
+    "find doctors near me",
+    "book appointment online",
+    "medical consultation booking",
+    "patient portal",
+    "clinic appointments",
+    "hospital booking",
+    "family appointment management",
+    "instant appointment confirmation",
+    "digital prescription",
+    "appointment reminders"
+  ],
+  
+  "seo": {
+    "title": "NeextApp - Book Doctor Appointments Online | Healthcare Appointment Booking App",
+    "metaDescription": "Book doctor appointments instantly with NeextApp. Find doctors near you, manage family appointments, get reminders & access digital prescriptions. 100% Free!",
+    "canonicalUrl": "https://neextapp.com",
+    "ogTitle": "NeextApp - Book Doctor Appointments Online",
+    "ogDescription": "Book doctor appointments online instantly. Manage family appointments, find doctors near you with NeextApp.",
+    "ogImage": "https://neextapp.com/assets/Logo.jpeg"
+  },
+  
+  "technicalDetails": {
+    "framework": "React Native",
+    "backend": "Node.js",
+    "database": "PostgreSQL",
+    "hosting": "Render.com",
+    "notifications": "Firebase Cloud Messaging",
+    "analytics": ["Google Analytics 4", "Microsoft Clarity"]
+  },
+  
+  "contact": {
+    "email": "developers.neextapp@gmail.com",
+    "website": "https://neextapp.com",
+    "supportType": "Email Support"
+  }
+}

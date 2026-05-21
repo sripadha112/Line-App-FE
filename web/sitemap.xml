@@ -26,6 +26,33 @@
     <mobile:mobile/>
   </url>
   
+  <!-- Appointment Booking App Landing Page -->
+  <url>
+    <loc>https://neextapp.com/appointment-booking-app.html</loc>
+    <lastmod>2026-05-21</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.95</priority>
+    <mobile:mobile/>
+  </url>
+  
+  <!-- Book Doctor Appointments Online Landing Page -->
+  <url>
+    <loc>https://neextapp.com/book-doctor-appointments-online.html</loc>
+    <lastmod>2026-05-21</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.95</priority>
+    <mobile:mobile/>
+  </url>
+  
+  <!-- NextApp Redirect Page -->
+  <url>
+    <loc>https://neextapp.com/nextapp.html</loc>
+    <lastmod>2026-05-21</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+    <mobile:mobile/>
+  </url>
+  
   <!-- Privacy Policy -->
   <url>
     <loc>https://neextapp.com/privacy-policy</loc>

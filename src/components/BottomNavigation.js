@@ -16,57 +16,69 @@ export default function BottomNavigation({ activeTab, onTabChange, onRefresh, us
   ];
 
   const handleReferFriend = async () => {
-    const referralMessage = 'Hey! I have been using this amazing healthcare app for booking appointments. It is really convenient and easy to use. You should try it too! Download the app and book your appointments hassle-free. Thanks for checking it out!';
-    
-    // Different WhatsApp URL schemes for iOS and Android
-    const whatsappUrls = Platform.OS === 'ios' 
-      ? [
-          `whatsapp://send?text=${encodeURIComponent(referralMessage)}`,
-          `https://wa.me/?text=${encodeURIComponent(referralMessage)}`,
-          `https://api.whatsapp.com/send?text=${encodeURIComponent(referralMessage)}`
-        ]
-      : [`whatsapp://send?text=${encodeURIComponent(referralMessage)}`];
-    
-    // Try WhatsApp URLs
-    for (const url of whatsappUrls) {
-      try {
-        const canOpen = await Linking.canOpenURL(url);
-        if (canOpen) {
-          await Linking.openURL(url);
-          return; // Successfully opened WhatsApp
-        }
-      } catch (error) {
-        console.log(`Failed to open ${url}:`, error);
-      }
-    }
-    
-    // If WhatsApp is not available, use native Share API
-    try {
-      const result = await Share.share({
-        message: referralMessage,
-        title: 'Share Healthcare App'
-      });
-      
-      if (result.action === Share.dismissedAction) {
-        console.log('Share dismissed');
-      }
-    } catch (error) {
-      console.error('Error sharing:', error);
-      Alert.alert(
-        'Unable to Share',
-        'Please install WhatsApp or use another sharing method.',
-        [
-          { text: 'OK' },
-          { 
-            text: 'Copy Message', 
-            onPress: () => {
-              // You can add Clipboard functionality here if needed
-              Alert.alert('Message', referralMessage);
+    Alert.alert(
+      'Refer Friends',
+      'Share Neext App with your friends via WhatsApp and help them book appointments easily!',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Share on WhatsApp',
+          onPress: async () => {
+            const referralMessage = 'Hey! I have been using this amazing healthcare app for booking appointments. It is really convenient and easy to use. You should try it too! Download the app and book your appointments hassle-free. Thanks for checking it out!';
+            
+            // Different WhatsApp URL schemes for iOS and Android
+            const whatsappUrls = Platform.OS === 'ios' 
+              ? [
+                  `whatsapp://send?text=${encodeURIComponent(referralMessage)}`,
+                  `https://wa.me/?text=${encodeURIComponent(referralMessage)}`,
+                  `https://api.whatsapp.com/send?text=${encodeURIComponent(referralMessage)}`
+                ]
+              : [`whatsapp://send?text=${encodeURIComponent(referralMessage)}`];
+            
+            // Try WhatsApp URLs
+            for (const url of whatsappUrls) {
+              try {
+                const canOpen = await Linking.canOpenURL(url);
+                if (canOpen) {
+                  await Linking.openURL(url);
+                  return; // Successfully opened WhatsApp
+                }
+              } catch (error) {
+                console.log(`Failed to open ${url}:`, error);
+              }
+            }
+            
+            // If WhatsApp is not available, use native Share API
+            try {
+              const result = await Share.share({
+                message: referralMessage,
+                title: 'Share Healthcare App'
+              });
+              
+              if (result.action === Share.dismissedAction) {
+                console.log('Share dismissed');
+              }
+            } catch (error) {
+              console.error('Error sharing:', error);
+              Alert.alert(
+                'Unable to Share',
+                'Please install WhatsApp or use another sharing method.',
+                [
+                  { text: 'OK' },
+                  { 
+                    text: 'Copy Message', 
+                    onPress: () => {
+                      // You can add Clipboard functionality here if needed
+                      Alert.alert('Message', referralMessage);
+                    }
+                  }
+                ]
+              );
             }
           }
-        ]
-      );
-    }
+        }
+      ]
+    );
   };
 
   const tabs = userType === 'user' ? getUserTabs() : getDoctorTabs();

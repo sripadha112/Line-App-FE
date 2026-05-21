@@ -78,6 +78,7 @@ export default function DoctorHome({ navigation, route }) {
   const [editedProfile, setEditedProfile] = useState(null);
   const [showAllWorkplaces, setShowAllWorkplaces] = useState(false);
   const [profileLoading, setProfileLoading] = useState(false);
+  const [workplacesLoading, setWorkplacesLoading] = useState(false);
   const [addWorkplaceModalVisible, setAddWorkplaceModalVisible] = useState(false);
   const [editWorkplaceModalVisible, setEditWorkplaceModalVisible] = useState(false);
   const [selectedWorkplaceForEdit, setSelectedWorkplaceForEdit] = useState(null);
@@ -338,6 +339,7 @@ export default function DoctorHome({ navigation, route }) {
 
   const fetchWorkplaces = async (id) => {
     try {
+      setWorkplacesLoading(true);
       const data = await DoctorAPIService.fetchWorkplacesWithCounts(id);
       // console.log('Workplaces with appointment counts:', data);
       setWorkplaces(data);
@@ -348,6 +350,8 @@ export default function DoctorHome({ navigation, route }) {
         return;
       }
       setWorkplaces([]);
+    } finally {
+      setWorkplacesLoading(false);
     }
   };
 
@@ -440,9 +444,17 @@ export default function DoctorHome({ navigation, route }) {
   };
 
   const contactDevelopers = () => {
-    const email = 'developers.neextapp@gmail.com';
-    const subject = 'Feedback from Neext App Doctor';
-    const body = `Hello Neext App Developers,
+    showAlert(
+      'Contact Developers',
+      'This will open your email app to send feedback to our development team at developers.neextapp@gmail.com. Do you want to continue?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Open Email',
+          onPress: () => {
+            const email = 'developers.neextapp@gmail.com';
+            const subject = 'Feedback from Neext App Doctor';
+            const body = `Hello Neext App Developers,
 
 I am writing to provide feedback about the Neext App from a doctor's perspective.
 
@@ -457,12 +469,16 @@ My feedback/issue:
 Best regards,
 Dr. ${name || 'Neext App Doctor'}`;
 
-    const mailto = `mailto:${email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-    
-    Linking.openURL(mailto).catch(err => {
-      showAlert('Error', 'Could not open email app. Please ensure you have an email app installed.');
-      console.error('Error opening email:', err);
-    });
+            const mailto = `mailto:${email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+            
+            Linking.openURL(mailto).catch(err => {
+              showAlert('Error', 'Could not open email app. Please ensure you have an email app installed.');
+              console.error('Error opening email:', err);
+            });
+          }
+        }
+      ]
+    );
   };
 
   const fetchUserDetails = async (userId) => {
@@ -1866,7 +1882,13 @@ Dr. ${name || 'Neext App Doctor'}`;
                 <Text style={styles.expandIcon}>✕</Text>
               </TouchableOpacity>
               
-              {workplaces.length === 0 ? (
+              {workplacesLoading ? (
+                // Show loading animation while fetching workplaces
+                <View style={styles.loadingWorkplacesContainer}>
+                  <ActivityIndicator size="large" color="#3498db" />
+                  <Text style={styles.loadingWorkplacesText}>Loading workplaces...</Text>
+                </View>
+              ) : workplaces.length === 0 ? (
               <View style={styles.emptyWorkplaceContainer}>
                 <Text style={styles.emptyScheduleText}>📍 No workplaces added yet!</Text>
                 <Text style={styles.emptyWorkplaceSubtext}>
@@ -3766,6 +3788,18 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 8,
     marginBottom: 16,
+  },
+  loadingWorkplacesContainer: {
+    paddingVertical: 40,
+    paddingHorizontal: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  loadingWorkplacesText: {
+    marginTop: 12,
+    fontSize: 14,
+    color: '#7f8c8d',
+    textAlign: 'center',
   },
   workplacesScrollView: {
     maxHeight: 400,
