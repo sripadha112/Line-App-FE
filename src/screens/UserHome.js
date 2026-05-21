@@ -6,7 +6,6 @@ import {
   TouchableOpacity,
   StyleSheet,
   RefreshControl,
-  Alert,
   Linking,
   Modal,
   TextInput,
@@ -21,6 +20,7 @@ import ActiveBookings from '../components/user/ActiveBookings';
 import UserNotificationService from '../services/userNotificationService';
 import APIErrorHelper from '../utils/apiErrorHelper';
 import { SkeletonUserHome } from '../components/skeletons';
+import { showAlert } from '../utils/alertUtils';
 
 export default function UserHome({ route, navigation }) {
   // Safely extract userId with fallback to SecureStore
@@ -270,7 +270,7 @@ export default function UserHome({ route, navigation }) {
   };
 
   const contactDevelopers = () => {
-    Alert.alert(
+    showAlert(
       'Contact Developers',
       'This will open your email app to send feedback to our development team at developers.neextapp@gmail.com. Do you want to continue?',
       [
@@ -298,7 +298,7 @@ ${userProfile?.fullName || 'Neext App User'}`;
             const mailto = `mailto:${email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
             
             Linking.openURL(mailto).catch(err => {
-              Alert.alert('Error', 'Could not open email app. Please ensure you have an email app installed.');
+              showAlert('Error', 'Could not open email app. Please ensure you have an email app installed.');
               console.error('Error opening email:', err);
             });
           }

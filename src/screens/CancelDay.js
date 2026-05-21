@@ -18,7 +18,6 @@ import BottomNavigation from '../components/BottomNavigation';
 import DatePicker from '../components/DatePicker';
 import { showAlert } from '../utils/alertUtils';
 import { SkeletonWorkplaceList } from '../components/skeletons';
-import ProductionModal from '../components/ProductionModal';
 
 const REASONS = [
   'Personal emergency',
@@ -513,14 +512,17 @@ export default function CancelDay({ route, navigation }) {
       )}
 
       {/* Cancel/Block Modal */}
-      <ProductionModal
+      <Modal
         visible={modalVisible}
+        transparent
+        animationType="slide"
         onRequestClose={() => setModalVisible(false)}
       >
-        <View style={styles.modalContainer}>
+        <View style={styles.modalBackdrop}>
+          <View style={styles.modalContainer}>
             <ScrollView 
               ref={modalScrollRef}
-              style={styles.modalScrollView} 
+              style={styles.modalContent} 
               showsVerticalScrollIndicator={false}
             >
               <Text style={[styles.modalTitle, mode === 'block' && styles.modalTitleBlock]}>
@@ -702,14 +704,18 @@ export default function CancelDay({ route, navigation }) {
               </View>
             </ScrollView>
           </View>
-      </ProductionModal>
+        </View>
+      </Modal>
 
       {/* Unblock Modal */}
-      <ProductionModal
+      <Modal
         visible={unblockModalVisible}
+        transparent
+        animationType="slide"
         onRequestClose={() => setUnblockModalVisible(false)}
       >
-        <View style={styles.modalContainer}>
+        <View style={styles.modalBackdrop}>
+          <View style={styles.modalContainer}>
             <Text style={styles.unblockModalTitle}>Manage Blocked Slots</Text>
             <Text style={styles.modalSubtitle}>
               {selectedWorkplace?.workplaceName}
@@ -792,7 +798,8 @@ export default function CancelDay({ route, navigation }) {
               )}
             </View>
           </View>
-      </ProductionModal>
+        </View>
+      </Modal>
 
       <BottomNavigation 
         activeTab="appointments"
@@ -960,24 +967,26 @@ const styles = StyleSheet.create({
     width: '100%',
     marginTop: 12,
   },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   modalContainer: {
-    backgroundColor: '#fff',
-    borderRadius: 20,
     width: '90%',
-    maxHeight: '80%',
+    maxHeight: '85%',
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+  },
+  modalContent: {
     padding: 20,
-    ...Platform.select({
-      android: {
-        elevation: 24,
-        shadowColor: '#000',
-      },
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.25,
-        shadowRadius: 3.84,
-      },
-    }),
+    paddingBottom: 40,
   },
   modalScrollView: {
     maxHeight: '100%',

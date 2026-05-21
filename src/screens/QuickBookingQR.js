@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, ActivityIndicator, Modal, FlatList, RefreshControl, Platform } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, ActivityIndicator, Modal, FlatList, RefreshControl, Platform, Image } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import { useFocusEffect } from '@react-navigation/native';
 import QRCode from '../components/QRCodeWrapper';
@@ -19,7 +19,9 @@ export default function QuickBookingQR({ route, navigation }) {
   const [selectedWorkplace, setSelectedWorkplace] = useState(null);
   const [qrModalVisible, setQrModalVisible] = useState(false);
   const [downloading, setDownloading] = useState(false);
+  const [showPoster, setShowPoster] = useState(false);
   const viewShotRef = useRef();
+  const posterViewShotRef = useRef();
 
   // Fetch workplaces and doctor profile when screen loads
   useFocusEffect(
@@ -132,25 +134,111 @@ export default function QuickBookingQR({ route, navigation }) {
       setDownloading(true);
       
       if (Platform.OS === 'web') {
-        // Web: Download using canvas/blob
+        // Web: Create styled A4 canvas with QR code
         try {
           const qrUrl = generateBookingURL(selectedWorkplace);
-          const canvas = document.createElement('canvas');
-          const QRCodeLib = require('qrcode');
-          await QRCodeLib.toCanvas(canvas, qrUrl, { width: 400 });
           
+          // Create A4 size canvas (595 x 842 pixels at 72 DPI)
+          const canvas = document.createElement('canvas');
+          canvas.width = 595;
+          canvas.height = 842;
+          const ctx = canvas.getContext('2d');
+          
+          // White background
+          ctx.fillStyle = '#ffffff';
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+          
+          // Add border
+          ctx.strokeStyle = '#2196F3';
+          ctx.lineWidth = 3;
+          ctx.strokeRect(20, 20, canvas.width - 40, canvas.height - 40);
+          
+          // Header - Clinic/Hospital Name
+          ctx.fillStyle = '#2196F3';
+          ctx.fillRect(30, 30, canvas.width - 60, 80);
+          ctx.fillStyle = '#ffffff';
+          ctx.font = 'bold 32px Arial';
+          ctx.textAlign = 'center';
+          const workplaceName = selectedWorkplace?.workplaceName || 'Medical Center';
+          ctx.fillText(workplaceName.toUpperCase(), canvas.width / 2, 75);
+          
+          // Subtitle - Book appointment text
+          ctx.fillStyle = '#2c3e50';
+          ctx.font = '20px Arial';
+          ctx.fillText('Book Your Next Appointment Easily With', canvas.width / 2, 150);
+          
+          // Doctor name in bold
+          ctx.font = 'bold 26px Arial';
+          ctx.fillStyle = '#e74c3c';
+          const doctorName = doctorProfile?.fullName || 'Doctor';
+          ctx.fillText(`Dr. ${doctorName}`, canvas.width / 2, 185);
+          
+          // Generate QR Code in black color
+          const QRCodeLib = require('qrcode');
+          const qrCanvas = document.createElement('canvas');
+          await QRCodeLib.toCanvas(qrCanvas, qrUrl, { 
+            width: 300,
+            margin: 2,
+            color: {
+              dark: '#000000',
+              light: '#ffffff'
+            }
+          });
+          
+          // Draw QR code centered
+          const qrX = (canvas.width - 300) / 2;
+          const qrY = 230;
+          ctx.drawImage(qrCanvas, qrX, qrY, 300, 300);
+          
+          // Instructions heading below QR
+          ctx.font = 'bold 18px Arial';
+          ctx.fillStyle = '#2c3e50';
+          ctx.fillText('📱 HOW TO BOOK:', canvas.width / 2, 560);
+          
+          // Instructions below heading
+          ctx.font = '15px Arial';
+          ctx.fillStyle = '#2c3e50';
+          ctx.textAlign = 'center';
+          
+          const instructions = [
+            '1. 📱 Open Google Lens (Android) / Camera app (iOS)',
+            '2. 📸 Point camera at the QR code above',
+            '3. 👆 Tap the notification that appears',
+            '4. ✍️ Fill in your details and book appointment'
+          ];
+          
+          let yPos = 590;
+          instructions.forEach(line => {
+            ctx.fillText(line, canvas.width / 2, yPos);
+            yPos += 28;
+          });
+          
+          // App logo and branding (no background)
+          ctx.fillStyle = '#2196F3';
+          ctx.font = 'bold 18px Arial';
+          ctx.fillText('🏥 NeextApp - Making Healthcare Accessible', canvas.width / 2, canvas.height - 70);
+          ctx.font = '13px Arial';
+          ctx.fillStyle = '#7f8c8d';
+          ctx.fillText('Visit: neextapp.com', canvas.width / 2, canvas.height - 48);
+          
+          // Platform availability
+          ctx.font = 'bold 14px Arial';
+          ctx.fillStyle = '#27ae60';
+          ctx.fillText('✅ Available on Android & Web', canvas.width / 2, canvas.height - 15);
+          
+          // Download the canvas
           canvas.toBlob((blob) => {
             const url = URL.createObjectURL(blob);
             const link = document.createElement('a');
             link.href = url;
-            link.download = `qr-${selectedWorkplace.workplaceName || 'booking'}.png`;
+            link.download = `NeextApp-QR-${workplaceName.replace(/\s+/g, '-')}.png`;
             link.click();
             URL.revokeObjectURL(url);
-            Alert.alert('Success', 'QR code downloaded!');
+            Alert.alert('Success', 'QR code poster downloaded!');
           });
         } catch (err) {
           console.log('Web download error:', err);
-          Alert.alert('Info', 'Please right-click on the QR code to save it.');
+          Alert.alert('Error', 'Failed to create QR poster. Please try again.');
         }
         return;
       }
@@ -162,8 +250,17 @@ export default function QuickBookingQR({ route, navigation }) {
         return;
       }
 
-      // Capture the QR code view as image
-      const uri = await viewShotRef.current.capture();
+      // Show poster view and capture it
+      setShowPoster(true);
+      
+      // Wait for view to render
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // Capture the poster view as image
+      const uri = await posterViewShotRef.current.capture();
+      
+      // Hide poster view
+      setShowPoster(false);
       
       // Save to media library
       const asset = await MediaLibrary.createAssetAsync(uri);
@@ -175,7 +272,7 @@ export default function QuickBookingQR({ route, navigation }) {
         await MediaLibrary.addAssetsToAlbumAsync([asset], album, false);
       }
       
-      Alert.alert('Success', 'QR code downloaded to your gallery!');
+      Alert.alert('Success', 'QR code poster downloaded to your gallery!');
     } catch (error) {
       console.log('Error downloading QR code:', error);
       Alert.alert('Error', 'Failed to download QR code. Please try again.');
@@ -251,6 +348,57 @@ export default function QuickBookingQR({ route, navigation }) {
                     />
                   </View>
                 </ViewShot>
+
+                {/* Hidden A4 Poster View for Download */}
+                <View style={{ position: 'absolute', left: -9999, opacity: showPoster ? 1 : 0 }}>
+                  <ViewShot ref={posterViewShotRef} options={{ format: "png", quality: 1 }}>
+                    <View style={styles.posterContainer}>
+                      {/* Header */}
+                      <View style={styles.posterHeader}>
+                        <Text style={styles.posterHeaderText}>{(selectedWorkplace?.workplaceName || 'Medical Center').toUpperCase()}</Text>
+                      </View>
+                      
+                      {/* Subtitle */}
+                      <Text style={styles.posterSubtitle}>Book Your Next Appointment Easily With</Text>
+                      <Text style={styles.posterDoctorName}>Dr. {doctorProfile?.fullName || 'Doctor'}</Text>
+                      
+                      {/* QR Code */}
+                      <View style={styles.posterQRContainer}>
+                        <QRCode
+                          value={generateBookingURL(selectedWorkplace)}
+                          size={280}
+                          color="#000000"
+                          backgroundColor="white"
+                        />
+                      </View>
+                      
+                      {/* Instructions heading */}
+                      <Text style={styles.posterInstructionsHeading}>📱 HOW TO BOOK:</Text>
+                      
+                      {/* Instructions */}
+                      <View style={styles.posterInstructions}>
+                        <Text style={styles.posterInstructionText}>1. 📱 Open Google Lens (Android) / Camera app (iOS)</Text>
+                        <Text style={styles.posterInstructionText}>2. 📸 Point camera at the QR code above</Text>
+                        <Text style={styles.posterInstructionText}>3. 👆 Tap the notification that appears</Text>
+                        <Text style={styles.posterInstructionText}>4. ✍️ Fill in your details and book appointment</Text>
+                      </View>
+                      
+                      {/* App Logo and Branding */}
+                      <View style={styles.posterBranding}>
+                        <View style={styles.posterLogoRow}>
+                          <Image 
+                            source={require('../../assets/favicon-96x96.png')} 
+                            style={styles.posterLogoImage}
+                            resizeMode="contain"
+                          />
+                          <Text style={styles.posterAppNameInline}>NeextApp - Making Healthcare Accessible</Text>
+                        </View>
+                        <Text style={styles.posterWebsite}>Visit: neextapp.com</Text>
+                        <Text style={styles.posterAvailability}>✅ Available on Android & Web</Text>
+                      </View>
+                    </View>
+                  </ViewShot>
+                </View>
 
                 {/* Info message and URL section */}
                 <View style={styles.shareInfoContainer}>
@@ -584,5 +732,99 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 14,
     fontWeight: '600',
+  },
+  // Poster styles for A4 download
+  posterContainer: {
+    width: 595,
+    height: 842,
+    backgroundColor: 'white',
+    padding: 20,
+  },
+  posterHeader: {
+    backgroundColor: '#2196F3',
+    padding: 20,
+    marginBottom: 20,
+    alignItems: 'center',
+  },
+  posterHeaderText: {
+    color: 'white',
+    fontSize: 28,
+    fontWeight: 'bold',
+    textAlign: 'center',
+  },
+  posterSubtitle: {
+    fontSize: 18,
+    color: '#2c3e50',
+    textAlign: 'center',
+    marginTop: 10,
+  },
+  posterDoctorName: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#e74c3c',
+    textAlign: 'center',
+    marginTop: 5,
+    marginBottom: 20,
+  },
+  posterQRContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginVertical: 15,
+    padding: 10,
+    backgroundColor: 'white',
+  },
+  posterInstructionsHeading: {
+    fontSize: 17,
+    fontWeight: 'bold',
+    color: '#2c3e50',
+    textAlign: 'center',
+    marginTop: 15,
+    marginBottom: 12,
+  },
+  posterInstructions: {
+    paddingHorizontal: 30,
+    marginTop: 5,
+    alignItems: 'center',
+  },
+  posterInstructionText: {
+    fontSize: 14,
+    color: '#2c3e50',
+    textAlign: 'center',
+    lineHeight: 22,
+  },
+  posterBranding: {
+    marginTop: 'auto',
+    paddingTop: 20,
+    alignItems: 'center',
+  },
+  posterLogoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 8,
+  },
+  posterLogoImage: {
+    width: 48,
+    height: 48,
+    marginRight: 10,
+  },
+  posterAppNameInline: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#2196F3',
+    textAlign: 'center',
+  },
+  posterWebsite: {
+    fontSize: 13,
+    color: '#7f8c8d',
+    textAlign: 'center',
+    marginTop: 8,
+  },
+  posterAvailability: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#27ae60',
+    textAlign: 'center',
+    marginTop: 12,
   },
 });

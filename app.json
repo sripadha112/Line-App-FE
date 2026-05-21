@@ -4,37 +4,42 @@
     "slug": "neext-app",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/web-app-manifest-512x512.png",
+    "icon": "./assets/ios/iTunesArtwork@3x.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": false,
     "splash": {
-      "image": "./assets/Logo.jpeg",
+      "image": "./assets/ios/iTunesArtwork@2x.png",
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.santhu112.lineapp",
-      "icon": "./assets/apple-touch-icon.png"
+      "icon": "./assets/ios/iTunesArtwork@2x.png",
+      "infoPlist": {
+        "UIBackgroundModes": ["remote-notification"]
+      }
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/web-app-manifest-512x512.png",
+        "foregroundImage": "./assets/android/ic_launcher-web.png",
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
       "package": "com.santhu_112.lineapp",
       "googleServicesFile": "./google-services.json",
       "useNextNotificationsApi": true,
+      "icon": "./assets/android/playstore-icon.png",
       "permissions": [
         "android.permission.POST_NOTIFICATIONS",
         "android.permission.RECEIVE_BOOT_COMPLETED",
         "android.permission.VIBRATE",
-        "android.permission.WAKE_LOCK"
+        "android.permission.WAKE_LOCK",
+        "android.permission.SCHEDULE_EXACT_ALARM"
       ]
     },
     "web": {
-      "favicon": "./assets/Logo.jpeg",
+      "favicon": "./assets/favicon.ico",
       "bundler": "metro"
     },
     "plugins": [
@@ -42,17 +47,18 @@
       [
         "expo-notifications",
         {
-          "icon": "./assets/Logo.jpeg",
+          "icon": "./assets/android/mipmap-hdpi/ic_launcher.png",
           "color": "#2196F3",
-          "defaultChannel": "default"
+          "defaultChannel": "default",
+          "sounds": []
         }
       ]
     ],
     "notification": {
-      "icon": "./assets/Logo.jpeg",
+      "icon": "./assets/android/mipmap-hdpi/ic_launcher.png",
       "color": "#2196F3",
       "androidMode": "default",
-      "androidCollapsedTitle": "NeextApp",
+      "androidCollapsedTitle": "NeextApp - Appointment Reminder",
       "iosDisplayInForeground": true
     },
     "extra": {
