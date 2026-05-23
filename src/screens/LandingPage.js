@@ -235,7 +235,7 @@ export default function LandingPage({ navigation }) {
             <Text style={styles.ctaButtonArrow}>→</Text>
           </TouchableOpacity>
 
-          <View style={styles.statsRow}>
+          {/* <View style={styles.statsRow}>
             <View style={styles.statItem}>
               <Text style={styles.statNumber}>10K+</Text>
               <Text style={styles.statLabel}>Active Users</Text>
@@ -250,7 +250,7 @@ export default function LandingPage({ navigation }) {
               <Text style={styles.statNumber}>50K+</Text>
               <Text style={styles.statLabel}>Appointments</Text>
             </View>
-          </View>
+          </View> */}
         </View>
       </Animated.View>
 
@@ -550,7 +550,7 @@ const getStyles = (width) => StyleSheet.create({
   
   // Hero Section
   hero: {
-    minHeight: width > 768 ? (Platform.OS === 'web' ? 600 : 500) : 550,
+    // minHeight: width > 768 ? (Platform.OS === 'web' ? 600 : 500) : 550,
     backgroundColor: '#f8f9ff',
     paddingHorizontal: 20,
     paddingTop: width > 768 ? (Platform.OS === 'web' ? 80 : 60) : 50,
@@ -615,38 +615,38 @@ const getStyles = (width) => StyleSheet.create({
     fontSize: 20,
     fontWeight: '700',
   },
-  statsRow: {
-    flexDirection: 'row',
-    marginTop: width > 768 ? 60 : 40,
-    padding: width > 768 ? 30 : 20,
-    backgroundColor: '#ffffff',
-    borderRadius: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 12,
-    elevation: 3,
-  },
-  statItem: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  statNumber: {
-    fontSize: width > 768 ? 32 : width > 480 ? 24 : 20,
-    fontWeight: '800',
-    color: '#4f46e5',
-    marginBottom: 4,
-  },
-  statLabel: {
-    fontSize: width > 768 ? 14 : 12,
-    color: '#64748b',
-    fontWeight: '500',
-  },
-  statDivider: {
-    width: 1,
-    backgroundColor: '#e2e8f0',
-    marginHorizontal: width > 768 ? 20 : 10,
-  },
+  // statsRow: {
+  //   flexDirection: 'row',
+  //   marginTop: width > 768 ? 60 : 40,
+  //   padding: width > 768 ? 30 : 20,
+  //   backgroundColor: '#ffffff',
+  //   borderRadius: 16,
+  //   shadowColor: '#000',
+  //   shadowOffset: { width: 0, height: 2 },
+  //   shadowOpacity: 0.05,
+  //   shadowRadius: 12,
+  //   elevation: 3,
+  // },
+  // statItem: {
+  //   flex: 1,
+  //   alignItems: 'center',
+  // },
+  // statNumber: {
+  //   fontSize: width > 768 ? 32 : width > 480 ? 24 : 20,
+  //   fontWeight: '800',
+  //   color: '#4f46e5',
+  //   marginBottom: 4,
+  // },
+  // statLabel: {
+  //   fontSize: width > 768 ? 14 : 12,
+  //   color: '#64748b',
+  //   fontWeight: '500',
+  // },
+  // statDivider: {
+  //   width: 1,
+  //   backgroundColor: '#e2e8f0',
+  //   marginHorizontal: width > 768 ? 20 : 10,
+  // },
 
   // Section Styles
   section: {
