@@ -428,24 +428,24 @@ export default function CancelDay({ route, navigation }) {
       <View style={styles.actionButtonsContainer}>
         <View style={styles.actionButtonsRow}>
           <TouchableOpacity 
-            style={styles.cancelButton}
+            style={styles.workplaceCancelButton}
             onPress={() => openModal(item, 'cancel')}
           >
-            <Text style={styles.cancelButtonText} numberOfLines={1}>Cancel Day</Text>
+            <Text style={styles.workplaceCancelButtonText} numberOfLines={1}>Cancel Day</Text>
           </TouchableOpacity>
           
           <TouchableOpacity 
-            style={styles.blockButton}
+            style={styles.workplaceBlockButton}
             onPress={() => openModal(item, 'block')}
           >
-            <Text style={styles.blockButtonText} numberOfLines={1}>Block</Text>
+            <Text style={styles.workplaceBlockButtonText} numberOfLines={1}>Block</Text>
           </TouchableOpacity>
           
           <TouchableOpacity 
-            style={styles.unblockButton}
+            style={styles.workplaceUnblockButton}
             onPress={() => openUnblockModal(item)}
           >
-            <Text style={styles.unblockButtonText} numberOfLines={1}>Unblock</Text>
+            <Text style={styles.workplaceUnblockButtonText} numberOfLines={1}>Unblock</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -523,7 +523,7 @@ export default function CancelDay({ route, navigation }) {
           <View style={styles.modalContainer}>
             <ScrollView 
               ref={modalScrollRef}
-              style={styles.modalContent} 
+              style={styles.modalContent}
               showsVerticalScrollIndicator={false}
             >
               <Text style={[styles.modalTitle, mode === 'block' && styles.modalTitleBlock]}>
@@ -674,36 +674,36 @@ export default function CancelDay({ route, navigation }) {
                   )}
                 </View>
               </View>
-
-              {/* Buttons */}
-              <View style={styles.modalButtons}>
-                <TouchableOpacity
-                  style={styles.modalCancelButton}
-                  onPress={() => setModalVisible(false)}
-                  disabled={submitting}
-                >
-                  <Text style={styles.modalCancelButtonText}>Cancel</Text>
-                </TouchableOpacity>
-                
-                <TouchableOpacity
-                  style={[
-                    styles.submitButton, 
-                    mode === 'block' && styles.submitButtonBlock,
-                    submitting && styles.submitButtonDisabled
-                  ]}
-                  onPress={handleSubmit}
-                  disabled={submitting}
-                >
-                  {submitting ? (
-                    <ActivityIndicator size="small" color="#fff" />
-                  ) : (
-                    <Text style={styles.submitButtonText}>
-                      {mode === 'cancel' ? 'Cancel Appointments' : 'Block Appointments'}
-                    </Text>
-                  )}
-                </TouchableOpacity>
-              </View>
             </ScrollView>
+
+            {/* Buttons outside ScrollView for better visibility */}
+            <View style={styles.modalActions}>
+              <TouchableOpacity
+                style={styles.cancelButton}
+                onPress={() => setModalVisible(false)}
+                disabled={submitting}
+              >
+                <Text style={styles.cancelButtonText}>Cancel</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity
+                style={[
+                  styles.submitButton, 
+                  mode === 'block' && styles.submitButtonBlock,
+                  submitting && styles.submitButtonDisabled
+                ]}
+                onPress={handleSubmit}
+                disabled={submitting}
+              >
+                {submitting ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <Text style={styles.submitButtonText}>
+                    {mode === 'cancel' ? 'Confirm Cancel' : 'Confirm Block'}
+                  </Text>
+                )}
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
       </Modal>
@@ -770,13 +770,13 @@ export default function CancelDay({ route, navigation }) {
               </ScrollView>
             )}
             
-            <View style={styles.modalButtons}>
+            <View style={styles.modalActions}>
               <TouchableOpacity
-                style={styles.modalCancelButton}
+                style={styles.cancelButton}
                 onPress={() => setUnblockModalVisible(false)}
                 disabled={submitting}
               >
-                <Text style={styles.modalCancelButtonText}>Close</Text>
+                <Text style={styles.cancelButtonText}>Close</Text>
               </TouchableOpacity>
               
               {existingBlocks.length > 0 && (
@@ -907,7 +907,7 @@ const styles = StyleSheet.create({
     color: '#7f8c8d',
     lineHeight: 20,
   },
-  cancelButton: {
+  workplaceCancelButton: {
     backgroundColor: '#e74c3c',
     paddingHorizontal: 6,
     paddingVertical: 10,
@@ -918,13 +918,13 @@ const styles = StyleSheet.create({
     minHeight: 40,
     marginHorizontal: 2,
   },
-  cancelButtonText: {
+  workplaceCancelButtonText: {
     color: '#fff',
     fontWeight: '600',
     fontSize: 11,
     textAlign: 'center',
   },
-  blockButton: {
+  workplaceBlockButton: {
     backgroundColor: '#f39c12',
     paddingHorizontal: 6,
     paddingVertical: 10,
@@ -935,13 +935,13 @@ const styles = StyleSheet.create({
     minHeight: 40,
     marginHorizontal: 2,
   },
-  blockButtonText: {
+  workplaceBlockButtonText: {
     color: '#fff',
     fontWeight: '600',
     fontSize: 11,
     textAlign: 'center',
   },
-  unblockButton: {
+  workplaceUnblockButton: {
     backgroundColor: '#27ae60',
     paddingHorizontal: 6,
     paddingVertical: 10,
@@ -952,7 +952,7 @@ const styles = StyleSheet.create({
     minHeight: 40,
     marginHorizontal: 2,
   },
-  unblockButtonText: {
+  workplaceUnblockButtonText: {
     color: '#fff',
     fontWeight: '600',
     fontSize: 11,
@@ -976,6 +976,7 @@ const styles = StyleSheet.create({
   },
   modalContainer: {
     width: '90%',
+    maxWidth: 500,
     maxHeight: '85%',
     backgroundColor: '#fff',
     borderRadius: 12,
@@ -987,7 +988,6 @@ const styles = StyleSheet.create({
   },
   modalContent: {
     padding: 20,
-    paddingBottom: 40,
   },
   modalScrollView: {
     maxHeight: '100%',
@@ -1058,38 +1058,38 @@ const styles = StyleSheet.create({
     height: 80,
     textAlignVertical: 'top',
   },
-  modalButtons: {
+  modalActions: {
     flexDirection: 'row',
-    paddingTop: 20,
-    paddingHorizontal: 10,
-    paddingBottom: 30,
     justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    paddingBottom: 20,
+    gap: 10,
+    borderTopWidth: 1,
+    borderTopColor: '#e9ecef',
   },
-  modalCancelButton: {
-    flex: 1,
+  cancelButton: {
+    flex: 0.9,
     backgroundColor: '#95a5a6',
-    paddingVertical: 14,
-    borderRadius: 10,
+    paddingVertical: 12,
+    borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: 48,
-    marginHorizontal: 5,
+    minHeight: 44,
   },
-  modalCancelButtonText: {
+  cancelButtonText: {
     color: '#fff',
     fontSize: 14,
     fontWeight: '600',
-    textAlign: 'center',
   },
   submitButton: {
-    flex: 1,
+    flex: 1.1,
     backgroundColor: '#e74c3c',
-    paddingVertical: 14,
-    borderRadius: 10,
+    paddingVertical: 12,
+    borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: 48,
-    marginHorizontal: 5,
+    minHeight: 44,
   },
   submitButtonDisabled: {
     backgroundColor: '#bdc3c7',
@@ -1098,7 +1098,6 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 14,
     fontWeight: '600',
-    textAlign: 'center',
   },
   subLabel: {
     fontSize: 14,
@@ -1387,11 +1386,12 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   unblockSubmitButton: {
-    flex: 1,
+    flex: 1.1,
     backgroundColor: '#27ae60',
-    paddingVertical: 14,
-    borderRadius: 10,
+    paddingVertical: 12,
+    borderRadius: 8,
     alignItems: 'center',
-    minHeight: 48,
+    justifyContent: 'center',
+    minHeight: 44,
   },
 });

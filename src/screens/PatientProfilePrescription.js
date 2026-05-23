@@ -1176,7 +1176,11 @@ export default function PatientProfilePrescription({ route, navigation }) {
                 <Text style={styles.allPrescriptionsCloseText}>✕</Text>
               </TouchableOpacity>
             </View>
-            <ScrollView style={styles.allPrescriptionsScrollView}>
+            <ScrollView 
+              style={styles.allPrescriptionsScrollView}
+              contentContainerStyle={{ paddingBottom: 20 }}
+              showsVerticalScrollIndicator={true}
+            >
               {prescriptions.map((prescription, index) => (
                 <View key={prescription.id} style={styles.prescriptionCard}>
                   <View style={styles.prescriptionCardHeader}>
@@ -1615,7 +1619,18 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   actionButton: {
-    padding: 4,
+    padding: 6,
+    backgroundColor: '#f5f5f5',
+    borderRadius: 6,
+    minWidth: 36,
+    minHeight: 36,
+    justifyContent: 'center',
+    alignItems: 'center',
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
   },
   actionButtonIcon: {
     fontSize: 20,

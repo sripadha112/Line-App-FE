@@ -931,6 +931,11 @@ export default function UserProfile({ route, navigation }) {
                               height: 36,
                               justifyContent: 'center',
                               alignItems: 'center',
+                              elevation: 2,
+                              shadowColor: '#000',
+                              shadowOffset: { width: 0, height: 1 },
+                              shadowOpacity: 0.2,
+                              shadowRadius: 2,
                             }}
                             onPress={() => sharePrescription(prescription.id)}
                           >
@@ -946,6 +951,11 @@ export default function UserProfile({ route, navigation }) {
                             height: 36,
                             justifyContent: 'center',
                             alignItems: 'center',
+                            elevation: 2,
+                            shadowColor: '#000',
+                            shadowOffset: { width: 0, height: 1 },
+                            shadowOpacity: 0.2,
+                            shadowRadius: 2,
                           }}
                           onPress={() => previewPrescription(prescription.id)}
                         >
@@ -960,6 +970,11 @@ export default function UserProfile({ route, navigation }) {
                             height: 36,
                             justifyContent: 'center',
                             alignItems: 'center',
+                            elevation: 2,
+                            shadowColor: '#000',
+                            shadowOffset: { width: 0, height: 1 },
+                            shadowOpacity: 0.2,
+                            shadowRadius: 2,
                           }}
                           onPress={() => deletePrescription(prescription.id)}
                         >
