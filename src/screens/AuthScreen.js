@@ -333,7 +333,7 @@ export default function AuthScreen({navigation}) {
         <View style={styles.header}>
           <Text style={styles.title}>Hi 👋</Text>
           <Text style={styles.subtitle}>
-            Enter your mobile number to login / register
+            Enter your mobile number to <Text style={styles.boldText}>LOGIN / REGISTER</Text>
           </Text>
         </View>
 
@@ -385,7 +385,7 @@ export default function AuthScreen({navigation}) {
         </View>
 
         {/* App Download Section - Only on Web */}
-        {Platform.OS === 'web' && (
+        {/* {Platform.OS === 'web' && (
           <View style={styles.appPromotionSection}>
             <View style={styles.appPromotionCard}>
               <Text style={styles.appPromotionIcon}>📱</Text>
@@ -431,7 +431,7 @@ export default function AuthScreen({navigation}) {
               <Text style={styles.appPromotionNote}>Available on Android & iOS</Text>
             </View>
           </View>
-        )}
+        )} */}
       </ScrollView>
     </KeyboardAvoidingView>
   );
