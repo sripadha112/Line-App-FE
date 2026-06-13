@@ -1,331 +1,801 @@
-import React, {useState} from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
+// import React, {useState} from 'react';
+// import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
+// import api from '../services/api';
+// import SecureStore from '../utils/secureStorage';
+// import { API_ENDPOINTS } from '../config/apiConfig';
+// import UserNotificationService from '../services/userNotificationService';
+// import { showAlert } from '../utils/alertUtils';
+
+// export default function AuthScreen({navigation}) {
+//   // const [mobile, setMobile] = useState('');
+//   // const [otp, setOtp] = useState('');
+//   // const [otpSent, setOtpSent] = useState(false);
+//   // const [loading, setLoading] = useState(false);
+
+//   // const requestOtp = async () => {
+//   //   if (!mobile || mobile.length < 10) {
+//   //     Alert.alert('Error', 'Please enter a valid mobile number');
+//   //     return;
+//   //   }
+
+//   //   setLoading(true);
+//   //   try {
+//   //     await api.post('/api/auth/request-otp', { mobileNumber: mobile });
+//   //     setOtpSent(true);
+//   //     // Clear OTP input when resending
+//   //     setOtp('');
+//   //     // Show alert when OTP is sent
+//   //     Alert.alert('OTP Sent', 'OTP has been sent to your mobile number');
+//   //   } catch (e) {
+//   //     Alert.alert('Error', 'Error requesting OTP. ' + (e.response?.data?.error || e.message));
+//   //   }
+//   //   setLoading(false);
+//   // };
+
+//   // const verifyOtp = async () => {
+//   //   if (!otp || otp.length < 4) {
+//   //     Alert.alert('Error', 'Please enter a valid OTP');
+//   //     return;
+//   //   }
+
+//   //   setLoading(true);
+//   //   try {
+//   //     // First try to verify OTP for existing user (login)
+//   //     const body = { mobileNumber: mobile, otpCode: otp };
+//   //     const res = await api.post('/api/auth/verify-otp', body);
+//   //     const data = res.data;
+      
+//   //     if (data.token || data.accessToken) {
+//   //       // User exists, login successful
+//   //       const token = data.token || data.accessToken;
+//   //       await SecureStore.setItemAsync('accessToken', token);
+//   //       await SecureStore.setItemAsync('role', data.role);
+//   //       await SecureStore.setItemAsync('userId', String(data.id));
+//   //       await SecureStore.setItemAsync('fullName', data.fullName || '');
+        
+//   //       api.defaults.headers.common['Authorization'] = 'Bearer ' + token;
+        
+//   //       if (data.role === 'DOCTOR') {
+//   //         navigation.reset({ 
+//   //           index: 0, 
+//   //           routes: [{ 
+//   //             name: 'DoctorHome', 
+//   //             params: { userId: data.id } 
+//   //           }] 
+//   //         });
+//   //       } else {
+//   //         navigation.reset({ 
+//   //           index: 0, 
+//   //           routes: [{ 
+//   //             name: 'UserHome', 
+//   //             params: { userId: data.id } 
+//   //           }] 
+//   //         });
+//   //       }
+//   //     }
+//   //   } catch (e) {
+//   //     // If user doesn't exist, navigate to role selection for registration
+//   //     if (e.response?.status === 400 || 
+//   //         e.response?.data?.error?.includes('not found') ||
+//   //         e.response?.data?.error?.includes('User not found')) {
+//   //       navigation.navigate('RoleSelection', { mobile, otp });
+//   //     } else {
+//   //       Alert.alert('Error', 'Verification failed: ' + (e.response?.data?.error || e.message));
+//   //     }
+//   //   }
+//   //   setLoading(false);
+//   // };
+
+//   // return (
+//   //   <KeyboardAvoidingView 
+//   //     style={styles.container} 
+//   //     behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+//   //     keyboardVerticalOffset={Platform.OS === 'ios' ? 100 : 0}
+//   //   >
+//   //     <ScrollView 
+//   //       contentContainerStyle={styles.scrollContainer}
+//   //       showsVerticalScrollIndicator={false}
+//   //       keyboardShouldPersistTaps="handled"
+//   //     >
+//   //       <View style={styles.header}>
+//   //         <Text style={styles.title}>Hi 👋</Text>
+//   //         <Text style={styles.subtitle}>
+//   //           {!otpSent ? 'Enter mobile to login / register' : 'Enter the OTP sent to your mobile'}
+//   //         </Text>
+//   //       </View>
+
+//   //       <View style={styles.form}>
+//   //       <View style={styles.inputGroup}>
+//   //         <Text style={styles.label}>Mobile Number</Text>
+//   //         <TextInput 
+//   //           style={[styles.input, otpSent && styles.disabledInput]} 
+//   //           keyboardType="phone-pad" 
+//   //           placeholder="Enter mobile number" 
+//   //           value={mobile} 
+//   //           onChangeText={setMobile}
+//   //           editable={!otpSent}
+//   //           maxLength={10}
+//   //         />
+//   //         {otpSent && (
+//   //           <View style={styles.successMessage}>
+//   //             <Text style={styles.successText}>✓ OTP sent to your mobile number</Text>
+//   //             <TouchableOpacity 
+//   //               style={styles.resendButton} 
+//   //               onPress={requestOtp}
+//   //               disabled={loading}
+//   //             >
+//   //               <Text style={styles.resendText}>
+//   //                 {loading ? 'Sending...' : 'Resend OTP'}
+//   //               </Text>
+//   //             </TouchableOpacity>
+//   //           </View>
+//   //         )}
+//   //       </View>
+
+//   //       {!otpSent ? (
+//   //         <TouchableOpacity 
+//   //           style={[styles.primaryButton, loading && styles.disabledButton]} 
+//   //           onPress={requestOtp}
+//   //           disabled={loading}
+//   //         >
+//   //           <Text style={styles.primaryButtonText}>
+//   //             {loading ? 'Sending...' : 'Request OTP'}
+//   //           </Text>
+//   //         </TouchableOpacity>
+//   //       ) : (
+//   //         <>
+//   //           <View style={styles.inputGroup}>
+//   //             <Text style={styles.label}>OTP</Text>
+//   //             <TextInput 
+//   //               style={styles.input} 
+//   //               keyboardType="number-pad" 
+//   //               placeholder="Enter OTP" 
+//   //               value={otp} 
+//   //               onChangeText={setOtp}
+//   //               maxLength={6}
+//   //             />
+//   //           </View>
+
+//   //           <TouchableOpacity 
+//   //             style={[styles.primaryButton, (!otp || loading) && styles.disabledButton]} 
+//   //             onPress={verifyOtp}
+//   //             disabled={!otp || loading}
+//   //           >
+//   //             <Text style={styles.primaryButtonText}>
+//   //               {loading ? 'Verifying...' : 'Verify OTP'}
+//   //             </Text>
+//   //           </TouchableOpacity>
+
+//   //           <TouchableOpacity 
+//   //             style={styles.secondaryButton} 
+//   //             onPress={() => {
+//   //               setOtpSent(false);
+//   //               setOtp('');
+//   //             }}
+//   //           >
+//   //             <Text style={styles.secondaryButtonText}>Change Mobile Number</Text>
+//   //           </TouchableOpacity>
+//   //         </>
+//   //       )}
+//   //     </View>
+//   //     </ScrollView>
+//   //   </KeyboardAvoidingView>
+//   // );
+
+//   // NEW MVP CODE - DIRECT MOBILE VERIFICATION
+  
+//   // State for new MVP functionality
+//   const [mobile, setMobile] = useState('');
+//   const [loading, setLoading] = useState(false);
+
+//   // Mobile number validation function
+//   const validateMobileNumber = (number) => {
+//     // Remove any non-numeric characters for validation
+//     const cleanNumber = number.replace(/\D/g, '');
+    
+//     // Check if it's exactly 10 digits
+//     if (cleanNumber.length !== 10) {
+//       return { isValid: false, message: 'Mobile number must be exactly 10 digits' };
+//     }
+    
+//     // Check if it starts with 6, 7, 8, or 9
+//     const firstDigit = cleanNumber[0];
+//     if (!['6', '7', '8', '9'].includes(firstDigit)) {
+//       return { isValid: false, message: 'Please enter a valid Mobile Number' };
+//     }
+    
+//     return { isValid: true, message: '' };
+//   };
+
+//   // Direct mobile verification (bypassing OTP for MVP)
+//   const verifyMobile = async () => {
+//     // Validate mobile number
+//     const validation = validateMobileNumber(mobile);
+//     if (!validation.isValid) {
+//       showAlert('Error', validation.message);
+//       return;
+//     }
+
+//     setLoading(true);
+//     try {
+//       // Call direct mobile verification API using api service
+//       console.log('📤 Calling verify-mobile API with mobile:', mobile);
+//       console.log('📤 API Endpoint:', API_ENDPOINTS.AUTH.VERIFY_MOBILE);
+      
+//       // Use fetch to send raw mobile number (not JSON stringified)
+//       const response = await fetch(`${api.defaults.baseURL}${API_ENDPOINTS.AUTH.VERIFY_MOBILE}`, {
+//         method: 'POST',
+//         headers: {
+//           'Content-Type': 'application/json',
+//           'Accept': '*/*'
+//         },
+//         body: mobile // Send as raw string: 9652752837 (not "9652752837")
+//       });
+      
+//       console.log('📥 Response status:', response.status);
+//       console.log('📥 Response headers:', response.headers);
+      
+//       if (!response.ok) {
+//         const errorText = await response.text();
+//         console.log('❌ Error response body:', errorText);
+//         throw new Error(`HTTP ${response.status}: ${errorText}`);
+//       }
+      
+//       const data = await response.json();
+//       console.log('📥 API Response data:', data);
+      
+//       if (data.status === 'USER_EXISTS') {
+//         // User exists but no token - need to complete registration
+//         navigation.navigate('RoleSelection', { mobile });
+//       } else if (data.token || data.accessToken) {
+//         // User exists with token, login successful
+//         const token = data.token || data.accessToken;
+//         await SecureStore.setItemAsync('accessToken', token);
+//         await SecureStore.setItemAsync('role', data.role);
+//         await SecureStore.setItemAsync('userId', String(data.id));
+//         await SecureStore.setItemAsync('fullName', data.fullName || '');
+//         await SecureStore.setItemAsync('mobile', mobile);
+        
+//         api.defaults.headers.common['Authorization'] = 'Bearer ' + token;
+        
+//         // Register FCM token for push notifications after successful login (only for users)
+//         if (data.role === 'USER') {
+//           console.log('🔔 Registering FCM token after user login...');
+//           try {
+//             const fcmResult = await UserNotificationService.forceRegisterFcmToken();
+//             console.log('📱 FCM registration result:', fcmResult);
+//           } catch (fcmError) {
+//             console.warn('⚠️ FCM registration warning (non-blocking):', fcmError);
+//             // Don't fail login if FCM fails
+//           }
+//         }
+        
+//         if (data.role === 'DOCTOR') {
+//           navigation.reset({ 
+//             index: 0, 
+//             routes: [{ 
+//               name: 'DoctorHome', 
+//               params: { userId: data.id } 
+//             }] 
+//           });
+//         } else {
+//           navigation.reset({ 
+//             index: 0, 
+//             routes: [{ 
+//               name: 'UserHome', 
+//               params: { userId: data.id } 
+//             }] 
+//           });
+//         }
+//       }
+//     } catch (e) {
+//       // Handle API errors - similar to original OTP verification
+//       console.log('❌ Verification error:', e);
+      
+//       // Parse the error message to check for user not found
+//       const errorMessage = e.message || '';
+//       const isUserNotFound = errorMessage.includes('User not found') || 
+//                             errorMessage.includes('Please register first') ||
+//                             errorMessage.includes('not found');
+      
+//       // Check if it's a parsed response with status
+//       if (e.response?.data?.status === 'NOT_FOUND' || isUserNotFound) {
+//         // User doesn't exist, navigate to role selection for registration
+//         console.log('🔄 User not found, navigating to registration...');
+//         navigation.navigate('RoleSelection', { mobile });
+//       } else if (e.response?.status === 400 || 
+//           e.response?.data?.error?.includes('not found') ||
+//           e.response?.data?.error?.includes('User not found')) {
+//         // User doesn't exist, navigate to role selection for registration
+//         console.log('🔄 User not found (400 error), navigating to registration...');
+//         navigation.navigate('RoleSelection', { mobile });
+//       } else {
+//         // Other errors (network, server, etc.)
+//         const displayMessage = e.response?.data?.error || e.message || 'Unknown error';
+//         showAlert('Error', 'Verification failed: ' + displayMessage);
+//       }
+//     }
+//     setLoading(false);
+//   };
+
+//   // NEW MVP UI
+//   return (
+//     <KeyboardAvoidingView 
+//       style={styles.container} 
+//       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+//       keyboardVerticalOffset={Platform.OS === 'ios' ? 100 : 0}
+//     >
+//       <ScrollView 
+//         contentContainerStyle={styles.scrollContainer}
+//         showsVerticalScrollIndicator={false}
+//         keyboardShouldPersistTaps="handled"
+//       >
+//         <View style={styles.header}>
+//           <Text style={styles.title}>Hi 👋</Text>
+//           <Text style={styles.subtitle}>
+//             Enter your mobile number to <Text style={styles.boldText}>LOGIN / REGISTER</Text>
+//           </Text>
+//         </View>
+
+//         <View style={styles.form}>
+//           <View style={styles.inputGroup}>
+//             <Text style={styles.label}>Mobile Number</Text>
+//             <TextInput 
+//               style={styles.input} 
+//               keyboardType="phone-pad" 
+//               placeholder="Enter 10-digit mobile number" 
+//               value={mobile} 
+//               onChangeText={(text) => {
+//                 // Only allow numeric input
+//                 const numericText = text.replace(/[^0-9]/g, '');
+//                 setMobile(numericText);
+//               }}
+//               maxLength={10}
+//             />
+//             {mobile.length > 0 && (
+//               <View style={styles.validationContainer}>
+//                 {validateMobileNumber(mobile).isValid ? (
+//                   <Text style={styles.successText}>✓ Valid mobile number</Text>
+//                 ) : (
+//                   <Text style={styles.errorText}>⚠ {validateMobileNumber(mobile).message}</Text>
+//                 )}
+//               </View>
+//             )}
+//           </View>
+
+//           <TouchableOpacity 
+//             style={[
+//               styles.primaryButton, 
+//               (!validateMobileNumber(mobile).isValid || loading) && styles.disabledButton
+//             ]} 
+//             onPress={verifyMobile}
+//             disabled={!validateMobileNumber(mobile).isValid || loading}
+//           >
+//             <Text style={styles.primaryButtonText}>
+//               {loading ? 'Verifying...' : 'Verify Mobile Number'}
+//             </Text>
+//           </TouchableOpacity>
+          
+//           {/* MVP Notice */}
+//           {/* <View style={styles.mvpNotice}>
+//             <Text style={styles.mvpNoticeText}>
+//               🚀 MVP Mode: Direct mobile verification (OTP temporarily disabled)
+//             </Text>
+//           </View> */}
+//         </View>
+
+//         {/* App Download Section - Only on Web */}
+//         {/* {Platform.OS === 'web' && (
+//           <View style={styles.appPromotionSection}>
+//             <View style={styles.appPromotionCard}>
+//               <Text style={styles.appPromotionIcon}>📱</Text>
+//               <Text style={styles.appPromotionTitle}>For Better Experience, Download Our Mobile App!</Text>
+//               <Text style={styles.appPromotionDescription}>
+//                 Get the full NeextApp experience with our mobile app:
+//               </Text>
+              
+//               <View style={styles.featuresList}>
+//                 <View style={styles.featureItem}>
+//                   <Text style={styles.featureBullet}>✓</Text>
+//                   <Text style={styles.featureText}>Book appointments instantly</Text>
+//                 </View>
+//                 <View style={styles.featureItem}>
+//                   <Text style={styles.featureBullet}>✓</Text>
+//                   <Text style={styles.featureText}>Real-time notifications & reminders</Text>
+//                 </View>
+//                 <View style={styles.featureItem}>
+//                   <Text style={styles.featureBullet}>✓</Text>
+//                   <Text style={styles.featureText}>Manage family appointments</Text>
+//                 </View>
+//                 <View style={styles.featureItem}>
+//                   <Text style={styles.featureBullet}>✓</Text>
+//                   <Text style={styles.featureText}>Access digital prescriptions</Text>
+//                 </View>
+//                 <View style={styles.featureItem}>
+//                   <Text style={styles.featureBullet}>✓</Text>
+//                   <Text style={styles.featureText}>QR code quick check-in</Text>
+//                 </View>
+//               </View>
+
+//               <TouchableOpacity 
+//                 style={styles.downloadButton}
+//                 onPress={() => {
+//                   if (Platform.OS === 'web') {
+//                     window.open('https://neextapp.com', '_blank');
+//                   }
+//                 }}
+//               >
+//                 <Text style={styles.downloadButtonText}>📲 Download NeextApp</Text>
+//               </TouchableOpacity>
+              
+//               <Text style={styles.appPromotionNote}>Available on Android & iOS</Text>
+//             </View>
+//           </View>
+//         )} */}
+//       </ScrollView>
+//     </KeyboardAvoidingView>
+//   );
+// }
+
+// const styles = StyleSheet.create({
+//   container: {
+//     flex: 1,
+//     backgroundColor: '#f8f9fa',
+//   },
+//   scrollContainer: {
+//     flexGrow: 1,
+//     justifyContent: 'center',
+//     padding: 20,
+//   },
+//   header: {
+//     alignItems: 'center',
+//     marginBottom: 40,
+//   },
+//   title: {
+//     fontSize: 32,
+//     fontWeight: '800',
+//     color: '#2c3e50',
+//     marginBottom: 8,
+//   },
+//   subtitle: {
+//     fontSize: 16,
+//     color: '#7f8c8d',
+//     textAlign: 'center',
+//     lineHeight: 22,
+//   },
+//   form: {
+//     backgroundColor: '#fff',
+//     borderRadius: 16,
+//     padding: 24,
+//     elevation: 4,
+//     shadowColor: '#000',
+//     shadowOffset: { width: 0, height: 4 },
+//     shadowOpacity: 0.1,
+//     shadowRadius: 8,
+//   },
+//   inputGroup: {
+//     marginBottom: 20,
+//   },
+//   label: {
+//     fontSize: 16,
+//     fontWeight: '600',
+//     color: '#2c3e50',
+//     marginBottom: 8,
+//   },
+//   input: {
+//     borderWidth: 1,
+//     borderColor: '#ddd',
+//     borderRadius: 12,
+//     padding: 16,
+//     fontSize: 16,
+//     backgroundColor: '#fff',
+//   },
+//   disabledInput: {
+//     backgroundColor: '#f8f9fa',
+//     color: '#7f8c8d',
+//   },
+//   primaryButton: {
+//     backgroundColor: '#3498db',
+//     borderRadius: 12,
+//     padding: 18,
+//     alignItems: 'center',
+//     marginBottom: 12,
+//   },
+//   disabledButton: {
+//     backgroundColor: '#bdc3c7',
+//   },
+//   primaryButtonText: {
+//     color: '#fff',
+//     fontSize: 18,
+//     fontWeight: '700',
+//   },
+//   secondaryButton: {
+//     padding: 12,
+//     alignItems: 'center',
+//   },
+//   secondaryButtonText: {
+//     color: '#3498db',
+//     fontSize: 16,
+//     fontWeight: '600',
+//   },
+//   successMessage: {
+//     marginTop: 8,
+//     flexDirection: 'row',
+//     justifyContent: 'space-between',
+//     alignItems: 'center',
+//   },
+//   successText: {
+//     color: '#27ae60',
+//     fontSize: 14,
+//     fontWeight: '500',
+//   },
+//   resendButton: {
+//     padding: 4,
+//   },
+//   resendText: {
+//     color: '#3498db',
+//     fontSize: 14,
+//     fontWeight: '600',
+//     textDecorationLine: 'underline',
+//   },
+//   // NEW STYLES FOR MVP
+//   validationContainer: {
+//     marginTop: 8,
+//   },
+//   errorText: {
+//     color: '#e74c3c',
+//     fontSize: 14,
+//     fontWeight: '500',
+//   },
+//   mvpNotice: {
+//     backgroundColor: '#fff3cd',
+//     borderRadius: 8,
+//     padding: 12,
+//     marginTop: 16,
+//     borderWidth: 1,
+//     borderColor: '#ffeaa7',
+//   },
+//   mvpNoticeText: {
+//     color: '#856404',
+//     fontSize: 12,
+//     textAlign: 'center',
+//     fontWeight: '500',
+//   },
+//   // App Promotion Section - Web Only
+//   appPromotionSection: {
+//     marginTop: 32,
+//     marginBottom: 20,
+//   },
+//   appPromotionCard: {
+//     backgroundColor: '#ffffff',
+//     borderRadius: 16,
+//     padding: 24,
+//     alignItems: 'center',
+//     elevation: 4,
+//     shadowColor: '#000',
+//     shadowOffset: { width: 0, height: 4 },
+//     shadowOpacity: 0.1,
+//     shadowRadius: 8,
+//     borderWidth: 2,
+//     borderColor: '#3498db',
+//   },
+//   appPromotionIcon: {
+//     fontSize: 48,
+//     marginBottom: 12,
+//   },
+//   appPromotionTitle: {
+//     fontSize: 20,
+//     fontWeight: '700',
+//     color: '#2c3e50',
+//     textAlign: 'center',
+//     marginBottom: 12,
+//     lineHeight: 28,
+//   },
+//   appPromotionDescription: {
+//     fontSize: 15,
+//     color: '#7f8c8d',
+//     textAlign: 'center',
+//     marginBottom: 20,
+//     lineHeight: 22,
+//   },
+//   featuresList: {
+//     width: '100%',
+//     marginBottom: 24,
+//   },
+//   featureItem: {
+//     flexDirection: 'row',
+//     alignItems: 'center',
+//     marginBottom: 12,
+//     paddingLeft: 8,
+//   },
+//   featureBullet: {
+//     fontSize: 16,
+//     color: '#27ae60',
+//     fontWeight: '700',
+//     marginRight: 12,
+//     width: 20,
+//   },
+//   featureText: {
+//     fontSize: 15,
+//     color: '#2c3e50',
+//     flex: 1,
+//     lineHeight: 22,
+//   },
+//   downloadButton: {
+//     backgroundColor: '#27ae60',
+//     borderRadius: 12,
+//     padding: 16,
+//     width: '100%',
+//     alignItems: 'center',
+//     marginBottom: 12,
+//     shadowColor: '#27ae60',
+//     shadowOffset: { width: 0, height: 4 },
+//     shadowOpacity: 0.3,
+//     shadowRadius: 8,
+//     elevation: 6,
+//   },
+//   downloadButtonText: {
+//     color: '#ffffff',
+//     fontSize: 18,
+//     fontWeight: '700',
+//   },
+//   appPromotionNote: {
+//     fontSize: 13,
+//     color: '#95a5a6',
+//     fontStyle: 'italic',
+//   },
+// });
+
+import React, { useState } from 'react';
+import {
+  View, Text, TextInput, TouchableOpacity, StyleSheet,
+  ScrollView, KeyboardAvoidingView, Platform, ActivityIndicator
+} from 'react-native';
 import api from '../services/api';
 import SecureStore from '../utils/secureStorage';
 import { API_ENDPOINTS } from '../config/apiConfig';
 import UserNotificationService from '../services/userNotificationService';
 import { showAlert } from '../utils/alertUtils';
 
-export default function AuthScreen({navigation}) {
-  // const [mobile, setMobile] = useState('');
-  // const [otp, setOtp] = useState('');
-  // const [otpSent, setOtpSent] = useState(false);
-  // const [loading, setLoading] = useState(false);
+// ── Step constants ────────────────────────────────────────────────────────
+const STEP_MOBILE = 'mobile';      // entering mobile number
+const STEP_LOGIN_PIN = 'login_pin'; // existing user → enter PIN to login
+const STEP_SET_PIN = 'set_pin';     // new user → set PIN before registration
 
-  // const requestOtp = async () => {
-  //   if (!mobile || mobile.length < 10) {
-  //     Alert.alert('Error', 'Please enter a valid mobile number');
-  //     return;
-  //   }
-
-  //   setLoading(true);
-  //   try {
-  //     await api.post('/api/auth/request-otp', { mobileNumber: mobile });
-  //     setOtpSent(true);
-  //     // Clear OTP input when resending
-  //     setOtp('');
-  //     // Show alert when OTP is sent
-  //     Alert.alert('OTP Sent', 'OTP has been sent to your mobile number');
-  //   } catch (e) {
-  //     Alert.alert('Error', 'Error requesting OTP. ' + (e.response?.data?.error || e.message));
-  //   }
-  //   setLoading(false);
-  // };
-
-  // const verifyOtp = async () => {
-  //   if (!otp || otp.length < 4) {
-  //     Alert.alert('Error', 'Please enter a valid OTP');
-  //     return;
-  //   }
-
-  //   setLoading(true);
-  //   try {
-  //     // First try to verify OTP for existing user (login)
-  //     const body = { mobileNumber: mobile, otpCode: otp };
-  //     const res = await api.post('/api/auth/verify-otp', body);
-  //     const data = res.data;
-      
-  //     if (data.token || data.accessToken) {
-  //       // User exists, login successful
-  //       const token = data.token || data.accessToken;
-  //       await SecureStore.setItemAsync('accessToken', token);
-  //       await SecureStore.setItemAsync('role', data.role);
-  //       await SecureStore.setItemAsync('userId', String(data.id));
-  //       await SecureStore.setItemAsync('fullName', data.fullName || '');
-        
-  //       api.defaults.headers.common['Authorization'] = 'Bearer ' + token;
-        
-  //       if (data.role === 'DOCTOR') {
-  //         navigation.reset({ 
-  //           index: 0, 
-  //           routes: [{ 
-  //             name: 'DoctorHome', 
-  //             params: { userId: data.id } 
-  //           }] 
-  //         });
-  //       } else {
-  //         navigation.reset({ 
-  //           index: 0, 
-  //           routes: [{ 
-  //             name: 'UserHome', 
-  //             params: { userId: data.id } 
-  //           }] 
-  //         });
-  //       }
-  //     }
-  //   } catch (e) {
-  //     // If user doesn't exist, navigate to role selection for registration
-  //     if (e.response?.status === 400 || 
-  //         e.response?.data?.error?.includes('not found') ||
-  //         e.response?.data?.error?.includes('User not found')) {
-  //       navigation.navigate('RoleSelection', { mobile, otp });
-  //     } else {
-  //       Alert.alert('Error', 'Verification failed: ' + (e.response?.data?.error || e.message));
-  //     }
-  //   }
-  //   setLoading(false);
-  // };
-
-  // return (
-  //   <KeyboardAvoidingView 
-  //     style={styles.container} 
-  //     behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-  //     keyboardVerticalOffset={Platform.OS === 'ios' ? 100 : 0}
-  //   >
-  //     <ScrollView 
-  //       contentContainerStyle={styles.scrollContainer}
-  //       showsVerticalScrollIndicator={false}
-  //       keyboardShouldPersistTaps="handled"
-  //     >
-  //       <View style={styles.header}>
-  //         <Text style={styles.title}>Hi 👋</Text>
-  //         <Text style={styles.subtitle}>
-  //           {!otpSent ? 'Enter mobile to login / register' : 'Enter the OTP sent to your mobile'}
-  //         </Text>
-  //       </View>
-
-  //       <View style={styles.form}>
-  //       <View style={styles.inputGroup}>
-  //         <Text style={styles.label}>Mobile Number</Text>
-  //         <TextInput 
-  //           style={[styles.input, otpSent && styles.disabledInput]} 
-  //           keyboardType="phone-pad" 
-  //           placeholder="Enter mobile number" 
-  //           value={mobile} 
-  //           onChangeText={setMobile}
-  //           editable={!otpSent}
-  //           maxLength={10}
-  //         />
-  //         {otpSent && (
-  //           <View style={styles.successMessage}>
-  //             <Text style={styles.successText}>✓ OTP sent to your mobile number</Text>
-  //             <TouchableOpacity 
-  //               style={styles.resendButton} 
-  //               onPress={requestOtp}
-  //               disabled={loading}
-  //             >
-  //               <Text style={styles.resendText}>
-  //                 {loading ? 'Sending...' : 'Resend OTP'}
-  //               </Text>
-  //             </TouchableOpacity>
-  //           </View>
-  //         )}
-  //       </View>
-
-  //       {!otpSent ? (
-  //         <TouchableOpacity 
-  //           style={[styles.primaryButton, loading && styles.disabledButton]} 
-  //           onPress={requestOtp}
-  //           disabled={loading}
-  //         >
-  //           <Text style={styles.primaryButtonText}>
-  //             {loading ? 'Sending...' : 'Request OTP'}
-  //           </Text>
-  //         </TouchableOpacity>
-  //       ) : (
-  //         <>
-  //           <View style={styles.inputGroup}>
-  //             <Text style={styles.label}>OTP</Text>
-  //             <TextInput 
-  //               style={styles.input} 
-  //               keyboardType="number-pad" 
-  //               placeholder="Enter OTP" 
-  //               value={otp} 
-  //               onChangeText={setOtp}
-  //               maxLength={6}
-  //             />
-  //           </View>
-
-  //           <TouchableOpacity 
-  //             style={[styles.primaryButton, (!otp || loading) && styles.disabledButton]} 
-  //             onPress={verifyOtp}
-  //             disabled={!otp || loading}
-  //           >
-  //             <Text style={styles.primaryButtonText}>
-  //               {loading ? 'Verifying...' : 'Verify OTP'}
-  //             </Text>
-  //           </TouchableOpacity>
-
-  //           <TouchableOpacity 
-  //             style={styles.secondaryButton} 
-  //             onPress={() => {
-  //               setOtpSent(false);
-  //               setOtp('');
-  //             }}
-  //           >
-  //             <Text style={styles.secondaryButtonText}>Change Mobile Number</Text>
-  //           </TouchableOpacity>
-  //         </>
-  //       )}
-  //     </View>
-  //     </ScrollView>
-  //   </KeyboardAvoidingView>
-  // );
-
-  // NEW MVP CODE - DIRECT MOBILE VERIFICATION
-  
-  // State for new MVP functionality
+export default function AuthScreen({ navigation }) {
   const [mobile, setMobile] = useState('');
+  const [pin, setPin] = useState('');
+  const [confirmPin, setConfirmPin] = useState('');
+  const [step, setStep] = useState(STEP_MOBILE);
   const [loading, setLoading] = useState(false);
 
-  // Mobile number validation function
+  // ── Validation ────────────────────────────────────────────────────────
   const validateMobileNumber = (number) => {
-    // Remove any non-numeric characters for validation
-    const cleanNumber = number.replace(/\D/g, '');
-    
-    // Check if it's exactly 10 digits
-    if (cleanNumber.length !== 10) {
+    const clean = number.replace(/\D/g, '');
+    if (clean.length !== 10)
       return { isValid: false, message: 'Mobile number must be exactly 10 digits' };
-    }
-    
-    // Check if it starts with 6, 7, 8, or 9
-    const firstDigit = cleanNumber[0];
-    if (!['6', '7', '8', '9'].includes(firstDigit)) {
-      return { isValid: false, message: 'Please enter a valid Mobile Number' };
-    }
-    
+    if (!['6', '7', '8', '9'].includes(clean[0]))
+      return { isValid: false, message: 'Please enter a valid mobile number' };
     return { isValid: true, message: '' };
   };
 
-  // Direct mobile verification (bypassing OTP for MVP)
-  const verifyMobile = async () => {
-    // Validate mobile number
+  const validatePin = (value) => /^[0-9]{4,6}$/.test(value);
+
+  // ── STEP 1: Check if mobile is registered ───────────────────────────────
+  const checkMobile = async () => {
     const validation = validateMobileNumber(mobile);
-    if (!validation.isValid) {
-      showAlert('Error', validation.message);
-      return;
-    }
+    if (!validation.isValid) { showAlert('Error', validation.message); return; }
 
     setLoading(true);
     try {
-      // Call direct mobile verification API using api service
-      console.log('📤 Calling verify-mobile API with mobile:', mobile);
-      console.log('📤 API Endpoint:', API_ENDPOINTS.AUTH.VERIFY_MOBILE);
-      
-      // Use fetch to send raw mobile number (not JSON stringified)
-      const response = await fetch(`${api.defaults.baseURL}${API_ENDPOINTS.AUTH.VERIFY_MOBILE}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': '*/*'
-        },
-        body: mobile // Send as raw string: 9652752837 (not "9652752837")
-      });
-      
-      console.log('📥 Response status:', response.status);
-      console.log('📥 Response headers:', response.headers);
-      
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.log('❌ Error response body:', errorText);
-        throw new Error(`HTTP ${response.status}: ${errorText}`);
-      }
-      
-      const data = await response.json();
-      console.log('📥 API Response data:', data);
-      
-      if (data.status === 'USER_EXISTS') {
-        // User exists but no token - need to complete registration
-        navigation.navigate('RoleSelection', { mobile });
-      } else if (data.token || data.accessToken) {
-        // User exists with token, login successful
-        const token = data.token || data.accessToken;
-        await SecureStore.setItemAsync('accessToken', token);
-        await SecureStore.setItemAsync('role', data.role);
-        await SecureStore.setItemAsync('userId', String(data.id));
-        await SecureStore.setItemAsync('fullName', data.fullName || '');
-        await SecureStore.setItemAsync('mobile', mobile);
-        
-        api.defaults.headers.common['Authorization'] = 'Bearer ' + token;
-        
-        // Register FCM token for push notifications after successful login (only for users)
-        if (data.role === 'USER') {
-          console.log('🔔 Registering FCM token after user login...');
-          try {
-            const fcmResult = await UserNotificationService.forceRegisterFcmToken();
-            console.log('📱 FCM registration result:', fcmResult);
-          } catch (fcmError) {
-            console.warn('⚠️ FCM registration warning (non-blocking):', fcmError);
-            // Don't fail login if FCM fails
-          }
-        }
-        
-        if (data.role === 'DOCTOR') {
-          navigation.reset({ 
-            index: 0, 
-            routes: [{ 
-              name: 'DoctorHome', 
-              params: { userId: data.id } 
-            }] 
-          });
-        } else {
-          navigation.reset({ 
-            index: 0, 
-            routes: [{ 
-              name: 'UserHome', 
-              params: { userId: data.id } 
-            }] 
-          });
-        }
+      const res = await api.post(API_ENDPOINTS.AUTH.CHECK_MOBILE, { mobileNumber: mobile });
+      if (res.data.exists) {
+        setStep(STEP_LOGIN_PIN);
+      } else {
+        setStep(STEP_SET_PIN);
       }
     } catch (e) {
-      // Handle API errors - similar to original OTP verification
-      console.log('❌ Verification error:', e);
-      
-      // Parse the error message to check for user not found
-      const errorMessage = e.message || '';
-      const isUserNotFound = errorMessage.includes('User not found') || 
-                            errorMessage.includes('Please register first') ||
-                            errorMessage.includes('not found');
-      
-      // Check if it's a parsed response with status
-      if (e.response?.data?.status === 'NOT_FOUND' || isUserNotFound) {
-        // User doesn't exist, navigate to role selection for registration
-        console.log('🔄 User not found, navigating to registration...');
-        navigation.navigate('RoleSelection', { mobile });
-      } else if (e.response?.status === 400 || 
-          e.response?.data?.error?.includes('not found') ||
-          e.response?.data?.error?.includes('User not found')) {
-        // User doesn't exist, navigate to role selection for registration
-        console.log('🔄 User not found (400 error), navigating to registration...');
-        navigation.navigate('RoleSelection', { mobile });
-      } else {
-        // Other errors (network, server, etc.)
-        const displayMessage = e.response?.data?.error || e.message || 'Unknown error';
-        showAlert('Error', 'Verification failed: ' + displayMessage);
-      }
+      showAlert('Error', 'Could not verify mobile number. ' + (e.response?.data?.error || e.message));
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
-  // NEW MVP UI
+  // ── STEP 2a: Existing user → Login with PIN ─────────────────────────────
+  const loginWithPin = async () => {
+    if (!validatePin(pin)) { showAlert('Error', 'Enter your 4-6 digit PIN'); return; }
+
+    setLoading(true);
+    try {
+      const res = await api.post(API_ENDPOINTS.AUTH.LOGIN, {
+        mobileNumber: mobile,
+        pin,
+      });
+      await handleAuthSuccess(res.data);
+    } catch (e) {
+      if (e.response?.status === 401) {
+        showAlert('Incorrect PIN', 'The PIN you entered is incorrect. Please try again.');
+        setPin('');
+      } else if (e.response?.status === 404) {
+        // Edge case: user deleted between check & login
+        showAlert('Account not found', 'Please register again.');
+        setStep(STEP_SET_PIN);
+        setPin('');
+        setConfirmPin('');
+      } else if (e.response?.status === 428 || e.response?.data?.status === 'PIN_NOT_SET') {
+        // Existing legacy user without a PIN yet → treat as set-PIN flow
+        showAlert('Set up your PIN', 'Please set a PIN to continue.');
+        setStep(STEP_SET_PIN);
+        setPin('');
+        setConfirmPin('');
+      } else {
+        showAlert('Error', 'Login failed: ' + (e.response?.data?.error || e.message));
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ── STEP 2b: New user → Set PIN → Proceed to Registration ────────────────
+  // No API call here — PIN is validated locally and carried forward to
+  // RoleSelection, which collects the rest of the profile and calls
+  // /api/register/user (with mobileNumber + pin + profile fields) in one go.
+  const proceedToRegistration = () => {
+    if (!validatePin(pin)) { showAlert('Error', 'PIN must be 4-6 digits'); return; }
+    if (pin !== confirmPin) { showAlert('Error', 'PINs do not match'); return; }
+
+    navigation.navigate('RoleSelection', { mobile, pin });
+  };
+
+  // ── Shared success handler (login) ───────────────────────────────────────
+  const handleAuthSuccess = async (data) => {
+    const token = data.accessToken || data.token;
+    await SecureStore.setItemAsync('accessToken', token);
+    await SecureStore.setItemAsync('role', data.role);
+    await SecureStore.setItemAsync('userId', String(data.id));
+    await SecureStore.setItemAsync('fullName', data.fullName || '');
+    await SecureStore.setItemAsync('mobile', data.mobileNumber || mobile);
+
+    api.defaults.headers.common['Authorization'] = 'Bearer ' + token;
+
+    // Register FCM token for push notifications (same as your original code)
+    if (data.role === 'USER') {
+      try {
+        const fcmResult = await UserNotificationService.forceRegisterFcmToken();
+        console.log('📱 FCM registration result:', fcmResult);
+      } catch (fcmError) {
+        console.warn('⚠️ FCM registration warning (non-blocking):', fcmError);
+      }
+    }
+
+    if (!data.fullName || data.fullName === 'Pending') {
+      // Profile incomplete → go to RoleSelection (rest of your old flow)
+      navigation.navigate('RoleSelection', { mobile: data.mobileNumber || mobile, userId: data.id });
+      return;
+    }
+
+    if (data.role === 'DOCTOR') {
+      navigation.reset({ index: 0, routes: [{ name: 'DoctorHome', params: { userId: data.id } }] });
+    } else {
+      navigation.reset({ index: 0, routes: [{ name: 'UserHome', params: { userId: data.id } }] });
+    }
+  };
+
+  // ── Reset to mobile entry ────────────────────────────────────────────────
+  const goBackToMobile = () => {
+    setStep(STEP_MOBILE);
+    setPin('');
+    setConfirmPin('');
+  };
+
+  // ── UI ──────────────────────────────────────────────────────────────────
   return (
-    <KeyboardAvoidingView 
-      style={styles.container} 
+    <KeyboardAvoidingView
+      style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       keyboardVerticalOffset={Platform.OS === 'ios' ? 100 : 0}
     >
-      <ScrollView 
+      <ScrollView
         contentContainerStyle={styles.scrollContainer}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
@@ -333,26 +803,35 @@ export default function AuthScreen({navigation}) {
         <View style={styles.header}>
           <Text style={styles.title}>Hi 👋</Text>
           <Text style={styles.subtitle}>
-            Enter your mobile number to <Text style={styles.boldText}>LOGIN / REGISTER</Text>
+            {step === STEP_MOBILE && (
+              <>Enter your mobile number to <Text style={styles.boldText}>LOGIN / REGISTER</Text></>
+            )}
+            {step === STEP_LOGIN_PIN && 'Enter your PIN to continue'}
+            {step === STEP_SET_PIN && "This number isn't registered yet"}
           </Text>
         </View>
 
         <View style={styles.form}>
+
+          {/* ── Mobile Number Input ── */}
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Mobile Number</Text>
-            <TextInput 
-              style={styles.input} 
-              keyboardType="phone-pad" 
-              placeholder="Enter 10-digit mobile number" 
-              value={mobile} 
-              onChangeText={(text) => {
-                // Only allow numeric input
-                const numericText = text.replace(/[^0-9]/g, '');
-                setMobile(numericText);
-              }}
-              maxLength={10}
-            />
-            {mobile.length > 0 && (
+            <View style={styles.phoneRow}>
+              <View style={styles.countryCode}>
+                <Text style={styles.countryCodeText}>+91</Text>
+              </View>
+              <TextInput
+                style={[styles.input, styles.phoneInput, step !== STEP_MOBILE && styles.disabledInput]}
+                keyboardType="phone-pad"
+                placeholder="10-digit mobile number"
+                value={mobile}
+                onChangeText={text => setMobile(text.replace(/[^0-9]/g, ''))}
+                maxLength={10}
+                editable={step === STEP_MOBILE}
+              />
+            </View>
+
+            {mobile.length > 0 && step === STEP_MOBILE && (
               <View style={styles.validationContainer}>
                 {validateMobileNumber(mobile).isValid ? (
                   <Text style={styles.successText}>✓ Valid mobile number</Text>
@@ -363,285 +842,175 @@ export default function AuthScreen({navigation}) {
             )}
           </View>
 
-          <TouchableOpacity 
-            style={[
-              styles.primaryButton, 
-              (!validateMobileNumber(mobile).isValid || loading) && styles.disabledButton
-            ]} 
-            onPress={verifyMobile}
-            disabled={!validateMobileNumber(mobile).isValid || loading}
-          >
-            <Text style={styles.primaryButtonText}>
-              {loading ? 'Verifying...' : 'Verify Mobile Number'}
-            </Text>
-          </TouchableOpacity>
-          
-          {/* MVP Notice */}
-          {/* <View style={styles.mvpNotice}>
-            <Text style={styles.mvpNoticeText}>
-              🚀 MVP Mode: Direct mobile verification (OTP temporarily disabled)
-            </Text>
-          </View> */}
-        </View>
+          {/* ── STEP: Continue (check mobile) ── */}
+          {step === STEP_MOBILE && (
+            <TouchableOpacity
+              style={[
+                styles.primaryButton,
+                (!validateMobileNumber(mobile).isValid || loading) && styles.disabledButton,
+              ]}
+              onPress={checkMobile}
+              disabled={!validateMobileNumber(mobile).isValid || loading}
+            >
+              {loading
+                ? <ActivityIndicator color="#fff" />
+                : <Text style={styles.primaryButtonText}>Continue</Text>}
+            </TouchableOpacity>
+          )}
 
-        {/* App Download Section - Only on Web */}
-        {/* {Platform.OS === 'web' && (
-          <View style={styles.appPromotionSection}>
-            <View style={styles.appPromotionCard}>
-              <Text style={styles.appPromotionIcon}>📱</Text>
-              <Text style={styles.appPromotionTitle}>For Better Experience, Download Our Mobile App!</Text>
-              <Text style={styles.appPromotionDescription}>
-                Get the full NeextApp experience with our mobile app:
-              </Text>
-              
-              <View style={styles.featuresList}>
-                <View style={styles.featureItem}>
-                  <Text style={styles.featureBullet}>✓</Text>
-                  <Text style={styles.featureText}>Book appointments instantly</Text>
-                </View>
-                <View style={styles.featureItem}>
-                  <Text style={styles.featureBullet}>✓</Text>
-                  <Text style={styles.featureText}>Real-time notifications & reminders</Text>
-                </View>
-                <View style={styles.featureItem}>
-                  <Text style={styles.featureBullet}>✓</Text>
-                  <Text style={styles.featureText}>Manage family appointments</Text>
-                </View>
-                <View style={styles.featureItem}>
-                  <Text style={styles.featureBullet}>✓</Text>
-                  <Text style={styles.featureText}>Access digital prescriptions</Text>
-                </View>
-                <View style={styles.featureItem}>
-                  <Text style={styles.featureBullet}>✓</Text>
-                  <Text style={styles.featureText}>QR code quick check-in</Text>
-                </View>
+          {/* ── STEP: Login with PIN (existing user) ── */}
+          {step === STEP_LOGIN_PIN && (
+            <>
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Enter PIN</Text>
+                <TextInput
+                  style={styles.input}
+                  keyboardType="number-pad"
+                  placeholder="Enter your 4-6 digit PIN"
+                  value={pin}
+                  onChangeText={text => setPin(text.replace(/[^0-9]/g, ''))}
+                  maxLength={6}
+                  secureTextEntry
+                />
               </View>
 
-              <TouchableOpacity 
-                style={styles.downloadButton}
-                onPress={() => {
-                  if (Platform.OS === 'web') {
-                    window.open('https://neextapp.com', '_blank');
-                  }
-                }}
+              <TouchableOpacity
+                style={[styles.primaryButton, (!validatePin(pin) || loading) && styles.disabledButton]}
+                onPress={loginWithPin}
+                disabled={!validatePin(pin) || loading}
               >
-                <Text style={styles.downloadButtonText}>📲 Download NeextApp</Text>
+                {loading
+                  ? <ActivityIndicator color="#fff" />
+                  : <Text style={styles.primaryButtonText}>Login</Text>}
               </TouchableOpacity>
-              
-              <Text style={styles.appPromotionNote}>Available on Android & iOS</Text>
-            </View>
-          </View>
-        )} */}
+
+              <TouchableOpacity style={styles.secondaryButton} onPress={goBackToMobile}>
+                <Text style={styles.secondaryButtonText}>Change Mobile Number</Text>
+              </TouchableOpacity>
+            </>
+          )}
+
+          {/* ── STEP: Set PIN (new user, before registration) ── */}
+          {step === STEP_SET_PIN && (
+            <>
+              <Text style={styles.infoText}>
+                Please set a new PIN for login. You'll use this PIN every time you log in with this number.
+              </Text>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Enter PIN (4-6 digits)</Text>
+                <TextInput
+                  style={styles.input}
+                  keyboardType="number-pad"
+                  placeholder="Enter a PIN"
+                  value={pin}
+                  onChangeText={text => setPin(text.replace(/[^0-9]/g, ''))}
+                  maxLength={6}
+                  secureTextEntry
+                />
+              </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Confirm PIN</Text>
+                <TextInput
+                  style={styles.input}
+                  keyboardType="number-pad"
+                  placeholder="Re-enter your PIN"
+                  value={confirmPin}
+                  onChangeText={text => setConfirmPin(text.replace(/[^0-9]/g, ''))}
+                  maxLength={6}
+                  secureTextEntry
+                />
+              </View>
+
+              {confirmPin.length > 0 && (
+                <View style={styles.validationContainer}>
+                  {pin === confirmPin ? (
+                    <Text style={styles.successText}>✓ PINs match</Text>
+                  ) : (
+                    <Text style={styles.errorText}>⚠ PINs do not match</Text>
+                  )}
+                </View>
+              )}
+
+              <TouchableOpacity
+                style={[
+                  styles.primaryButton,
+                  (!validatePin(pin) || pin !== confirmPin) && styles.disabledButton,
+                ]}
+                onPress={proceedToRegistration}
+                disabled={!validatePin(pin) || pin !== confirmPin}
+              >
+                <Text style={styles.primaryButtonText}>Proceed to Registration</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity style={styles.secondaryButton} onPress={goBackToMobile}>
+                <Text style={styles.secondaryButtonText}>Change Mobile Number</Text>
+              </TouchableOpacity>
+            </>
+          )}
+
+        </View>
+
+        {/* Security note */}
+        <Text style={styles.securityNote}>
+          🔒 Your PIN is securely encrypted and never shared.
+        </Text>
       </ScrollView>
     </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f8f9fa',
-  },
-  scrollContainer: {
-    flexGrow: 1,
-    justifyContent: 'center',
-    padding: 20,
-  },
-  header: {
-    alignItems: 'center',
-    marginBottom: 40,
-  },
-  title: {
-    fontSize: 32,
-    fontWeight: '800',
-    color: '#2c3e50',
-    marginBottom: 8,
-  },
-  subtitle: {
-    fontSize: 16,
-    color: '#7f8c8d',
-    textAlign: 'center',
-    lineHeight: 22,
-  },
+  container: { flex: 1, backgroundColor: '#f8f9fa' },
+  scrollContainer: { flexGrow: 1, justifyContent: 'center', padding: 20 },
+  header: { alignItems: 'center', marginBottom: 40 },
+  title: { fontSize: 32, fontWeight: '800', color: '#2c3e50', marginBottom: 8 },
+  subtitle: { fontSize: 16, color: '#7f8c8d', textAlign: 'center', lineHeight: 22 },
+  boldText: { fontWeight: '700', color: '#2c3e50' },
   form: {
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    padding: 24,
-    elevation: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
+    backgroundColor: '#fff', borderRadius: 16, padding: 24,
+    elevation: 4, shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 8,
   },
-  inputGroup: {
-    marginBottom: 20,
+  inputGroup: { marginBottom: 20 },
+  label: { fontSize: 16, fontWeight: '600', color: '#2c3e50', marginBottom: 8 },
+
+  phoneRow: { flexDirection: 'row', alignItems: 'center' },
+  countryCode: {
+    borderWidth: 1, borderColor: '#ddd', borderRadius: 12,
+    paddingHorizontal: 12, paddingVertical: 16,
+    backgroundColor: '#f0f4f8', marginRight: 8,
   },
-  label: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#2c3e50',
-    marginBottom: 8,
-  },
+  countryCodeText: { fontSize: 16, fontWeight: '600', color: '#2c3e50' },
+  phoneInput: { flex: 1 },
+
   input: {
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 12,
-    padding: 16,
-    fontSize: 16,
-    backgroundColor: '#fff',
+    borderWidth: 1, borderColor: '#ddd', borderRadius: 12,
+    padding: 16, fontSize: 16, backgroundColor: '#fff',
   },
-  disabledInput: {
-    backgroundColor: '#f8f9fa',
-    color: '#7f8c8d',
+  disabledInput: { backgroundColor: '#f8f9fa', color: '#7f8c8d' },
+
+  validationContainer: { marginTop: 6 },
+  successText: { color: '#27ae60', fontSize: 13, fontWeight: '500' },
+  errorText: { color: '#e74c3c', fontSize: 13, fontWeight: '500' },
+
+  infoText: {
+    fontSize: 14, color: '#34495e', backgroundColor: '#eaf2fb',
+    borderRadius: 10, padding: 12, marginBottom: 20, lineHeight: 20,
   },
+
   primaryButton: {
-    backgroundColor: '#3498db',
-    borderRadius: 12,
-    padding: 18,
-    alignItems: 'center',
-    marginBottom: 12,
+    backgroundColor: '#3498db', borderRadius: 12,
+    padding: 18, alignItems: 'center', marginBottom: 12,
   },
-  disabledButton: {
-    backgroundColor: '#bdc3c7',
-  },
-  primaryButtonText: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: '700',
-  },
-  secondaryButton: {
-    padding: 12,
-    alignItems: 'center',
-  },
-  secondaryButtonText: {
-    color: '#3498db',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  successMessage: {
-    marginTop: 8,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  successText: {
-    color: '#27ae60',
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  resendButton: {
-    padding: 4,
-  },
-  resendText: {
-    color: '#3498db',
-    fontSize: 14,
-    fontWeight: '600',
-    textDecorationLine: 'underline',
-  },
-  // NEW STYLES FOR MVP
-  validationContainer: {
-    marginTop: 8,
-  },
-  errorText: {
-    color: '#e74c3c',
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  mvpNotice: {
-    backgroundColor: '#fff3cd',
-    borderRadius: 8,
-    padding: 12,
-    marginTop: 16,
-    borderWidth: 1,
-    borderColor: '#ffeaa7',
-  },
-  mvpNoticeText: {
-    color: '#856404',
-    fontSize: 12,
-    textAlign: 'center',
-    fontWeight: '500',
-  },
-  // App Promotion Section - Web Only
-  appPromotionSection: {
-    marginTop: 32,
-    marginBottom: 20,
-  },
-  appPromotionCard: {
-    backgroundColor: '#ffffff',
-    borderRadius: 16,
-    padding: 24,
-    alignItems: 'center',
-    elevation: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    borderWidth: 2,
-    borderColor: '#3498db',
-  },
-  appPromotionIcon: {
-    fontSize: 48,
-    marginBottom: 12,
-  },
-  appPromotionTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#2c3e50',
-    textAlign: 'center',
-    marginBottom: 12,
-    lineHeight: 28,
-  },
-  appPromotionDescription: {
-    fontSize: 15,
-    color: '#7f8c8d',
-    textAlign: 'center',
-    marginBottom: 20,
-    lineHeight: 22,
-  },
-  featuresList: {
-    width: '100%',
-    marginBottom: 24,
-  },
-  featureItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 12,
-    paddingLeft: 8,
-  },
-  featureBullet: {
-    fontSize: 16,
-    color: '#27ae60',
-    fontWeight: '700',
-    marginRight: 12,
-    width: 20,
-  },
-  featureText: {
-    fontSize: 15,
-    color: '#2c3e50',
-    flex: 1,
-    lineHeight: 22,
-  },
-  downloadButton: {
-    backgroundColor: '#27ae60',
-    borderRadius: 12,
-    padding: 16,
-    width: '100%',
-    alignItems: 'center',
-    marginBottom: 12,
-    shadowColor: '#27ae60',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 6,
-  },
-  downloadButtonText: {
-    color: '#ffffff',
-    fontSize: 18,
-    fontWeight: '700',
-  },
-  appPromotionNote: {
-    fontSize: 13,
-    color: '#95a5a6',
-    fontStyle: 'italic',
+  disabledButton: { backgroundColor: '#bdc3c7' },
+  primaryButtonText: { color: '#fff', fontSize: 18, fontWeight: '700' },
+
+  secondaryButton: { padding: 12, alignItems: 'center' },
+  secondaryButtonText: { color: '#3498db', fontSize: 16, fontWeight: '600' },
+
+  securityNote: {
+    marginTop: 16, textAlign: 'center', fontSize: 12, color: '#95a5a6',
   },
 });

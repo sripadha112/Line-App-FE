@@ -6,17 +6,17 @@ import SecureStore from '../utils/secureStorage';
 import UserNotificationService from '../services/userNotificationService';
 
 export default function UserRegistrationScreen({ navigation, route }) {
-  const { mobile, otp } = route.params || {};
+  const { mobile, pin } = route.params || {};
   
   // Add error handling for missing parameters using useEffect
   useEffect(() => {
-    if (!mobile) {
+    if (!mobile || !pin) {
       navigation.replace('Auth');
     }
-  }, [mobile, navigation]);
+  }, [mobile, pin, navigation]);
 
   // Early return if mobile is missing (prevents rendering until navigation completes)
-  if (!mobile) {
+  if (!mobile || !pin) {
     return null;
   }
 
@@ -69,6 +69,7 @@ export default function UserRegistrationScreen({ navigation, route }) {
     try {
       const body = {
         mobileNumber: String(mobile).trim(),
+        pin: String(pin).trim(),
         fullName: formData.fullName.trim(),
         email: formData.email.trim() ? formData.email.trim().toLowerCase() : null,
         gender: formData.gender.trim(),
@@ -105,28 +106,16 @@ export default function UserRegistrationScreen({ navigation, route }) {
         // Don't fail registration if FCM fails
       }
       
-      Alert.alert(
-        'Registration Successful!', 
-        'Your account has been created successfully.',
-        [
-          {
-            text: 'Continue',
-            onPress: () => {
-              // Navigate to login or home
-              navigation.reset({ 
-                index: 0, 
-                routes: [{ 
-                  name: 'UserHome', 
-                  params: { userId: data.userId || data.id } 
-                }] 
-              });
-            }
-          }
-        ]
-      );
+      navigation.reset({
+        index: 0,
+        routes: [{
+          name: 'UserHome',
+          params: { userId: data.userId || data.id }
+        }]
+      });
     } catch (e) {
       console.error('❌ User registration failed:', e);
-      Alert.alert('Registration Failed', e.response?.data?.error || e.message);
+      Alert.alert('Registration Failed', e.response?.data?.message || e.response?.data?.error || e.message);
     }
     setLoading(false);
   };

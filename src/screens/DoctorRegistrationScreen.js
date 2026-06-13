@@ -46,17 +46,17 @@ const HOUR_OPTIONS = Array.from({ length: 12 }, (_, i) => i + 1);
 const MINUTE_OPTIONS = Array.from({ length: 60 }, (_, i) => i);
 
 export default function DoctorRegistrationScreen({ navigation, route }) {
-  const { mobile, otp } = route.params || {};
+  const { mobile, pin } = route.params || {};
   
   // Add error handling for missing parameters using useEffect
   useEffect(() => {
-    if (!mobile) {
+    if (!mobile || !pin) {
       navigation.replace('Auth');
     }
-  }, [mobile, navigation]);
+  }, [mobile, pin, navigation]);
 
   // Early return if mobile is missing (prevents rendering until navigation completes)
-  if (!mobile) {
+  if (!mobile || !pin) {
     return null;
   }
 
@@ -251,6 +251,7 @@ export default function DoctorRegistrationScreen({ navigation, route }) {
     try {
       const body = {
         mobileNumber: String(mobile).trim(),
+        pin: String(pin).trim(),
         fullName: formData.fullName.trim(),
         email: formData.email.trim().toLowerCase(),
         address: formData.address.trim(),
@@ -300,53 +301,28 @@ export default function DoctorRegistrationScreen({ navigation, route }) {
       await SecureStore.setItemAsync('fullName', formData.fullName);
       await SecureStore.setItemAsync('role', 'DOCTOR');
       await SecureStore.setItemAsync('mobile', mobile);
+      setLoading(false);
       
-      console.log('💾 All user data stored to SecureStore');
-      
-      Alert.alert(
-        'Registration Successful!', 
-        'Your doctor account has been created successfully.',
-        [
-          {
-            text: 'Continue',
-            onPress: async () => {
-              // If we have a token, go directly to DoctorHome
-              const token = data.token || data.accessToken;
-              if (token) {
-                console.log('✅ Navigating to DoctorHome with token');
-                navigation.reset({ 
-                  index: 0, 
-                  routes: [{ 
-                    name: 'DoctorHome', 
-                    params: { userId: data.doctorId || data.id } 
-                  }] 
-                });
-              } else {
-                // No token, need to authenticate - redirect to auth screen
-                console.log('⚠️ No token, redirecting to Auth screen for login');
-                Alert.alert(
-                  'Please Login',
-                  'Registration complete! Please login with your mobile number.',
-                  [
-                    {
-                      text: 'OK',
-                      onPress: () => {
-                        navigation.reset({
-                          index: 0,
-                          routes: [{ name: 'Auth' }]
-                        });
-                      }
-                    }
-                  ]
-                );
-              }
-            }
-          }
-        ]
-      );
+      if (token) {
+        console.log('Navigating to DoctorHome with token');
+        navigation.reset({
+          index: 0,
+          routes: [{
+            name: 'DoctorHome',
+            params: { userId: data.doctorId || data.id }
+          }]
+        });
+      } else {
+        console.log('No token, redirecting to Auth screen for login');
+        navigation.reset({
+          index: 0,
+          routes: [{ name: 'Auth' }]
+        });
+      }
+      return;
     } catch (e) {
       console.error('❌ Doctor registration failed:', e);
-      Alert.alert('Registration Failed', e.response?.data?.error || e.message);
+      Alert.alert('Registration Failed', e.response?.data?.message || e.response?.data?.error || e.message);
     }
     setLoading(false);
   };
