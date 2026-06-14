@@ -1,9 +1,5 @@
 import { Alert, Platform } from 'react-native';
 
-/**
- * Platform-aware Alert utility
- * Works with Alert.alert on native and window.alert/confirm on web
- */
 export const showAlert = (title, message, buttons = [], options = {}) => {
   if (Platform.OS === 'web') {
     // Web implementation
