@@ -5,21 +5,21 @@
   
   <!-- Homepage -->
   <url>
-    <loc>https://neextapp.com/</loc>
+    <loc>https://kedulz.com/</loc>
     <lastmod>2026-03-10</lastmod>
     <changefreq>daily</changefreq>
     <priority>1.0</priority>
     <mobile:mobile/>
     <image:image>
-      <image:loc>https://neextapp.com/assets/Logo.jpeg</image:loc>
-      <image:title>NeextApp - Healthcare Appointment Booking</image:title>
-      <image:caption>Book doctor appointments online with NeextApp</image:caption>
+      <image:loc>https://kedulz.com/assets/Logo.jpeg</image:loc>
+      <image:title>kedulz - Healthcare Appointment Booking</image:title>
+      <image:caption>Book doctor appointments online with kedulz</image:caption>
     </image:image>
   </url>
   
   <!-- Booking Page -->
   <url>
-    <loc>https://neextapp.com/booking/</loc>
+    <loc>https://kedulz.com/booking/</loc>
     <lastmod>2026-03-10</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
@@ -28,7 +28,7 @@
   
   <!-- Appointment Booking App Landing Page -->
   <url>
-    <loc>https://neextapp.com/appointment-booking-app.html</loc>
+    <loc>https://kedulz.com/appointment-booking-app.html</loc>
     <lastmod>2026-05-21</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.95</priority>
@@ -37,7 +37,7 @@
   
   <!-- Book Doctor Appointments Online Landing Page -->
   <url>
-    <loc>https://neextapp.com/book-doctor-appointments-online.html</loc>
+    <loc>https://kedulz.com/book-doctor-appointments-online.html</loc>
     <lastmod>2026-05-21</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.95</priority>
@@ -46,7 +46,7 @@
   
   <!-- NextApp Redirect Page -->
   <url>
-    <loc>https://neextapp.com/nextapp.html</loc>
+    <loc>https://kedulz.com/nextapp.html</loc>
     <lastmod>2026-05-21</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
@@ -55,7 +55,7 @@
   
   <!-- Privacy Policy -->
   <url>
-    <loc>https://neextapp.com/privacy-policy</loc>
+    <loc>https://kedulz.com/privacy-policy</loc>
     <lastmod>2026-04-19</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
@@ -64,7 +64,7 @@
   
   <!-- Terms and Conditions -->
   <url>
-    <loc>https://neextapp.com/terms-and-conditions</loc>
+    <loc>https://kedulz.com/terms-and-conditions</loc>
     <lastmod>2026-04-19</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>

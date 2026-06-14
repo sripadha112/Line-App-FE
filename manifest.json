@@ -1,7 +1,7 @@
 {
-  "short_name": "NeextApp",
-  "name": "NeextApp - Book Doctor Appointments Online",
-  "description": "Book doctor appointments online instantly with NeextApp. Manage family appointments, find doctors near you, and schedule medical consultations easily. Your trusted healthcare appointment booking platform.",
+  "short_name": "kedulz",
+  "name": "kedulz - Book Doctor Appointments Online",
+  "description": "Book doctor appointments online instantly with kedulz. Manage family appointments, find doctors near you, and schedule medical consultations easily. Your trusted healthcare appointment booking platform.",
   "categories": ["health", "medical", "productivity", "lifestyle"],
   "icons": [
     {

@@ -11,7 +11,7 @@ const API_CONFIG = {
 
 // App Download Links
 const APP_DOWNLOAD_LINKS = {
-    DEFAULT: 'https://neextapp.com/download', 
+    DEFAULT: 'https://kedulz.com/download', 
     ANDROID: 'https://play.google.com/store/apps/details?id=com.quickbooking',
     IOS: 'https://apps.apple.com/app/quickbooking/id123456789'
 };
