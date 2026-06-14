@@ -66,7 +66,7 @@ export default function QuickBookingQR({ route, navigation }) {
   const generateBookingURL = (workplace) => {
     // const baseURL = 'http://localhost:8000/';
     // const baseURL = 'https://sripadha112.github.io/QuickBooking/';
-    const baseURL = 'https://neextapp.com/booking/';
+    const baseURL = 'https://kedulz.com/booking/';
     const params = new URLSearchParams();
     
     // Required parameters
@@ -211,10 +211,10 @@ export default function QuickBookingQR({ route, navigation }) {
           // App logo and branding (no background)
           ctx.fillStyle = '#2196F3';
           ctx.font = 'bold 18px Arial';
-          ctx.fillText('🏥 NeextApp - Making Healthcare Accessible', canvas.width / 2, canvas.height - 60);
+          ctx.fillText('🏥 kedulz - Making Healthcare Accessible', canvas.width / 2, canvas.height - 60);
           ctx.font = '13px Arial';
           ctx.fillStyle = '#7f8c8d';
-          ctx.fillText('Visit: neextapp.com', canvas.width / 2, canvas.height - 40);
+          ctx.fillText('Visit: kedulz.com', canvas.width / 2, canvas.height - 40);
           
           // Platform availability
           ctx.font = 'bold 14px Arial';
@@ -226,7 +226,7 @@ export default function QuickBookingQR({ route, navigation }) {
             const url = URL.createObjectURL(blob);
             const link = document.createElement('a');
             link.href = url;
-            link.download = `NeextApp-QR-${workplaceName.replace(/\s+/g, '-')}.png`;
+            link.download = `kedulz-QR-${workplaceName.replace(/\s+/g, '-')}.png`;
             link.click();
             URL.revokeObjectURL(url);
             Alert.alert('Success', 'QR code poster downloaded!');
@@ -386,9 +386,9 @@ export default function QuickBookingQR({ route, navigation }) {
                             style={styles.posterLogoImage}
                             resizeMode="contain"
                           />
-                          <Text style={styles.posterAppNameInline}>NeextApp - Making Healthcare Accessible</Text>
+                          <Text style={styles.posterAppNameInline}>kedulz - Making Healthcare Accessible</Text>
                         </View>
-                        <Text style={styles.posterWebsite}>Visit: neextapp.com</Text>
+                        <Text style={styles.posterWebsite}>Visit: kedulz.com</Text>
                         <Text style={styles.posterAvailability}>✅ Available on Android & Web</Text>
                       </View>
                     </View>

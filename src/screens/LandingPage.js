@@ -394,7 +394,7 @@ export default function LandingPage({ navigation }) {
       {/* Gallery Section */}
       <View style={styles.gallerySection}>
         <Text style={styles.sectionLabel}>APP GALLERY</Text>
-        <Text style={styles.sectionTitle}>Explore NeextApp's Interface</Text>
+        <Text style={styles.sectionTitle}>Explore kedulz's Interface</Text>
         
         <View style={styles.carouselContainer}>
           <View style={styles.carouselWrapper}>
@@ -489,13 +489,13 @@ export default function LandingPage({ navigation }) {
           <View style={[styles.footerInfoCard, styles.footerAboutCard]}>
             <Text style={styles.footerInfoTitle}>About Us</Text>
             <Text style={styles.footerInfoText}>
-              <Text style={styles.footerInfoBrand}>NeextApp</Text> is your trusted healthcare companion, revolutionizing the way you book and manage medical appointments.
+              <Text style={styles.footerInfoBrand}>kedulz</Text> is your trusted healthcare companion, revolutionizing the way you book and manage medical appointments.
             </Text>
             <Text style={styles.footerInfoText}>
               We understand that your time is valuable, and accessing healthcare should be simple and convenient. That's why we've created a seamless platform that connects patients with healthcare providers instantly.
             </Text>
             <Text style={styles.footerInfoText}>
-              Our mission is to make healthcare more accessible for everyone by eliminating the hassles of traditional appointment booking. With NeextApp, you can find doctors, book appointments, manage your family's healthcare, and access your medical history - all in one place.
+              Our mission is to make healthcare more accessible for everyone by eliminating the hassles of traditional appointment booking. With kedulz, you can find doctors, book appointments, manage your family's healthcare, and access your medical history - all in one place.
             </Text>
           </View>
 
@@ -507,7 +507,7 @@ export default function LandingPage({ navigation }) {
             </Text>
             
             <View style={styles.footerContactList}>
-              <Text style={styles.footerContactItem}>Email: developers.neextapp@gmail.com</Text>
+              <Text style={styles.footerContactItem}>Email: developers.kedulz@gmail.com</Text>
               <Text style={styles.footerContactItem}>Phone: +91</Text>
               <Text style={styles.footerContactItem}>Address: Boduppal, Hyderabad, Telangana, 500092</Text>
             </View>
@@ -534,7 +534,7 @@ export default function LandingPage({ navigation }) {
 
         {/* Copyright Footer */}
         <View style={styles.footerCopyright}>
-          <Text style={styles.footerText}>© 2026 NeextApp. Healthcare Made Simple.</Text>
+          <Text style={styles.footerText}>© 2026 kedulz. Healthcare Made Simple.</Text>
           <Text style={styles.footerSubtext}>Your health, our priority</Text>
         </View>
       </View>

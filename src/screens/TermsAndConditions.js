@@ -10,7 +10,7 @@ export default function TermsAndConditions({ navigation }) {
         <Text style={styles.updateDate}>Last Updated: April 19, 2026</Text>
         
         <Text style={styles.paragraph}>
-          Please read these Terms and Conditions ("Terms") carefully before using the NeextApp mobile application and website (the "Service") operated by NeextApp ("us", "we", or "our").
+          Please read these Terms and Conditions ("Terms") carefully before using the kedulz mobile application and website (the "Service") operated by kedulz ("us", "we", or "our").
         </Text>
 
         <Text style={styles.heading}>1. Acceptance of Terms</Text>
@@ -20,7 +20,7 @@ export default function TermsAndConditions({ navigation }) {
 
         <Text style={styles.heading}>2. Description of Service</Text>
         <Text style={styles.paragraph}>
-          NeextApp is a healthcare appointment booking and management platform that connects patients with healthcare providers. The Service includes:{'\n\n'}
+          kedulz is a healthcare appointment booking and management platform that connects patients with healthcare providers. The Service includes:{'\n\n'}
           • Patient registration and profile management{'\n'}
           • Doctor registration and profile management{'\n'}
           • Appointment booking and scheduling{'\n'}
@@ -47,7 +47,7 @@ export default function TermsAndConditions({ navigation }) {
 
         <Text style={styles.heading}>4. Medical Disclaimer</Text>
         <Text style={styles.paragraph}>
-          NeextApp is a PLATFORM ONLY. We do not provide medical advice, diagnosis, or treatment. We do not employ or control healthcare providers. All medical decisions and advice come from the healthcare provider, not NeextApp.
+          kedulz is a PLATFORM ONLY. We do not provide medical advice, diagnosis, or treatment. We do not employ or control healthcare providers. All medical decisions and advice come from the healthcare provider, not kedulz.
         </Text>
 
         <Text style={styles.warningBox}>
@@ -72,7 +72,7 @@ export default function TermsAndConditions({ navigation }) {
 
         <Text style={styles.heading}>7. Limitation of Liability</Text>
         <Text style={styles.paragraph}>
-          NeextApp shall not be liable for any indirect, incidental, special, consequential, or punitive damages resulting from your use or inability to use the Service.
+          kedulz shall not be liable for any indirect, incidental, special, consequential, or punitive damages resulting from your use or inability to use the Service.
         </Text>
 
         <Text style={styles.heading}>8. Changes to Terms</Text>
@@ -83,8 +83,8 @@ export default function TermsAndConditions({ navigation }) {
         <Text style={styles.heading}>9. Contact Us</Text>
         <Text style={styles.paragraph}>
           If you have questions about these Terms, please contact us at:{'\n\n'}
-          Email: support@neextapp.com{'\n'}
-          Website: https://neextapp.com
+          Email: support@kedulz.com{'\n'}
+          Website: https://kedulz.com
         </Text>
 
         <View style={styles.bottomSpace} />

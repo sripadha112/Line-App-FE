@@ -60,7 +60,7 @@
       "icon": "./assets/android/mipmap-hdpi/ic_launcher.png",
       "color": "#2196F3",
       "androidMode": "default",
-      "androidCollapsedTitle": "NeextApp - Appointment Reminder",
+      "androidCollapsedTitle": "kedulz - Appointment Reminder",
       "iosDisplayInForeground": true
     },
     "extra": {

@@ -2,7 +2,7 @@
   "name": "neext-app",
   "version": "1.0.0",
   "main": "index.js",
-  "homepage": "https://neextapp.com",
+  "homepage": "https://kedulz.com",
   "scripts": {
     "start": "expo start",
     "start:prod": "cross-env EXPO_PUBLIC_API_ENV=prod expo start",

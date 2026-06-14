@@ -59,7 +59,7 @@ const Stack = createNativeStackNavigator();
 
 // Linking configuration for web browser navigation
 const linking = {
-  prefixes: ['https://neextapp.com', 'http://localhost:19006'],
+  prefixes: ['https://kedulz.com', 'http://localhost:19006'],
   config: {
     screens: {
       Landing: '',
@@ -182,7 +182,7 @@ export default function App() {
         fallback={<View style={{flex:1,justifyContent:'center',alignItems:'center'}}><ActivityIndicator/></View>}
         documentTitle={{
           formatter: (options, route) => 
-            options?.title ? `${options.title} - NeextApp` : 'NeextApp - Healthcare Appointments'
+            options?.title ? `${options.title} - kedulz` : 'kedulz - Healthcare Appointments'
         }}
         onReady={() => {
           // Set navigation reference when container is ready
@@ -193,7 +193,7 @@ export default function App() {
         <Stack.Screen 
           name="Landing" 
           component={LandingPage} 
-          options={{headerShown:false, title:'NeextApp - Healthcare Made Simple'}} 
+          options={{headerShown:false, title:'kedulz - Healthcare Made Simple'}} 
         />
         <Stack.Screen name="Auth" component={AuthScreen} options={{headerShown:false, title:'Login'}} />
         <Stack.Screen name="OtpVerify" component={OtpVerifyScreen} options={{title:'Verify OTP', headerShown: Platform.OS !== 'web'}} />

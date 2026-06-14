@@ -446,13 +446,13 @@ export default function DoctorHome({ navigation, route }) {
   const contactDevelopers = () => {
     showAlert(
       'Contact Developers',
-      'This will open your email app to send feedback to our development team at developers.neextapp@gmail.com. Do you want to continue?',
+      'This will open your email app to send feedback to our development team at developers.kedulz@gmail.com. Do you want to continue?',
       [
         { text: 'Cancel', style: 'cancel' },
         {
           text: 'Open Email',
           onPress: () => {
-            const email = 'developers.neextapp@gmail.com';
+            const email = 'developers.kedulz@gmail.com';
             const subject = 'Feedback from Neext App Doctor';
             const body = `Hello Neext App Developers,
 

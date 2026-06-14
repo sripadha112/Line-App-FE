@@ -10,7 +10,7 @@ export default function PrivacyPolicy({ navigation }) {
         <Text style={styles.updateDate}>Last Updated: April 19, 2026</Text>
         
         <Text style={styles.paragraph}>
-          NeextApp ("we", "us", or "our") is committed to protecting your privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our mobile application and website.
+          kedulz ("we", "us", or "our") is committed to protecting your privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our mobile application and website.
         </Text>
 
         <Text style={styles.paragraph}>
@@ -128,9 +128,9 @@ export default function PrivacyPolicy({ navigation }) {
         <Text style={styles.heading}>9. Contact Us</Text>
         <Text style={styles.paragraph}>
           If you have questions about this Privacy Policy, please contact us:{'\n\n'}
-          Email: privacy@neextapp.com{'\n'}
-          Website: https://neextapp.com{'\n'}
-          Address: NeextApp, India
+          Email: privacy@kedulz.com{'\n'}
+          Website: https://kedulz.com{'\n'}
+          Address: kedulz, India
         </Text>
 
         <View style={styles.bottomSpace} />

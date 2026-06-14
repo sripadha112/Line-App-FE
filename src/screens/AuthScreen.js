@@ -391,7 +391,7 @@
 //               <Text style={styles.appPromotionIcon}>📱</Text>
 //               <Text style={styles.appPromotionTitle}>For Better Experience, Download Our Mobile App!</Text>
 //               <Text style={styles.appPromotionDescription}>
-//                 Get the full NeextApp experience with our mobile app:
+//                 Get the full kedulz experience with our mobile app:
 //               </Text>
               
 //               <View style={styles.featuresList}>
@@ -421,11 +421,11 @@
 //                 style={styles.downloadButton}
 //                 onPress={() => {
 //                   if (Platform.OS === 'web') {
-//                     window.open('https://neextapp.com', '_blank');
+//                     window.open('https://kedulz.com', '_blank');
 //                   }
 //                 }}
 //               >
-//                 <Text style={styles.downloadButtonText}>📲 Download NeextApp</Text>
+//                 <Text style={styles.downloadButtonText}>📲 Download kedulz</Text>
 //               </TouchableOpacity>
               
 //               <Text style={styles.appPromotionNote}>Available on Android & iOS</Text>

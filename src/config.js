@@ -16,8 +16,8 @@ const PROFILES = {
 		// web: 'https://line-application-latest.onrender.com',
 		// mobile: 'https://line-application-latest.onrender.com',
 		// NEW: AWS EC2 deployment
-		web: 'https://api.neextapp.com',
-		mobile: 'https://api.neextapp.com',
+		web: 'https://api.kedulz.com',
+		mobile: 'https://api.kedulz.com',
 		description: 'Production server on AWS EC2'
 	}
 };

@@ -1,14 +1,14 @@
 {
   "application": {
-    "name": "NeextApp",
+    "name": "kedulz",
     "alternateNames": ["Neext App", "Next App", "NextApp", "Neext"],
     "tagline": "Book Doctor Appointments Online Instantly",
-    "description": "NeextApp is a comprehensive healthcare appointment booking platform that enables patients to book doctor appointments online instantly, manage family appointments, find doctors near them, and access digital prescriptions.",
+    "description": "kedulz is a comprehensive healthcare appointment booking platform that enables patients to book doctor appointments online instantly, manage family appointments, find doctors near them, and access digital prescriptions.",
     "category": "Healthcare",
     "subcategory": "Appointment Booking",
     "type": "Mobile & Web Application",
-    "website": "https://neextapp.com",
-    "email": "developers.neextapp@gmail.com",
+    "website": "https://kedulz.com",
+    "email": "developers.kedulz@gmail.com",
     "version": "1.0.0",
     "pricing": "Free for patients",
     "platforms": ["iOS", "Android", "Web"],
@@ -147,49 +147,49 @@
   
   "faq": [
     {
-      "question": "What is NeextApp?",
-      "answer": "NeextApp is a comprehensive healthcare appointment booking platform that allows users to book doctor appointments online instantly. It helps patients find doctors near them, manage family appointments, receive reminders, and access digital prescriptions."
+      "question": "What is kedulz?",
+      "answer": "kedulz is a comprehensive healthcare appointment booking platform that allows users to book doctor appointments online instantly. It helps patients find doctors near them, manage family appointments, receive reminders, and access digital prescriptions."
     },
     {
-      "question": "How do I book an appointment on NeextApp?",
+      "question": "How do I book an appointment on kedulz?",
       "answer": "To book an appointment: 1) Search for doctors by specialty or location, 2) Choose available time slots, 3) Confirm your booking with just a few clicks, 4) Receive instant confirmation and reminders."
     },
     {
-      "question": "Is NeextApp free to use?",
-      "answer": "Yes, NeextApp is 100% free for patients. You can book unlimited appointments, manage family members, and access all features without any charges."
+      "question": "Is kedulz free to use?",
+      "answer": "Yes, kedulz is 100% free for patients. You can book unlimited appointments, manage family members, and access all features without any charges."
     },
     {
       "question": "Can I manage appointments for my family members?",
-      "answer": "Yes, NeextApp allows you to add and manage appointments for all your family members from a single account, making it convenient to handle healthcare for your entire family."
+      "answer": "Yes, kedulz allows you to add and manage appointments for all your family members from a single account, making it convenient to handle healthcare for your entire family."
     },
     {
-      "question": "What platforms is NeextApp available on?",
-      "answer": "NeextApp is available on iOS, Android smartphones, and as a web application. You can access it from any device with internet connectivity."
+      "question": "What platforms is kedulz available on?",
+      "answer": "kedulz is available on iOS, Android smartphones, and as a web application. You can access it from any device with internet connectivity."
     },
     {
       "question": "How do I cancel or reschedule an appointment?",
-      "answer": "You can easily cancel or reschedule appointments directly from the NeextApp. Go to your appointments list, select the appointment you want to modify, and choose either reschedule or cancel option."
+      "answer": "You can easily cancel or reschedule appointments directly from the kedulz. Go to your appointments list, select the appointment you want to modify, and choose either reschedule or cancel option."
     },
     {
       "question": "Do I get reminders for my appointments?",
-      "answer": "Yes, NeextApp sends push notifications and reminders before your scheduled appointments to ensure you never miss them."
+      "answer": "Yes, kedulz sends push notifications and reminders before your scheduled appointments to ensure you never miss them."
     },
     {
       "question": "Can I see my appointment history?",
       "answer": "Yes, you can access your complete appointment history including past appointments, prescriptions, and medical records anytime from your profile."
     },
     {
-      "question": "How do doctors join NeextApp?",
-      "answer": "Doctors can register on NeextApp, set up their profile with specialization and availability, and start accepting appointments from patients online."
+      "question": "How do doctors join kedulz?",
+      "answer": "Doctors can register on kedulz, set up their profile with specialization and availability, and start accepting appointments from patients online."
     },
     {
       "question": "Is my medical information secure?",
-      "answer": "Yes, NeextApp takes data security seriously and implements industry-standard encryption and security measures to protect your medical information."
+      "answer": "Yes, kedulz takes data security seriously and implements industry-standard encryption and security measures to protect your medical information."
     }
   ],
   
   "keywords": [
-    "neextapp",
+    "kedulz",
     "next app",
     "nextapp",
     "neext",
@@ -214,12 +214,12 @@
   ],
   
   "seo": {
-    "title": "NeextApp - Book Doctor Appointments Online | Healthcare Appointment Booking App",
-    "metaDescription": "Book doctor appointments instantly with NeextApp. Find doctors near you, manage family appointments, get reminders & access digital prescriptions. 100% Free!",
-    "canonicalUrl": "https://neextapp.com",
-    "ogTitle": "NeextApp - Book Doctor Appointments Online",
-    "ogDescription": "Book doctor appointments online instantly. Manage family appointments, find doctors near you with NeextApp.",
-    "ogImage": "https://neextapp.com/assets/Logo.jpeg"
+    "title": "kedulz - Book Doctor Appointments Online | Healthcare Appointment Booking App",
+    "metaDescription": "Book doctor appointments instantly with kedulz. Find doctors near you, manage family appointments, get reminders & access digital prescriptions. 100% Free!",
+    "canonicalUrl": "https://kedulz.com",
+    "ogTitle": "kedulz - Book Doctor Appointments Online",
+    "ogDescription": "Book doctor appointments online instantly. Manage family appointments, find doctors near you with kedulz.",
+    "ogImage": "https://kedulz.com/assets/Logo.jpeg"
   },
   
   "technicalDetails": {
@@ -232,8 +232,8 @@
   },
   
   "contact": {
-    "email": "developers.neextapp@gmail.com",
-    "website": "https://neextapp.com",
+    "email": "developers.kedulz@gmail.com",
+    "website": "https://kedulz.com",
     "supportType": "Email Support"
   }
 }
