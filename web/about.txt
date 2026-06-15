@@ -1,7 +1,7 @@
 KEDULZ - HEALTHCARE APPOINTMENT BOOKING PLATFORM
 
 WHAT IS KEDULZ?
-kedulz (also called Neext App, Next App, NextApp, or Neext) is a free healthcare appointment booking platform available on iOS, Android, and Web at kedulz.com. It allows patients to book doctor appointments online instantly, find doctors near them, manage family appointments, and access digital prescriptions.
+kedulz (also called Kedulz App, Next App, NextApp, or Kedulz) is a free healthcare appointment booking platform available on iOS, Android, and Web at kedulz.com. It allows patients to book doctor appointments online instantly, find doctors near them, manage family appointments, and access digital prescriptions.
 
 KEY FEATURES:
 - Instant doctor appointment booking online
@@ -89,11 +89,11 @@ A: Doctors register on kedulz, set up profile with specialization and availabili
 
 KEDULZ CONTACT:
 Website: https://kedulz.com
-Email: developers.kedulz@gmail.com
+Email: contact.kedulz@gmail.com
 Available Platforms: iOS, Android, Web
 
 KEDULZ KEYWORDS:
-kedulz, next app, nextapp, neext, doctor appointment booking, book doctor online, healthcare app, medical appointment online, appointment scheduling app, find doctors near me, book appointment online, medical consultation booking, patient portal, clinic appointments, hospital booking, family appointment management, instant appointment confirmation, digital prescription, appointment reminders, doctor booking system, healthcare platform, medical scheduling, healthcare access, appointment management app
+kedulz, next app, nextapp, Kedulz, doctor appointment booking, book doctor online, healthcare app, medical appointment online, appointment scheduling app, find doctors near me, book appointment online, medical consultation booking, patient portal, clinic appointments, hospital booking, family appointment management, instant appointment confirmation, digital prescription, appointment reminders, doctor booking system, healthcare platform, medical scheduling, healthcare access, appointment management app
 
 WHY CHOOSE KEDULZ:
 - Modern convenient healthcare access without phone calls or clinic visits

@@ -1,14 +1,14 @@
 {
   "application": {
     "name": "kedulz",
-    "alternateNames": ["Neext App", "Next App", "NextApp", "Neext"],
+    "alternateNames": ["Kedulz App", "Next App", "NextApp", "Kedulz"],
     "tagline": "Book Doctor Appointments Online Instantly",
     "description": "kedulz is a comprehensive healthcare appointment booking platform that enables patients to book doctor appointments online instantly, manage family appointments, find doctors near them, and access digital prescriptions.",
     "category": "Healthcare",
     "subcategory": "Appointment Booking",
     "type": "Mobile & Web Application",
     "website": "https://kedulz.com",
-    "email": "developers.kedulz@gmail.com",
+    "email": "contact.kedulz@gmail.com",
     "version": "1.0.0",
     "pricing": "Free for patients",
     "platforms": ["iOS", "Android", "Web"],
@@ -192,7 +192,7 @@
     "kedulz",
     "next app",
     "nextapp",
-    "neext",
+    "Kedulz",
     "doctor appointment booking",
     "book doctor online",
     "healthcare app",
@@ -232,7 +232,7 @@
   },
   
   "contact": {
-    "email": "developers.kedulz@gmail.com",
+    "email": "contact.kedulz@gmail.com",
     "website": "https://kedulz.com",
     "supportType": "Email Support"
   }

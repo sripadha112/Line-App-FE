@@ -507,7 +507,7 @@ export default function LandingPage({ navigation }) {
             </Text>
             
             <View style={styles.footerContactList}>
-              <Text style={styles.footerContactItem}>Email: developers.kedulz@gmail.com</Text>
+              <Text style={styles.footerContactItem}>Email: contact.kedulz@gmail.com</Text>
               <Text style={styles.footerContactItem}>Phone: +91</Text>
               <Text style={styles.footerContactItem}>Address: Boduppal, Hyderabad, Telangana, 500092</Text>
             </View>

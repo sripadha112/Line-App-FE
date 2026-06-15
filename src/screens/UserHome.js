@@ -272,17 +272,17 @@ export default function UserHome({ route, navigation }) {
   const contactDevelopers = () => {
     showAlert(
       'Contact Developers',
-      'This will open your email app to send feedback to our development team at developers.kedulz@gmail.com. Do you want to continue?',
+      'This will open your email app to send feedback to our development team at contact.kedulz@gmail.com. Do you want to continue?',
       [
         { text: 'Cancel', style: 'cancel' },
         {
           text: 'Open Email',
           onPress: () => {
-            const email = 'developers.kedulz@gmail.com';
-            const subject = 'Feedback from Neext App User';
-            const body = `Hello Neext App Developers,
+            const email = 'contact.kedulz@gmail.com';
+            const subject = 'Feedback from Kedulz App User';
+            const body = `Hello Kedulz App Developers,
 
-I am writing to provide feedback about the Neext App.
+I am writing to provide feedback about the Kedulz App.
 
 User Type: User
 Mobile: ${userProfile?.mobileNumber || 'N/A'}
@@ -293,7 +293,7 @@ My feedback/issue:
 
 
 Best regards,
-${userProfile?.fullName || 'Neext App User'}`;
+${userProfile?.fullName || 'Kedulz App User'}`;
 
             const mailto = `mailto:${email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
             

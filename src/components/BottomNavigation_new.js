@@ -18,7 +18,7 @@ export default function BottomNavigation({ activeTab, onTabChange, onRefresh, us
   const handleReferFriend = async () => {
     Alert.alert(
       'Refer Friends',
-      'Share Neext App with your friends via WhatsApp and help them book appointments easily!',
+      'Share Kedulz App with your friends via WhatsApp and help them book appointments easily!',
       [
         { text: 'Cancel', style: 'cancel' },
         {
