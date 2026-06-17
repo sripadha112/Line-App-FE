@@ -649,18 +649,53 @@
 import React, { useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
-  ScrollView, KeyboardAvoidingView, Platform, ActivityIndicator
+  ScrollView, KeyboardAvoidingView, Platform, ActivityIndicator,
+  Animated, Easing
 } from 'react-native';
 import api from '../services/api';
 import SecureStore from '../utils/secureStorage';
 import { API_ENDPOINTS } from '../config/apiConfig';
 import UserNotificationService from '../services/userNotificationService';
 import { showAlert } from '../utils/alertUtils';
+// import { EncryptionService } from '../utils/encryption';
 
 // ── Step constants ────────────────────────────────────────────────────────
-const STEP_MOBILE = 'mobile';      // entering mobile number
-const STEP_LOGIN_PIN = 'login_pin'; // existing user → enter PIN to login
-const STEP_SET_PIN = 'set_pin';     // new user → set PIN before registration
+const STEP_MOBILE = 'mobile';
+const STEP_LOGIN_PIN = 'login_pin';
+const STEP_SET_PIN = 'set_pin';
+const STEP_CREATE_PIN = 'create_pin';
+
+// ── Design tokens ────────────────────────────────────────────────────────
+const COLORS = {
+  primary: '#2563eb',      // Modern blue
+  primaryDark: '#1e40af',  // Darker blue for hover
+  success: '#10b981',      // Green
+  error: '#ef4444',        // Red
+  warning: '#f59e0b',      // Amber
+  bg: '#f9fafb',           // Light gray
+  bgCard: '#ffffff',       // White
+  text: '#111827',         // Dark gray/black
+  textSecondary: '#6b7280', // Gray
+  border: '#e5e7eb',       // Light border
+  disabled: '#d1d5db',     // Disabled gray
+};
+
+const SPACING = {
+  xs: 4,
+  sm: 8,
+  md: 12,
+  lg: 16,
+  xl: 20,
+  xxl: 24,
+  xxxl: 32,
+};
+
+const RADIUS = {
+  sm: 8,
+  md: 12,
+  lg: 16,
+  full: 999,
+};
 
 export default function AuthScreen({ navigation }) {
   const [mobile, setMobile] = useState('');
@@ -668,34 +703,69 @@ export default function AuthScreen({ navigation }) {
   const [confirmPin, setConfirmPin] = useState('');
   const [step, setStep] = useState(STEP_MOBILE);
   const [loading, setLoading] = useState(false);
+  const [userId, setUserId] = useState(null);
+  const [fadeAnim] = useState(new Animated.Value(0));
+
+  // ── Trigger fade animation when step changes ──
+  React.useEffect(() => {
+    fadeAnim.setValue(0);
+    Animated.timing(fadeAnim, {
+      toValue: 1,
+      duration: 300,
+      easing: Easing.ease,
+      useNativeDriver: true,
+    }).start();
+  }, [step, fadeAnim]);
 
   // ── Validation ────────────────────────────────────────────────────────
   const validateMobileNumber = (number) => {
     const clean = number.replace(/\D/g, '');
     if (clean.length !== 10)
-      return { isValid: false, message: 'Mobile number must be exactly 10 digits' };
+      return { isValid: false, message: 'Mobile number must be 10 digits' };
     if (!['6', '7', '8', '9'].includes(clean[0]))
-      return { isValid: false, message: 'Please enter a valid mobile number' };
+      return { isValid: false, message: 'Enter a valid Indian mobile number' };
     return { isValid: true, message: '' };
   };
 
   const validatePin = (value) => /^[0-9]{4,6}$/.test(value);
 
+  const validatePinMatch = (pin1, pin2) => pin1 === pin2 && pin1.length > 0;
+
   // ── STEP 1: Check if mobile is registered ───────────────────────────────
   const checkMobile = async () => {
     const validation = validateMobileNumber(mobile);
-    if (!validation.isValid) { showAlert('Error', validation.message); return; }
+
+    if (!validation.isValid) {
+      showAlert('Invalid Mobile', validation.message);
+      return;
+    }
 
     setLoading(true);
+
     try {
-      const res = await api.post(API_ENDPOINTS.AUTH.CHECK_MOBILE, { mobileNumber: mobile });
-      if (res.data.exists) {
+      const res = await api.post(
+        API_ENDPOINTS.AUTH.CHECK_MOBILE,
+        { mobileNumber: mobile }
+      );
+
+      const { mobileExists, pinExists, userId } = res.data;
+
+      if (!mobileExists) {
+        // New user → Set PIN before registration
+        setStep(STEP_SET_PIN);
+      } else if (pinExists) {
+        // Existing user with PIN → Login
         setStep(STEP_LOGIN_PIN);
       } else {
-        setStep(STEP_SET_PIN);
+        // Existing user without PIN → Create PIN
+        setUserId(userId);
+        setStep(STEP_CREATE_PIN);
       }
     } catch (e) {
-      showAlert('Error', 'Could not verify mobile number. ' + (e.response?.data?.error || e.message));
+      showAlert(
+        'Error',
+        'Unable to verify mobile: ' + (e.response?.data?.error || e.message)
+      );
     } finally {
       setLoading(false);
     }
@@ -703,7 +773,10 @@ export default function AuthScreen({ navigation }) {
 
   // ── STEP 2a: Existing user → Login with PIN ─────────────────────────────
   const loginWithPin = async () => {
-    if (!validatePin(pin)) { showAlert('Error', 'Enter your 4-6 digit PIN'); return; }
+    if (!validatePin(pin)) {
+      showAlert('Invalid PIN', 'Enter a 4-6 digit PIN');
+      return;
+    }
 
     setLoading(true);
     try {
@@ -714,40 +787,90 @@ export default function AuthScreen({ navigation }) {
       await handleAuthSuccess(res.data);
     } catch (e) {
       if (e.response?.status === 401) {
-        showAlert('Incorrect PIN', 'The PIN you entered is incorrect. Please try again.');
+        showAlert('Incorrect PIN', 'Please try again.');
         setPin('');
       } else if (e.response?.status === 404) {
-        // Edge case: user deleted between check & login
-        showAlert('Account not found', 'Please register again.');
-        setStep(STEP_SET_PIN);
-        setPin('');
-        setConfirmPin('');
+        showAlert('Account Not Found', 'Please register again.');
+        resetFlow();
       } else if (e.response?.status === 428 || e.response?.data?.status === 'PIN_NOT_SET') {
-        // Existing legacy user without a PIN yet → treat as set-PIN flow
-        showAlert('Set up your PIN', 'Please set a PIN to continue.');
-        setStep(STEP_SET_PIN);
+        setUserId(e.response?.data?.userId);
+        setStep(STEP_CREATE_PIN);
         setPin('');
         setConfirmPin('');
       } else {
-        showAlert('Error', 'Login failed: ' + (e.response?.data?.error || e.message));
+        showAlert('Login Failed', e.response?.data?.error || 'Unknown error');
       }
     } finally {
       setLoading(false);
     }
   };
 
-  // ── STEP 2b: New user → Set PIN → Proceed to Registration ────────────────
-  // No API call here — PIN is validated locally and carried forward to
-  // RoleSelection, which collects the rest of the profile and calls
-  // /api/register/user (with mobileNumber + pin + profile fields) in one go.
+  // ── STEP 2b: Create PIN for existing user (no PIN yet) ────────────────────
+  const createPinForExistingUser = async () => {
+    if (!validatePin(pin)) {
+      showAlert('Invalid PIN', 'PIN must be 4-6 digits');
+      return;
+    }
+
+    if (!validatePinMatch(pin, confirmPin)) {
+      showAlert('PIN Mismatch', 'PINs do not match');
+      return;
+    }
+
+    if (!userId) {
+      showAlert('Error', 'User ID missing');
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      // Encrypt sensitive parameters
+      // const encryptedPin = EncryptionService.encrypt(pin);
+      // const encryptedId = EncryptionService.encrypt(String(userId));
+
+      const encryptedPin = pin;
+      const encryptedId = userId;
+
+      if (!encryptedPin || !encryptedId) {
+        showAlert('Error', 'Failed to encrypt parameters');
+        setLoading(false);
+        return;
+      }
+
+      // Make API call with encrypted parameters
+      await api.put(
+        `${API_ENDPOINTS.AUTH.SET_PIN}?pin=${encryptedPin}&id=${encryptedId}`
+      );
+
+      showAlert('Success', 'PIN created. Please log in.');
+      setPin('');
+      setConfirmPin('');
+      setStep(STEP_LOGIN_PIN);
+    } catch (e) {
+      const errorMsg = e.response?.data?.message || e.message || 'Failed to create PIN';
+      showAlert('Error', errorMsg);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ── STEP 2c: Set PIN for new user (before registration) ──────────────────
   const proceedToRegistration = () => {
-    if (!validatePin(pin)) { showAlert('Error', 'PIN must be 4-6 digits'); return; }
-    if (pin !== confirmPin) { showAlert('Error', 'PINs do not match'); return; }
+    if (!validatePin(pin)) {
+      showAlert('Invalid PIN', 'PIN must be 4-6 digits');
+      return;
+    }
+
+    if (!validatePinMatch(pin, confirmPin)) {
+      showAlert('PIN Mismatch', 'PINs do not match');
+      return;
+    }
 
     navigation.navigate('RoleSelection', { mobile, pin });
   };
 
-  // ── Shared success handler (login) ───────────────────────────────────────
+  // ── Shared success handler ────────────────────────────────────────────────
   const handleAuthSuccess = async (data) => {
     const token = data.accessToken || data.token;
     await SecureStore.setItemAsync('accessToken', token);
@@ -756,261 +879,516 @@ export default function AuthScreen({ navigation }) {
     await SecureStore.setItemAsync('fullName', data.fullName || '');
     await SecureStore.setItemAsync('mobile', data.mobileNumber || mobile);
 
-    api.defaults.headers.common['Authorization'] = 'Bearer ' + token;
+    api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
 
-    // Register FCM token for push notifications (same as your original code)
+    // Register FCM token
     if (data.role === 'USER') {
       try {
         const fcmResult = await UserNotificationService.forceRegisterFcmToken();
-        console.log('📱 FCM registration result:', fcmResult);
+        console.log('📱 FCM registered:', fcmResult);
       } catch (fcmError) {
-        console.warn('⚠️ FCM registration warning (non-blocking):', fcmError);
+        console.warn('⚠️ FCM warning (non-blocking):', fcmError);
       }
     }
 
+    // Navigate based on profile completion
     if (!data.fullName || data.fullName === 'Pending') {
-      // Profile incomplete → go to RoleSelection (rest of your old flow)
-      navigation.navigate('RoleSelection', { mobile: data.mobileNumber || mobile, userId: data.id });
+      navigation.navigate('RoleSelection', {
+        mobile: data.mobileNumber || mobile,
+        userId: data.id,
+      });
       return;
     }
 
     if (data.role === 'DOCTOR') {
-      navigation.reset({ index: 0, routes: [{ name: 'DoctorHome', params: { userId: data.id } }] });
+      navigation.reset({
+        index: 0,
+        routes: [{ name: 'DoctorHome', params: { userId: data.id } }],
+      });
     } else {
-      navigation.reset({ index: 0, routes: [{ name: 'UserHome', params: { userId: data.id } }] });
+      navigation.reset({
+        index: 0,
+        routes: [{ name: 'UserHome', params: { userId: data.id } }],
+      });
     }
   };
 
   // ── Reset to mobile entry ────────────────────────────────────────────────
-  const goBackToMobile = () => {
+  const resetFlow = () => {
     setStep(STEP_MOBILE);
     setPin('');
     setConfirmPin('');
+    setUserId(null);
   };
 
-  // ── UI ──────────────────────────────────────────────────────────────────
+  // ── UI: Header ──────────────────────────────────────────────────────────
+  const renderHeader = () => (
+    <View style={styles.header}>
+      <Text style={styles.emoji}>👋</Text>
+      <Text style={styles.title}>Welcome</Text>
+      <Text style={styles.subtitle}>
+        {step === STEP_MOBILE && 'Enter your mobile number to login or register'}
+        {step === STEP_LOGIN_PIN && 'Enter your PIN to continue'}
+        {step === STEP_SET_PIN && 'Create a secure PIN for your new account'}
+        {step === STEP_CREATE_PIN && 'Set up your PIN to complete registration'}
+      </Text>
+    </View>
+  );
+
+  // ── UI: Mobile Input ────────────────────────────────────────────────────
+  const renderMobileInput = () => (
+    <View style={styles.inputGroup}>
+      <Text style={styles.label}>Mobile Number</Text>
+      <View style={styles.phoneRow}>
+        <View style={styles.countryCode}>
+          <Text style={styles.countryCodeText}>🇮🇳 +91</Text>
+        </View>
+        <TextInput
+          style={[
+            styles.input,
+            styles.phoneInput,
+            step !== STEP_MOBILE && styles.disabledInput,
+          ]}
+          keyboardType="phone-pad"
+          placeholder="10-digit number"
+          value={mobile}
+          onChangeText={(text) => setMobile(text.replace(/[^0-9]/g, ''))}
+          maxLength={10}
+          editable={step === STEP_MOBILE}
+          placeholderTextColor={COLORS.textSecondary}
+        />
+      </View>
+      {mobile.length > 0 && step === STEP_MOBILE && (
+        <View style={styles.validationContainer}>
+          {validateMobileNumber(mobile).isValid ? (
+            <View style={styles.validRow}>
+              <Text style={styles.validIcon}>✓</Text>
+              <Text style={styles.successText}>Valid number</Text>
+            </View>
+          ) : (
+            <View style={styles.validRow}>
+              <Text style={styles.errorIcon}>⚠</Text>
+              <Text style={styles.errorText}>{validateMobileNumber(mobile).message}</Text>
+            </View>
+          )}
+        </View>
+      )}
+    </View>
+  );
+
+  // ── UI: PIN Input ──────────────────────────────────────────────────────
+  const renderPinInputs = ({ showConfirm = false }) => (
+    <>
+      <View style={styles.inputGroup}>
+        <Text style={styles.label}>PIN</Text>
+        <TextInput
+          style={styles.input}
+          keyboardType="number-pad"
+          placeholder="4–6 digits"
+          value={pin}
+          onChangeText={(text) => setPin(text.replace(/[^0-9]/g, ''))}
+          maxLength={6}
+          secureTextEntry
+          placeholderTextColor={COLORS.textSecondary}
+        />
+      </View>
+
+      {showConfirm && (
+        <View style={styles.inputGroup}>
+          <Text style={styles.label}>Confirm PIN</Text>
+          <TextInput
+            style={styles.input}
+            keyboardType="number-pad"
+            placeholder="Re-enter PIN"
+            value={confirmPin}
+            onChangeText={(text) => setConfirmPin(text.replace(/[^0-9]/g, ''))}
+            maxLength={6}
+            secureTextEntry
+            placeholderTextColor={COLORS.textSecondary}
+          />
+        </View>
+      )}
+
+      {showConfirm && confirmPin.length > 0 && (
+        <View style={styles.validationContainer}>
+          {validatePinMatch(pin, confirmPin) ? (
+            <View style={styles.validRow}>
+              <Text style={styles.validIcon}>✓</Text>
+              <Text style={styles.successText}>PINs match</Text>
+            </View>
+          ) : (
+            <View style={styles.validRow}>
+              <Text style={styles.errorIcon}>⚠</Text>
+              <Text style={styles.errorText}>PINs do not match</Text>
+            </View>
+          )}
+        </View>
+      )}
+    </>
+  );
+
+  // ── UI: Button ──────────────────────────────────────────────────────────
+  const renderButton = ({
+    onPress,
+    text,
+    disabled = false,
+    variant = 'primary',
+  }) => (
+    <TouchableOpacity
+      style={[
+        styles.button,
+        styles[`button_${variant}`],
+        disabled && styles.buttonDisabled,
+      ]}
+      onPress={onPress}
+      disabled={disabled || loading}
+      activeOpacity={0.8}
+    >
+      {loading ? (
+        <ActivityIndicator color={variant === 'secondary' ? COLORS.primary : '#fff'} />
+      ) : (
+        <Text
+          style={[
+            styles.buttonText,
+            styles[`buttonText_${variant}`],
+          ]}
+        >
+          {text}
+        </Text>
+      )}
+    </TouchableOpacity>
+  );
+
+  // ── Main Render ─────────────────────────────────────────────────────────
   return (
     <KeyboardAvoidingView
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 100 : 0}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 80 : 0}
     >
       <ScrollView
         contentContainerStyle={styles.scrollContainer}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
-        <View style={styles.header}>
-          <Text style={styles.title}>Hi 👋</Text>
-          <Text style={styles.subtitle}>
-            {step === STEP_MOBILE && (
-              <>Enter your mobile number to <Text style={styles.boldText}>LOGIN / REGISTER</Text></>
-            )}
-            {step === STEP_LOGIN_PIN && 'Enter your PIN to continue'}
-            {step === STEP_SET_PIN && "This number isn't registered yet"}
-          </Text>
-        </View>
+        {renderHeader()}
 
-        <View style={styles.form}>
-
-          {/* ── Mobile Number Input ── */}
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Mobile Number</Text>
-            <View style={styles.phoneRow}>
-              <View style={styles.countryCode}>
-                <Text style={styles.countryCodeText}>+91</Text>
-              </View>
-              <TextInput
-                style={[styles.input, styles.phoneInput, step !== STEP_MOBILE && styles.disabledInput]}
-                keyboardType="phone-pad"
-                placeholder="10-digit mobile number"
-                value={mobile}
-                onChangeText={text => setMobile(text.replace(/[^0-9]/g, ''))}
-                maxLength={10}
-                editable={step === STEP_MOBILE}
-              />
-            </View>
-
-            {mobile.length > 0 && step === STEP_MOBILE && (
-              <View style={styles.validationContainer}>
-                {validateMobileNumber(mobile).isValid ? (
-                  <Text style={styles.successText}>✓ Valid mobile number</Text>
-                ) : (
-                  <Text style={styles.errorText}>⚠ {validateMobileNumber(mobile).message}</Text>
-                )}
-              </View>
-            )}
-          </View>
-
-          {/* ── STEP: Continue (check mobile) ── */}
+        <Animated.View
+          style={[
+            styles.card,
+            { opacity: fadeAnim },
+          ]}
+        >
+          {/* STEP: Mobile Entry */}
           {step === STEP_MOBILE && (
-            <TouchableOpacity
-              style={[
-                styles.primaryButton,
-                (!validateMobileNumber(mobile).isValid || loading) && styles.disabledButton,
-              ]}
-              onPress={checkMobile}
-              disabled={!validateMobileNumber(mobile).isValid || loading}
-            >
-              {loading
-                ? <ActivityIndicator color="#fff" />
-                : <Text style={styles.primaryButtonText}>Continue</Text>}
-            </TouchableOpacity>
+            <>
+              {renderMobileInput()}
+              {renderButton({
+                onPress: checkMobile,
+                text: 'Continue',
+                disabled: !validateMobileNumber(mobile).isValid,
+              })}
+            </>
           )}
 
-          {/* ── STEP: Login with PIN (existing user) ── */}
+          {/* STEP: Login with PIN (Existing User) */}
           {step === STEP_LOGIN_PIN && (
             <>
-              <View style={styles.inputGroup}>
-                <Text style={styles.label}>Enter PIN</Text>
-                <TextInput
-                  style={styles.input}
-                  keyboardType="number-pad"
-                  placeholder="Enter your 4-6 digit PIN"
-                  value={pin}
-                  onChangeText={text => setPin(text.replace(/[^0-9]/g, ''))}
-                  maxLength={6}
-                  secureTextEntry
-                />
+              <View style={styles.infoBox}>
+                <Text style={styles.infoIcon}>🔐</Text>
+                <Text style={styles.infoText}>
+                  Enter the PIN you created during registration
+                </Text>
               </View>
 
-              <TouchableOpacity
-                style={[styles.primaryButton, (!validatePin(pin) || loading) && styles.disabledButton]}
-                onPress={loginWithPin}
-                disabled={!validatePin(pin) || loading}
-              >
-                {loading
-                  ? <ActivityIndicator color="#fff" />
-                  : <Text style={styles.primaryButtonText}>Login</Text>}
-              </TouchableOpacity>
+              {renderPinInputs({ showConfirm: false })}
 
-              <TouchableOpacity style={styles.secondaryButton} onPress={goBackToMobile}>
-                <Text style={styles.secondaryButtonText}>Change Mobile Number</Text>
-              </TouchableOpacity>
+              {renderButton({
+                onPress: loginWithPin,
+                text: 'Login',
+                disabled: !validatePin(pin),
+              })}
+
+              {renderButton({
+                onPress: resetFlow,
+                text: 'Use Different Number',
+                variant: 'secondary',
+              })}
             </>
           )}
 
-          {/* ── STEP: Set PIN (new user, before registration) ── */}
+          {/* STEP: Set PIN (New User) */}
           {step === STEP_SET_PIN && (
             <>
-              <Text style={styles.infoText}>
-                Please set a new PIN for login. You'll use this PIN every time you log in with this number.
-              </Text>
-
-              <View style={styles.inputGroup}>
-                <Text style={styles.label}>Enter PIN (4-6 digits)</Text>
-                <TextInput
-                  style={styles.input}
-                  keyboardType="number-pad"
-                  placeholder="Enter a PIN"
-                  value={pin}
-                  onChangeText={text => setPin(text.replace(/[^0-9]/g, ''))}
-                  maxLength={6}
-                  secureTextEntry
-                />
+              <View style={styles.infoBox}>
+                <Text style={styles.infoIcon}>✨</Text>
+                <Text style={styles.infoText}>
+                  Create a PIN you'll use every time you log in
+                </Text>
               </View>
 
-              <View style={styles.inputGroup}>
-                <Text style={styles.label}>Confirm PIN</Text>
-                <TextInput
-                  style={styles.input}
-                  keyboardType="number-pad"
-                  placeholder="Re-enter your PIN"
-                  value={confirmPin}
-                  onChangeText={text => setConfirmPin(text.replace(/[^0-9]/g, ''))}
-                  maxLength={6}
-                  secureTextEntry
-                />
-              </View>
+              {renderPinInputs({ showConfirm: true })}
 
-              {confirmPin.length > 0 && (
-                <View style={styles.validationContainer}>
-                  {pin === confirmPin ? (
-                    <Text style={styles.successText}>✓ PINs match</Text>
-                  ) : (
-                    <Text style={styles.errorText}>⚠ PINs do not match</Text>
-                  )}
-                </View>
-              )}
+              {renderButton({
+                onPress: proceedToRegistration,
+                text: 'Proceed to Registration',
+                disabled: !validatePin(pin) || !validatePinMatch(pin, confirmPin),
+              })}
 
-              <TouchableOpacity
-                style={[
-                  styles.primaryButton,
-                  (!validatePin(pin) || pin !== confirmPin) && styles.disabledButton,
-                ]}
-                onPress={proceedToRegistration}
-                disabled={!validatePin(pin) || pin !== confirmPin}
-              >
-                <Text style={styles.primaryButtonText}>Proceed to Registration</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity style={styles.secondaryButton} onPress={goBackToMobile}>
-                <Text style={styles.secondaryButtonText}>Change Mobile Number</Text>
-              </TouchableOpacity>
+              {renderButton({
+                onPress: resetFlow,
+                text: 'Use Different Number',
+                variant: 'secondary',
+              })}
             </>
           )}
 
-        </View>
+          {/* STEP: Create PIN (Existing User Without PIN) */}
+          {step === STEP_CREATE_PIN && (
+            <>
+              <View style={styles.infoBox}>
+                <Text style={styles.infoIcon}>🔑</Text>
+                <Text style={styles.infoText}>
+                  Your account exists but needs a PIN for security
+                </Text>
+              </View>
 
-        {/* Security note */}
-        <Text style={styles.securityNote}>
-          🔒 Your PIN is securely encrypted and never shared.
-        </Text>
+              {renderPinInputs({ showConfirm: true })}
+
+              {renderButton({
+                onPress: createPinForExistingUser,
+                text: 'Create PIN',
+                disabled: !validatePin(pin) || !validatePinMatch(pin, confirmPin),
+              })}
+
+              {renderButton({
+                onPress: resetFlow,
+                text: 'Use Different Number',
+                variant: 'secondary',
+              })}
+            </>
+          )}
+        </Animated.View>
+
+        {/* Security Footer */}
+        <View style={styles.footer}>
+          <Text style={styles.securityIcon}>🔒</Text>
+          <Text style={styles.securityText}>
+            Your PIN is encrypted and never shared. All communication is secured with HTTPS.
+          </Text>
+        </View>
       </ScrollView>
     </KeyboardAvoidingView>
   );
 }
 
+// ════════════════════════════════════════════════════════════════════════════
+// STYLES
+// ════════════════════════════════════════════════════════════════════════════
+
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f8f9fa' },
-  scrollContainer: { flexGrow: 1, justifyContent: 'center', padding: 20 },
-  header: { alignItems: 'center', marginBottom: 40 },
-  title: { fontSize: 32, fontWeight: '800', color: '#2c3e50', marginBottom: 8 },
-  subtitle: { fontSize: 16, color: '#7f8c8d', textAlign: 'center', lineHeight: 22 },
-  boldText: { fontWeight: '700', color: '#2c3e50' },
-  form: {
-    backgroundColor: '#fff', borderRadius: 16, padding: 24,
-    elevation: 4, shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 8,
+  // ── Containers ──────────────────────────────────────────────────────────
+  container: {
+    flex: 1,
+    backgroundColor: COLORS.bg,
   },
-  inputGroup: { marginBottom: 20 },
-  label: { fontSize: 16, fontWeight: '600', color: '#2c3e50', marginBottom: 8 },
-
-  phoneRow: { flexDirection: 'row', alignItems: 'center' },
-  countryCode: {
-    borderWidth: 1, borderColor: '#ddd', borderRadius: 12,
-    paddingHorizontal: 12, paddingVertical: 16,
-    backgroundColor: '#f0f4f8', marginRight: 8,
+  scrollContainer: {
+    flexGrow: 1,
+    padding: SPACING.lg,
+    justifyContent: 'center',
+    paddingBottom: SPACING.xxl,
   },
-  countryCodeText: { fontSize: 16, fontWeight: '600', color: '#2c3e50' },
-  phoneInput: { flex: 1 },
 
+  // ── Header ──────────────────────────────────────────────────────────────
+  header: {
+    alignItems: 'center',
+    marginBottom: SPACING.xxxl,
+  },
+  emoji: {
+    fontSize: 48,
+    marginBottom: SPACING.md,
+  },
+  title: {
+    fontSize: 32,
+    fontWeight: '800',
+    color: COLORS.text,
+    marginBottom: SPACING.sm,
+    letterSpacing: -0.5,
+  },
+  subtitle: {
+    fontSize: 15,
+    color: COLORS.textSecondary,
+    textAlign: 'center',
+    lineHeight: 22,
+    maxWidth: 280,
+  },
+
+  // ── Card ────────────────────────────────────────────────────────────────
+  card: {
+    backgroundColor: COLORS.bgCard,
+    borderRadius: RADIUS.lg,
+    padding: SPACING.xxl,
+    marginBottom: SPACING.xxl,
+    shadowColor: COLORS.text,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 3,
+  },
+
+  // ── Input Groups ────────────────────────────────────────────────────────
+  inputGroup: {
+    marginBottom: SPACING.lg,
+  },
+  label: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: COLORS.text,
+    marginBottom: SPACING.sm,
+    textTransform: 'uppercase',
+    letterSpacing: 0.3,
+  },
   input: {
-    borderWidth: 1, borderColor: '#ddd', borderRadius: 12,
-    padding: 16, fontSize: 16, backgroundColor: '#fff',
+    borderWidth: 1.5,
+    borderColor: COLORS.border,
+    borderRadius: RADIUS.md,
+    paddingHorizontal: SPACING.lg,
+    paddingVertical: SPACING.md,
+    fontSize: 16,
+    backgroundColor: COLORS.bgCard,
+    color: COLORS.text,
+    fontWeight: '500',
   },
-  disabledInput: { backgroundColor: '#f8f9fa', color: '#7f8c8d' },
 
-  validationContainer: { marginTop: 6 },
-  successText: { color: '#27ae60', fontSize: 13, fontWeight: '500' },
-  errorText: { color: '#e74c3c', fontSize: 13, fontWeight: '500' },
+  phoneRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.sm,
+  },
+  countryCode: {
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.md,
+    backgroundColor: '#f3f4f6',
+    borderRadius: RADIUS.md,
+    borderWidth: 1.5,
+    borderColor: COLORS.border,
+  },
+  countryCodeText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: COLORS.text,
+  },
+  phoneInput: {
+    flex: 1,
+  },
+  disabledInput: {
+    backgroundColor: '#f9fafb',
+    color: COLORS.textSecondary,
+  },
 
+  // ── Validation ──────────────────────────────────────────────────────────
+  validationContainer: {
+    marginTop: SPACING.sm,
+  },
+  validRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.sm,
+  },
+  validIcon: {
+    fontSize: 16,
+    color: COLORS.success,
+    fontWeight: 'bold',
+  },
+  errorIcon: {
+    fontSize: 16,
+    color: COLORS.error,
+    fontWeight: 'bold',
+  },
+  successText: {
+    color: COLORS.success,
+    fontSize: 13,
+    fontWeight: '500',
+  },
+  errorText: {
+    color: COLORS.error,
+    fontSize: 13,
+    fontWeight: '500',
+  },
+
+  // ── Info Box ────────────────────────────────────────────────────────────
+  infoBox: {
+    backgroundColor: '#f0f9ff',
+    borderRadius: RADIUS.md,
+    padding: SPACING.lg,
+    marginBottom: SPACING.lg,
+    borderLeftWidth: 4,
+    borderLeftColor: COLORS.primary,
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: SPACING.md,
+  },
+  infoIcon: {
+    fontSize: 20,
+    marginTop: SPACING.xs,
+  },
   infoText: {
-    fontSize: 14, color: '#34495e', backgroundColor: '#eaf2fb',
-    borderRadius: 10, padding: 12, marginBottom: 20, lineHeight: 20,
+    flex: 1,
+    fontSize: 14,
+    color: '#0c4a6e',
+    lineHeight: 20,
+    fontWeight: '500',
   },
 
-  primaryButton: {
-    backgroundColor: '#3498db', borderRadius: 12,
-    padding: 18, alignItems: 'center', marginBottom: 12,
+  // ── Buttons ─────────────────────────────────────────────────────────────
+  button: {
+    borderRadius: RADIUS.md,
+    paddingVertical: SPACING.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: SPACING.md,
+    minHeight: 48,
   },
-  disabledButton: { backgroundColor: '#bdc3c7' },
-  primaryButtonText: { color: '#fff', fontSize: 18, fontWeight: '700' },
+  button_primary: {
+    backgroundColor: COLORS.primary,
+  },
+  button_secondary: {
+    backgroundColor: 'transparent',
+    borderWidth: 1.5,
+    borderColor: COLORS.primary,
+  },
+  buttonDisabled: {
+    backgroundColor: COLORS.disabled,
+    borderColor: COLORS.disabled,
+  },
+  buttonText: {
+    fontSize: 16,
+    fontWeight: '700',
+    letterSpacing: 0.3,
+  },
+  buttonText_primary: {
+    color: '#fff',
+  },
+  buttonText_secondary: {
+    color: COLORS.primary,
+  },
 
-  secondaryButton: { padding: 12, alignItems: 'center' },
-  secondaryButtonText: { color: '#3498db', fontSize: 16, fontWeight: '600' },
-
-  securityNote: {
-    marginTop: 16, textAlign: 'center', fontSize: 12, color: '#95a5a6',
+  // ── Footer ──────────────────────────────────────────────────────────────
+  footer: {
+    backgroundColor: '#f9fafb',
+    borderRadius: RADIUS.md,
+    padding: SPACING.lg,
+    alignItems: 'center',
+    gap: SPACING.sm,
+  },
+  securityIcon: {
+    fontSize: 20,
+  },
+  securityText: {
+    fontSize: 12,
+    color: COLORS.textSecondary,
+    textAlign: 'center',
+    lineHeight: 18,
+    fontWeight: '500',
   },
 });

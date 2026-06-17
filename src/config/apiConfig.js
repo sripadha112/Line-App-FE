@@ -5,6 +5,7 @@ export const API_ENDPOINTS = {
     LOGOUT: '/api/auth/logout',
     VERIFY_MOBILE: '/api/auth/verify-mobile',  // POST - Direct mobile verification (MVP)
     CHECK_MOBILE: '/api/auth/check-mobile',
+    SET_PIN: '/api/auth/setpin',
     REGISTER: '/api/auth/register',
     LOGIN: '/api/auth/login',
   },
