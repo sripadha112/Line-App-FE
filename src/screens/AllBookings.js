@@ -19,6 +19,9 @@ import API_BASE_URL from '../config';
 import SecureStore from '../utils/secureStorage';
 import { showAlert } from '../utils/alertUtils';
 import { SkeletonAllBookings } from '../components/skeletons';
+import { encryptQueryId } from '../utils/queryParamCrypto';
+
+const securePathId = (id) => encodeURIComponent(encryptQueryId(id));
 
 export default function AllBookings({ route, navigation }) {
   const { doctorId, workplaceId, workplaceName, refresh } = route.params;
@@ -75,7 +78,7 @@ export default function AllBookings({ route, navigation }) {
     for (const userId of userIdsToFetch) {
       if (!newCache[userId]) {
         try {
-          const response = await fetch(`${API_BASE_URL}/api/user/${userId}/family-members`, {
+          const response = await fetch(`${API_BASE_URL}/api/user/${securePathId(userId)}/family-members`, {
             headers: {
               'Authorization': `Bearer ${await SecureStore.getItemAsync('accessToken')}`
             }

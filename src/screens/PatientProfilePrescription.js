@@ -20,6 +20,9 @@ import MedicineSearchModal from '../components/MedicineSearchModal';
 import PrescriptionEditor from '../components/PrescriptionEditor';
 import { showAlert } from '../utils/alertUtils';
 import { SkeletonProfileInfo } from '../components/skeletons';
+import { encryptQueryId } from '../utils/queryParamCrypto';
+
+const securePathId = (id) => encodeURIComponent(encryptQueryId(id));
 
 export default function PatientProfilePrescription({ route, navigation }) {
   const { appointment, doctorId } = route.params;
@@ -81,7 +84,7 @@ export default function PatientProfilePrescription({ route, navigation }) {
       if (!userId) return;
       
       const token = await SecureStore.getItemAsync('accessToken');
-      const response = await fetch(`${API_BASE_URL}/api/prescriptions/user/${userId}`, {
+      const response = await fetch(`${API_BASE_URL}/api/prescriptions/user/${securePathId(userId)}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
         },
@@ -121,7 +124,7 @@ export default function PatientProfilePrescription({ route, navigation }) {
       try {
         setPdfLoading(true);
         const token = await SecureStore.getItemAsync('accessToken');
-        const url = `${API_BASE_URL}/api/prescriptions/${prescriptionId}/pdf`;
+        const url = `${API_BASE_URL}/api/prescriptions/${securePathId(prescriptionId)}/pdf`;
         
         const response = await fetch(url, {
           headers: {
@@ -169,7 +172,7 @@ export default function PatientProfilePrescription({ route, navigation }) {
         import('expo-intent-launcher'),
       ]);
       
-      const response = await fetch(`${API_BASE_URL}/api/prescriptions/${prescriptionId}/pdf`, {
+      const response = await fetch(`${API_BASE_URL}/api/prescriptions/${securePathId(prescriptionId)}/pdf`, {
         headers: {
           'Authorization': `Bearer ${token}`,
         },
@@ -224,7 +227,7 @@ export default function PatientProfilePrescription({ route, navigation }) {
       // On web, open in new tab and use browser print
       try {
         const token = await SecureStore.getItemAsync('accessToken');
-        const url = `${API_BASE_URL}/api/prescriptions/${prescriptionId}/pdf`;
+        const url = `${API_BASE_URL}/api/prescriptions/${securePathId(prescriptionId)}/pdf`;
         
         const response = await fetch(url, {
           headers: {
@@ -253,7 +256,7 @@ export default function PatientProfilePrescription({ route, navigation }) {
     // Native platforms
     try {
       const token = await SecureStore.getItemAsync('accessToken');
-      const response = await fetch(`${API_BASE_URL}/api/prescriptions/${prescriptionId}/pdf`, {
+      const response = await fetch(`${API_BASE_URL}/api/prescriptions/${securePathId(prescriptionId)}/pdf`, {
         headers: {
           'Authorization': `Bearer ${token}`,
         },

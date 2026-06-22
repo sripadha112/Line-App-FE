@@ -657,7 +657,7 @@ import SecureStore from '../utils/secureStorage';
 import { API_ENDPOINTS } from '../config/apiConfig';
 import UserNotificationService from '../services/userNotificationService';
 import { showAlert } from '../utils/alertUtils';
-// import { EncryptionService } from '../utils/encryption';
+import { encryptQueryId, encryptQueryValue } from '../utils/queryParamCrypto';
 
 // ── Step constants ────────────────────────────────────────────────────────
 const STEP_MOBILE = 'mobile';
@@ -826,11 +826,8 @@ export default function AuthScreen({ navigation }) {
 
     try {
       // Encrypt sensitive parameters
-      // const encryptedPin = EncryptionService.encrypt(pin);
-      // const encryptedId = EncryptionService.encrypt(String(userId));
-
-      const encryptedPin = pin;
-      const encryptedId = userId;
+      const encryptedPin = encryptQueryValue(pin);
+      const encryptedId = encryptQueryId(userId);
 
       if (!encryptedPin || !encryptedId) {
         showAlert('Error', 'Failed to encrypt parameters');
@@ -840,7 +837,7 @@ export default function AuthScreen({ navigation }) {
 
       // Make API call with encrypted parameters
       await api.put(
-        `${API_ENDPOINTS.AUTH.SET_PIN}?pin=${encryptedPin}&id=${encryptedId}`
+        `${API_ENDPOINTS.AUTH.SET_PIN}?pin=${encodeURIComponent(encryptedPin)}&id=${encodeURIComponent(encryptedId)}`
       );
 
       showAlert('Success', 'PIN created. Please log in.');

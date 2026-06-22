@@ -9,6 +9,9 @@ import ViewShot from 'react-native-view-shot';
 import TopBar from '../components/TopBar';
 import api from '../services/api';
 import { SkeletonWorkplaceList } from '../components/skeletons';
+import { encryptQueryId } from '../utils/queryParamCrypto';
+
+const securePathId = (id) => encodeURIComponent(encryptQueryId(id));
 
 export default function QuickBookingQR({ route, navigation }) {
   const { doctorId } = route.params;
@@ -34,7 +37,7 @@ export default function QuickBookingQR({ route, navigation }) {
   const fetchWorkplaces = async () => {
     try {
       setLoading(true);
-      const response = await api.get(`/api/doctors/${doctorId}/workplaces`);
+      const response = await api.get(`/api/doctors/${securePathId(doctorId)}/workplaces`);
       setWorkplaces(response.data || []);
     } catch (error) {
       console.log('Error fetching workplaces:', error.message);
@@ -47,7 +50,7 @@ export default function QuickBookingQR({ route, navigation }) {
   const fetchDoctorProfile = async () => {
     try {
       // console.log('📤 Fetching doctor profile for ID:', doctorId);
-      const response = await api.get(`/api/doctor/${doctorId}`);
+      const response = await api.get(`/api/doctor/${securePathId(doctorId)}`);
       // console.log('👨‍⚕️ Doctor profile response:', response.data);
       setDoctorProfile(response.data);
     } catch (error) {
@@ -70,8 +73,8 @@ export default function QuickBookingQR({ route, navigation }) {
     const params = new URLSearchParams();
     
     // Required parameters
-    params.append('doctorId', doctorId);
-    params.append('workplaceId', workplace.id || workplace.workplaceId);
+    params.append('doctorId', encryptQueryId(doctorId));
+    params.append('workplaceId', encryptQueryId(workplace.id || workplace.workplaceId));
     
     // Doctor name - check multiple possible field names
     const doctorName = doctorProfile?.doctorName || 

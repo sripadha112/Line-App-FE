@@ -24,8 +24,13 @@ let appState = {
 document.addEventListener('DOMContentLoaded', async () => {
     // Parse URL parameters to get doctorId, workplaceId, and optional details from QR code
     const urlParams = new URLSearchParams(window.location.search);
-    appState.doctorId = urlParams.get('doctorId');
-    appState.workplaceId = urlParams.get('workplaceId');
+    try {
+        appState.doctorId = window.QueryParamCrypto.decryptQueryId(urlParams.get('doctorId'));
+        appState.workplaceId = window.QueryParamCrypto.decryptQueryId(urlParams.get('workplaceId'));
+    } catch (error) {
+        showError('Invalid QR Code', 'This QR code is invalid or expired. Please scan a valid QR code from the clinic.');
+        return;
+    }
     
     // Get optional parameters from URL (if provided in QR code)
     const doctorName = urlParams.get('doctorName');

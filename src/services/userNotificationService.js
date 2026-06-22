@@ -3,6 +3,9 @@ import SecureStore from '../utils/secureStorage';
 import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
 import API_BASE_URL from '../config';
+import { encryptQueryId } from '../utils/queryParamCrypto';
+
+const securePathId = (id) => encodeURIComponent(encryptQueryId(id));
 
 /**
  * User Notification Service
@@ -126,7 +129,7 @@ class UserNotificationService {
             console.log('🔑 [UserNotification] Token preview:', token ? token.substring(0, 30) + '...' : 'null');
 
             // Send token to backend API
-            const response = await fetch(`${API_BASE_URL}/api/user/${userId}/fcm-token`, {
+            const response = await fetch(`${API_BASE_URL}/api/user/${securePathId(userId)}/fcm-token`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

@@ -45,7 +45,9 @@ class APIService {
      */
     async getAvailableSlots(doctorId, workplaceId) {
         try {
-            const endpoint = `${API_CONFIG.ENDPOINTS.AVAILABLE_SLOTS}?doctorId=${doctorId}&workplaceId=${workplaceId}`;
+            const encryptedDoctorId = window.QueryParamCrypto.encryptQueryId(doctorId);
+            const encryptedWorkplaceId = window.QueryParamCrypto.encryptQueryId(workplaceId);
+            const endpoint = `${API_CONFIG.ENDPOINTS.AVAILABLE_SLOTS}?doctorId=${encodeURIComponent(encryptedDoctorId)}&workplaceId=${encodeURIComponent(encryptedWorkplaceId)}`;
             const response = await this.fetchAPI(endpoint);
             return response;
         } catch (error) {
@@ -125,7 +127,8 @@ class APIService {
                 notes: appointmentData.notes || `Booking via QuickBooking. Notes: ${userDetails.notes || 'None'}`
             };
 
-            const endpoint = API_CONFIG.ENDPOINTS.BOOK_APPOINTMENT.replace('{userId}', userId);
+            const encryptedUserId = window.QueryParamCrypto.encryptQueryId(userId);
+            const endpoint = API_CONFIG.ENDPOINTS.BOOK_APPOINTMENT.replace('{userId}', encodeURIComponent(encryptedUserId));
             const response = await this.fetchAPI(endpoint, {
                 method: 'POST',
                 body: JSON.stringify(bookingData)

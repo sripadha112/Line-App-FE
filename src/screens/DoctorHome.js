@@ -15,6 +15,9 @@ import { SkeletonDoctorHome, SkeletonDoctorProfile } from '../components/skeleto
 // Import services
 import { DoctorAPIService, UserAPIService, AuthAPIService } from '../services/doctorApiService';
 import api from '../services/api';
+import { encryptQueryId } from '../utils/queryParamCrypto';
+
+const securePathId = (id) => encodeURIComponent(encryptQueryId(id));
 
 // Time options for dropdowns
 const HOUR_OPTIONS = Array.from({ length: 12 }, (_, i) => i + 1); // 1-12 for 12-hour format
@@ -484,7 +487,7 @@ Dr. ${name || 'Kedulz App Doctor'}`;
   const fetchUserDetails = async (userId) => {
     try {
       setLoading(true);
-      const res = await api.get(`/api/user/${userId}`);
+      const res = await api.get(`/api/user/${securePathId(userId)}`);
       setSelectedUser(res.data);
       setUserDetailsModalVisible(true);
     } catch (e) {
@@ -1258,7 +1261,7 @@ Dr. ${name || 'Kedulz App Doctor'}`;
       const today = new Date();
       const startFrom = startOfDay(today).toISOString();
       
-      await api.post(`/api/doctor/${doctorId}/appointments/reschedule`, {
+      await api.post(`/api/doctor/${securePathId(doctorId)}/appointments/reschedule`, {
         startFrom,
         shiftMinutes: parseInt(shiftMinutes),
         maxShiftMinutes: 1440
@@ -1293,7 +1296,7 @@ Dr. ${name || 'Kedulz App Doctor'}`;
               const today = new Date();
               const dateStr = format(today, 'yyyy-MM-dd');
               
-              const res = await api.post(`/api/doctor/${doctorId}/appointments/cancel-day`, {
+              const res = await api.post(`/api/doctor/${securePathId(doctorId)}/appointments/cancel-day`, {
                 date: dateStr,
                 reason: reason.trim()
               });
@@ -1352,7 +1355,7 @@ Dr. ${name || 'Kedulz App Doctor'}`;
       const finalReason = selectedCancelReason === 'Other' ? customCancelReason.trim() : selectedCancelReason;
       
       // You can include the reason in the API call if your backend supports it
-      await api.delete(`/api/user/${appointmentToCancel.userId}/appointments/${appointmentToCancel.appointmentId}`);
+      await api.delete(`/api/user/${securePathId(appointmentToCancel.userId)}/appointments/${securePathId(appointmentToCancel.appointmentId)}`);
       
       showAlert('Success', 'Appointment cancelled successfully');
       setCancelReasonModalVisible(false);
@@ -1365,7 +1368,7 @@ Dr. ${name || 'Kedulz App Doctor'}`;
   const handleRescheduleAppointment = async (appointment, newMinutes) => {
     try {
       const newTime = new Date(new Date(appointment.appointmentTime).getTime() + newMinutes * 60000);
-      await api.put(`/api/appointments/${appointment.id}/reschedule`, {
+      await api.put(`/api/appointments/${securePathId(appointment.id)}/reschedule`, {
         newTime: newTime.toISOString()
       });
       showAlert('Success', 'Appointment rescheduled successfully');
@@ -1382,7 +1385,7 @@ Dr. ${name || 'Kedulz App Doctor'}`;
       setLoading(true);
       const from = startOfDay(fromDate).toISOString();
       const to = endOfDay(toDate).toISOString();
-      const res = await api.get(`/api/doctor/${doctorId}/appointments/history?from=${from}&to=${to}`);
+      const res = await api.get(`/api/doctor/${securePathId(doctorId)}/appointments/history?from=${from}&to=${to}`);
       setHistoryAppointments(res.data || []);
     } catch (e) {
       showAlert('Error', 'Failed to fetch history: ' + (e.response?.data?.error || e.message));

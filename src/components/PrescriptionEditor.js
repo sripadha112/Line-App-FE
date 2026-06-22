@@ -13,6 +13,9 @@ import {
 import MedicineSearchModal from '../components/MedicineSearchModal';
 import API_BASE_URL from '../config';
 import SecureStore from '../utils/secureStorage';
+import { encryptQueryId } from '../utils/queryParamCrypto';
+
+const securePathId = (id) => encodeURIComponent(encryptQueryId(id));
 
 export default function PrescriptionEditor({
   userId,
@@ -40,7 +43,7 @@ export default function PrescriptionEditor({
       setLoading(true);
       const token = await SecureStore.getItemAsync('accessToken');
       
-      const response = await fetch(`${API_BASE_URL}/api/prescriptions/${prescriptionId}`, {
+      const response = await fetch(`${API_BASE_URL}/api/prescriptions/${securePathId(prescriptionId)}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
         },
@@ -157,7 +160,7 @@ export default function PrescriptionEditor({
       console.log('📦 Request body:', JSON.stringify(body, null, 2));
 
       const url = prescriptionId
-        ? `${API_BASE_URL}/api/prescriptions/${prescriptionId}`
+        ? `${API_BASE_URL}/api/prescriptions/${securePathId(prescriptionId)}`
         : `${API_BASE_URL}/api/prescriptions`;
 
       console.log('🌐 Full URL:', url);

@@ -1,6 +1,9 @@
 import { API_ENDPOINTS } from '../config/apiConfig';
 import api from './api';
 import { format, startOfDay, endOfDay, addDays } from 'date-fns';
+import { encryptQueryId } from '../utils/queryParamCrypto';
+
+const securePathId = (id) => encodeURIComponent(encryptQueryId(id));
 
 export class DoctorAPIService {
   // @deprecated - Use fetchAppointmentHistory instead
@@ -106,7 +109,7 @@ export class DoctorAPIService {
   static async getUserProfile(userId) {
     try {
       console.log('📤 Fetching user profile:', userId);
-      const response = await api.get(`/api/user/${userId}/profile`);
+      const response = await api.get(`/api/user/${securePathId(userId)}/profile`);
       console.log('📥 User profile response:', response.data);
       return response.data;
     } catch (error) {
@@ -119,7 +122,7 @@ export class DoctorAPIService {
   static async updateUserProfile(userId, profileData) {
     try {
       console.log('📤 Updating user profile:', userId, profileData);
-      const response = await api.put(`/api/user/${userId}/edit-profile`, profileData);
+      const response = await api.put(`/api/user/${securePathId(userId)}/edit-profile`, profileData);
       console.log('📥 Update profile response:', response.data);
       return response.data;
     } catch (error) {
@@ -157,7 +160,7 @@ export class DoctorAPIService {
       if (!doctorId) {
         throw new Error('doctorId is required for bulk reschedule');
       }
-      const response = await api.post(`/api/doctor/${doctorId}/appointments/bulk-reschedule`, payload);
+      const response = await api.post(`/api/doctor/${securePathId(doctorId)}/appointments/bulk-reschedule`, payload);
       return response.data;
     } catch (error) {
       console.log('Error bulk rescheduling appointments:', error.message);
@@ -463,7 +466,7 @@ export class UserAPIService {
     try {
       const numericUserId = parseInt(userId, 10);
       if (isNaN(numericUserId)) throw new Error('Invalid userId');
-      const response = await api.get(`/api/user/${numericUserId}/family-members`);
+      const response = await api.get(`/api/user/${securePathId(numericUserId)}/family-members`);
       return response.data || [];
     } catch (error) {
       console.log('Error fetching family members:', error.message);
@@ -478,7 +481,7 @@ export class UserAPIService {
     try {
       const numericUserId = parseInt(userId, 10);
       if (isNaN(numericUserId)) throw new Error('Invalid userId');
-      const response = await api.post(`/api/user/${numericUserId}/family-members`, memberData);
+      const response = await api.post(`/api/user/${securePathId(numericUserId)}/family-members`, memberData);
       return response.data;
     } catch (error) {
       console.log('Error creating family member:', error.message);
@@ -603,7 +606,7 @@ export class UserAPIService {
   // Fetch available slots (deprecated - use getAvailableSlots instead)
   static async fetchAvailableSlots(doctorId, workplaceId, date = null) {
     try {
-      let url = `${API_ENDPOINTS.USER.AVAILABLE_SLOTS}?doctorId=${doctorId}&workplaceId=${workplaceId}`;
+      let url = `${API_ENDPOINTS.USER.AVAILABLE_SLOTS}?doctorId=${encodeURIComponent(encryptQueryId(doctorId))}&workplaceId=${encodeURIComponent(encryptQueryId(workplaceId))}`;
       if (date) {
         url += `&date=${date}`;
         console.log('📅 Using specific date for slots:', date);
@@ -685,8 +688,8 @@ export class UserAPIService {
     try {
       // Build query parameters
       const queryParams = new URLSearchParams();
-      queryParams.append('doctorId', doctorId);
-      queryParams.append('workplaceId', workplaceId);
+      queryParams.append('doctorId', encryptQueryId(doctorId));
+      queryParams.append('workplaceId', encryptQueryId(workplaceId));
       
       // Add date parameter if provided (format: YYYY-MM-DD)
       if (params.date) {
@@ -729,7 +732,7 @@ export class UserAPIService {
         throw new Error('Invalid userId provided');
       }
       
-      const response = await api.put(`/api/user/${numericUserId}/edit-profile`, profileData);
+      const response = await api.put(`/api/user/${securePathId(numericUserId)}/edit-profile`, profileData);
       console.log('Profile update response:', response.data);
       return response.data;
     } catch (error) {
@@ -771,9 +774,9 @@ export class SlotsAPIService {
     try {
       // Build query parameters
       const queryParams = new URLSearchParams();
-      queryParams.append('workplaceId', workplaceId);
+      queryParams.append('workplaceId', encryptQueryId(workplaceId));
       
-      if (params.doctorId) queryParams.append('doctorId', params.doctorId);
+      if (params.doctorId) queryParams.append('doctorId', encryptQueryId(params.doctorId));
       
       // Add date parameter if provided (format: YYYY-MM-DD)
       if (params.date) {

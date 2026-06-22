@@ -54,12 +54,43 @@ import { ActivityIndicator, View, Modal, Text, TextInput, Button, TouchableOpaci
 import fcmService from './src/services/fcmService';
 import UserNotificationService from './src/services/userNotificationService';
 import WarmupService from './src/services/warmupService';
+import { decryptQueryId, encryptQueryId } from './src/utils/queryParamCrypto';
 
 const Stack = createNativeStackNavigator();
 
+const encryptedRouteIdKeys = [
+  'userId',
+  'doctorId',
+  'workspaceId',
+  'workplaceId',
+  'patientId',
+];
+
+const encryptedRouteIdParse = encryptedRouteIdKeys.reduce((parsers, key) => {
+  parsers[key] = (value) => {
+    try {
+      return decryptQueryId(value);
+    } catch (error) {
+      return value;
+    }
+  };
+  return parsers;
+}, {});
+
+const encryptedRouteIdStringify = encryptedRouteIdKeys.reduce((stringifiers, key) => {
+  stringifiers[key] = (value) => encryptQueryId(value);
+  return stringifiers;
+}, {});
+
+const routeWithEncryptedIds = (path) => ({
+  path,
+  parse: encryptedRouteIdParse,
+  stringify: encryptedRouteIdStringify,
+});
+
 // Linking configuration for web browser navigation
 const linking = {
-  prefixes: ['https://kedulz.com', 'http://localhost:19006'],
+  prefixes: ['https://kedulz.com', 'http://localhost:19006', 'http://localhost:8081'],
   config: {
     screens: {
       Landing: '',
@@ -68,20 +99,20 @@ const linking = {
       RoleSelection: 'role-selection',
       DoctorRegistration: 'doctor-registration',
       UserRegistration: 'user-registration',
-      DoctorHome: 'doctor/home',
-      UserHome: 'user/home',
-      UserCalendar: 'user/calendar',
-      UserProfile: 'user/profile',
-      EditProfile: 'user/edit-profile',
-      BookAppointment: 'user/book-appointment',
-      RescheduleAppointment: 'user/reschedule',
-      CancelAppointment: 'user/cancel',
-      AllBookings: 'doctor/bookings',
-      PatientProfilePrescription: 'doctor/patient/:patientId',
-      AppointmentHistory: 'doctor/history',
-      BulkReschedule: 'doctor/bulk-reschedule',
-      CancelDay: 'doctor/cancel-day',
-      QuickBookingQR: 'quick-booking/:doctorId',
+      DoctorHome: routeWithEncryptedIds('doctor/home'),
+      UserHome: routeWithEncryptedIds('user/home'),
+      UserCalendar: routeWithEncryptedIds('user/calendar'),
+      UserProfile: routeWithEncryptedIds('user/profile'),
+      EditProfile: routeWithEncryptedIds('user/edit-profile'),
+      BookAppointment: routeWithEncryptedIds('user/book-appointment'),
+      RescheduleAppointment: routeWithEncryptedIds('user/reschedule'),
+      CancelAppointment: routeWithEncryptedIds('user/cancel'),
+      AllBookings: routeWithEncryptedIds('doctor/bookings'),
+      PatientProfilePrescription: routeWithEncryptedIds('doctor/patient/:patientId'),
+      AppointmentHistory: routeWithEncryptedIds('doctor/history'),
+      BulkReschedule: routeWithEncryptedIds('doctor/bulk-reschedule'),
+      CancelDay: routeWithEncryptedIds('doctor/cancel-day'),
+      QuickBookingQR: routeWithEncryptedIds('quick-booking/:doctorId'),
       FCMTest: 'fcm-test',
       TermsAndConditions: 'terms',
       PrivacyPolicy: 'privacy',

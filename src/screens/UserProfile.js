@@ -21,6 +21,9 @@ import BottomNavigation from '../components/BottomNavigation';
 import { Modal, TextInput } from 'react-native';
 import { showAlert } from '../utils/alertUtils';
 import { SkeletonProfileHeader, SkeletonProfileInfo } from '../components/skeletons';
+import { encryptQueryId } from '../utils/queryParamCrypto';
+
+const securePathId = (id) => encodeURIComponent(encryptQueryId(id));
 
 export default function UserProfile({ route, navigation }) {
   const { userId } = route.params;
@@ -109,7 +112,7 @@ export default function UserProfile({ route, navigation }) {
   const fetchPrescriptions = async () => {
     try {
       const token = await SecureStore.getItemAsync('accessToken');
-      const response = await fetch(`${API_BASE_URL}/api/prescriptions/user/${userId}`, {
+      const response = await fetch(`${API_BASE_URL}/api/prescriptions/user/${securePathId(userId)}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
         },
@@ -127,7 +130,7 @@ export default function UserProfile({ route, navigation }) {
   const sharePrescription = async (prescriptionId) => {
     try {
       const token = await SecureStore.getItemAsync('accessToken');
-      const response = await fetch(`${API_BASE_URL}/api/prescriptions/${prescriptionId}/pdf`, {
+      const response = await fetch(`${API_BASE_URL}/api/prescriptions/${securePathId(prescriptionId)}/pdf`, {
         headers: {
           'Authorization': `Bearer ${token}`,
         },
@@ -178,7 +181,7 @@ export default function UserProfile({ route, navigation }) {
           onPress: async () => {
             try {
               const token = await SecureStore.getItemAsync('accessToken');
-              const response = await fetch(`${API_BASE_URL}/api/prescriptions/${prescriptionId}`, {
+              const response = await fetch(`${API_BASE_URL}/api/prescriptions/${securePathId(prescriptionId)}`, {
                 method: 'DELETE',
                 headers: {
                   'Authorization': `Bearer ${token}`,
@@ -204,7 +207,7 @@ export default function UserProfile({ route, navigation }) {
       setPdfLoading(true);
       
       const token = await SecureStore.getItemAsync('accessToken');
-      const response = await fetch(`${API_BASE_URL}/api/prescriptions/${prescriptionId}/pdf`, {
+      const response = await fetch(`${API_BASE_URL}/api/prescriptions/${securePathId(prescriptionId)}/pdf`, {
         headers: {
           'Authorization': `Bearer ${token}`,
         },
@@ -248,7 +251,7 @@ export default function UserProfile({ route, navigation }) {
       try {
         setPdfLoading(true);
         const token = await SecureStore.getItemAsync('accessToken');
-        const url = `${API_BASE_URL}/api/prescriptions/${prescriptionId}/pdf`;
+        const url = `${API_BASE_URL}/api/prescriptions/${securePathId(prescriptionId)}/pdf`;
         
         const response = await fetch(url, {
           headers: {
@@ -297,7 +300,7 @@ export default function UserProfile({ route, navigation }) {
         Promise.resolve(require('react-native')),
       ]);
       
-      const response = await fetch(`${API_BASE_URL}/api/prescriptions/${prescriptionId}/pdf`, {
+      const response = await fetch(`${API_BASE_URL}/api/prescriptions/${securePathId(prescriptionId)}/pdf`, {
         headers: {
           'Authorization': `Bearer ${token}`,
         },
