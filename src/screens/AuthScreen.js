@@ -780,9 +780,17 @@ export default function AuthScreen({ navigation }) {
 
     setLoading(true);
     try {
+      const encryptedPin = encryptQueryValue(pin);
+
+      if (!encryptedPin) {
+        showAlert('Error', 'Failed to encrypt PIN');
+        setLoading(false);
+        return;
+      }
+
       const res = await api.post(API_ENDPOINTS.AUTH.LOGIN, {
         mobileNumber: mobile,
-        pin,
+        pin: encryptedPin,
       });
       await handleAuthSuccess(res.data);
     } catch (e) {

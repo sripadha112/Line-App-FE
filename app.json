@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "Kedulz",
+    "name": "kedulz",
     "slug": "kedulz",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -65,7 +65,7 @@
     },
     "extra": {
       "eas": {
-        "projectId": "489a6fe8-470c-43c9-b082-863e7ffd5c3d"
+        "projectId": "8efebfa6-33b2-4cb2-a05b-3ff0d87b14a9"
       }
     }
   }
