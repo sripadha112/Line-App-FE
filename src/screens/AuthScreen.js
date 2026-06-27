@@ -795,8 +795,20 @@ export default function AuthScreen({ navigation }) {
       await handleAuthSuccess(res.data);
     } catch (e) {
       if (e.response?.status === 401) {
-        showAlert('Incorrect PIN', 'Please try again.');
-        setPin('');
+        showAlert(
+          'Incorrect PIN',
+          'Please enter the correct PIN.',
+          [
+            {
+              text: 'Try Again',
+              onPress: () => {
+                setPin('');
+                setStep(STEP_LOGIN_PIN);
+              },
+            },
+          ],
+          { cancelable: false }
+        );
       } else if (e.response?.status === 404) {
         showAlert('Account Not Found', 'Please register again.');
         resetFlow();
