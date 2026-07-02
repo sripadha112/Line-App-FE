@@ -143,12 +143,20 @@ export default function ActiveBookings({ userId, onReschedule, onCancel, refresh
     </View>
   );
 
+  const getSortedDateEntries = () => {
+    return Object.entries(appointmentsByDate || {}).sort(([dateA], [dateB]) => {
+      const a = new Date(dateA);
+      const b = new Date(dateB);
+      return a - b; // Ascending: today -> tomorrow -> upcoming
+    });
+  };
+
   // Render appointments with load more functionality
   const renderAllAppointments = () => {
     const allAppointments = [];
     let appointmentCount = 0;
     
-    Object.entries(appointmentsByDate || {}).forEach(([date, appointmentsForDate]) => {
+    getSortedDateEntries().forEach(([date, appointmentsForDate]) => {
       // Filter only BOOKED appointments for Active Bookings section
       const activeAppointments = appointmentsForDate.filter(appointment => 
         appointment.status === 'BOOKED'
@@ -187,7 +195,7 @@ export default function ActiveBookings({ userId, onReschedule, onCancel, refresh
   // Count total BOOKED appointments for the load more button
   const getTotalAppointmentCount = () => {
     let count = 0;
-    Object.entries(appointmentsByDate || {}).forEach(([date, appointmentsForDate]) => {
+    getSortedDateEntries().forEach(([date, appointmentsForDate]) => {
       // Count only BOOKED appointments
       const activeAppointments = appointmentsForDate.filter(appointment => 
         appointment.status === 'BOOKED'

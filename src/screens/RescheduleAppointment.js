@@ -91,10 +91,8 @@ const formatTimeSlot = (startTime, endTime) => {
 export default function RescheduleAppointment({ route, navigation }) {
   const { userId: routeUserId, appointmentId, fromDoctorView, fromRevisit, patientData, appointment: routeAppointment } = route.params;
   
-  // For revisit mode, extract userId from appointment object, otherwise use routeUserId
-  const userId = fromRevisit 
-    ? (routeAppointment?.userId || routeAppointment?.patientId || routeUserId)
-    : routeUserId;
+  // Ensure patient userId is preferred (doctor/workplace IDs must never be used for user endpoints)
+  const userId = routeAppointment?.patientId || routeAppointment?.userId || routeUserId;
     
   console.log('🔍 RescheduleAppointment params:', { userId, appointmentId, fromRevisit, hasRouteAppointment: !!routeAppointment });
   
@@ -118,19 +116,37 @@ export default function RescheduleAppointment({ route, navigation }) {
   const customReasonInputRef = useRef(null);
 
   useEffect(() => {
-    if (appointmentId) {
-      fetchAppointmentDetails();
-    } else if (fromRevisit) {
-      // In revisit mode, go directly to slot selection with the passed appointment
-      if (routeAppointment) {
-        setAppointment(routeAppointment);
-        setShowSlotSelection(true);
-        fetchAvailableSlots(routeAppointment.workplaceId, routeAppointment.doctorId);
+    const init = async () => {
+      try {
+        if (fromDoctorView && routeAppointment) {
+          // Doctor-side flow should not call user-only endpoints (avoids 403 "own account" errors)
+          setLoading(true);
+          setAppointment(routeAppointment);
+          setShowSlotSelection(true);
+          await fetchAvailableSlots(
+            routeAppointment.workplaceId,
+            routeAppointment.doctorId
+          );
+        } else if (appointmentId) {
+          await fetchAppointmentDetails();
+        } else if (fromRevisit) {
+          // In revisit mode, go directly to slot selection with the passed appointment
+          if (routeAppointment) {
+            setLoading(true);
+            setAppointment(routeAppointment);
+            setShowSlotSelection(true);
+            await fetchAvailableSlots(routeAppointment.workplaceId, routeAppointment.doctorId);
+          }
+        } else {
+          // Normal mode: fetch all appointments to select from
+          await fetchAllAppointments();
+        }
+      } finally {
+        setLoading(false);
       }
-    } else {
-      // Normal mode: fetch all appointments to select from
-      fetchAllAppointments();
-    }
+    };
+
+    init();
   }, []);
 
   const fetchAllAppointments = async () => {

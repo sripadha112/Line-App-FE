@@ -135,10 +135,33 @@ export default function AllBookings({ route, navigation }) {
   };
 
   const handleReschedule = (appointment) => {
-    // Navigate to existing reschedule screen with appointment details
+    // Doctor-side reschedule must use patient's user ID (not doctor/workplace IDs)
+    const patientUserId =
+      appointment.patientId ||
+      appointment.userId ||
+      appointment.user_id;
+
+    const normalizedAppointment = {
+      id: appointment.id || appointment.appointmentId,
+      appointmentId: appointment.appointmentId || appointment.id,
+      userId: patientUserId,
+      patientId: patientUserId,
+      doctorId: appointment.doctorId || doctorId,
+      workplaceId: appointment.workplaceId || workplaceId,
+      workplaceName: appointment.workplaceName || workplaceName,
+      workplaceAddress: appointment.workplaceAddress,
+      slot: appointment.slot || appointment.timeSlot,
+      status: appointment.status,
+      queuePosition: appointment.queuePosition,
+      appointmentDate: appointment.appointmentDate,
+      appointmentDateTime: appointment.appointmentDateTime,
+      patientName: appointment.patientName,
+    };
+
     navigation.navigate('RescheduleAppointment', {
       appointmentId: appointment.appointmentId,
-      userId: appointment.userId || appointment.patientId, // Use whichever field contains the patient's user ID
+      userId: patientUserId,
+      appointment: normalizedAppointment,
       patientName: appointment.patientName,
       currentDateTime: appointment.appointmentDateTime,
       fromDoctorView: true // Add this parameter to indicate it's from doctor's side

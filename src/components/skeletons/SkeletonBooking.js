@@ -1,6 +1,21 @@
 import React from 'react';
-import { View, StyleSheet, ScrollView, useWindowDimensions } from 'react-native';
-import ContentLoader, { Rect, Circle } from 'react-content-loader/native';
+import { View, StyleSheet, ScrollView, useWindowDimensions, Platform } from 'react-native';
+
+const isWeb = Platform.OS === 'web';
+const webLoader = isWeb ? require('react-content-loader') : null;
+const nativeLoader = !isWeb ? require('react-content-loader/native') : null;
+
+const ContentLoader = isWeb
+  ? (webLoader.default || webLoader)
+  : nativeLoader.default;
+
+const Rect = isWeb
+  ? (props) => React.createElement('rect', props)
+  : nativeLoader.Rect;
+
+const Circle = isWeb
+  ? (props) => React.createElement('circle', props)
+  : nativeLoader.Circle;
 
 export const SkeletonDoctorSearch = () => {
   const { width } = useWindowDimensions();
