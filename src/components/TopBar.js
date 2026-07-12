@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Animated, Platform } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Animated, Platform, StatusBar } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 /**
  * TopBar Component - Compact and responsive header
@@ -28,6 +29,11 @@ import { View, Text, TouchableOpacity, StyleSheet, Animated, Platform } from 're
  * ```
  */
 export default function TopBar({ name, title, userType = 'doctor', onBack, scrollY }) {
+  const insets = useSafeAreaInsets();
+  const androidStatusInset = Platform.OS === 'android' ? (StatusBar.currentHeight || 0) : 0;
+  const topPadding = Platform.OS === 'ios' ? insets.top + 12 : androidStatusInset + 10;
+  const expandedHeight = topPadding + 42;
+
   const getGreeting = () => {
     if (userType === 'doctor') {
       return `Hi, Dr. ${name}`;
@@ -37,16 +43,35 @@ export default function TopBar({ name, title, userType = 'doctor', onBack, scrol
     return `Hi, ${name}`;
   };
 
-  // Animated header that hides on scroll down, shows on scroll up
-  const headerTranslate = scrollY ? scrollY.interpolate({
-    inputRange: [0, 100],
-    outputRange: [0, -100],
-    extrapolate: 'clamp',
-  }) : 0;
-
-  const animatedStyle = scrollY ? {
-    transform: [{ translateY: headerTranslate }],
-  } : {};
+  // Animated header that collapses on scroll down (no visible blank top padding)
+  const animatedStyle = scrollY
+    ? {
+        height: scrollY.interpolate({
+          inputRange: [0, 90],
+          outputRange: [expandedHeight, 0],
+          extrapolate: 'clamp',
+        }),
+        opacity: scrollY.interpolate({
+          inputRange: [0, 70, 90],
+          outputRange: [1, 0.2, 0],
+          extrapolate: 'clamp',
+        }),
+        paddingTop: scrollY.interpolate({
+          inputRange: [0, 90],
+          outputRange: [topPadding, 0],
+          extrapolate: 'clamp',
+        }),
+        paddingBottom: scrollY.interpolate({
+          inputRange: [0, 90],
+          outputRange: [10, 0],
+          extrapolate: 'clamp',
+        }),
+      }
+    : {
+        height: expandedHeight,
+        paddingTop: topPadding,
+        paddingBottom: 10,
+      };
 
   return (
     <Animated.View style={[styles.topBar, animatedStyle]}>
@@ -57,7 +82,7 @@ export default function TopBar({ name, title, userType = 'doctor', onBack, scrol
       )}
       <Text 
         style={styles.greeting} 
-        numberOfLines={2}
+        numberOfLines={1}
         ellipsizeMode="tail"
       >
         {title || getGreeting()}
@@ -68,14 +93,14 @@ export default function TopBar({ name, title, userType = 'doctor', onBack, scrol
 
 const styles = StyleSheet.create({
   topBar: {
-    minHeight: Platform.OS === 'ios' ? 60 : 56,
     flexDirection: 'row',
-    alignItems: 'flex-end',
+    alignItems: 'center',
     justifyContent: 'flex-start',
     paddingHorizontal: 16,
-    paddingTop: Platform.OS === 'ios' ? 28 : 20,
-    paddingBottom: 4,
     backgroundColor: '#fff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#f1f1f1',
+    overflow: 'hidden',
     elevation: 2,
     shadowColor: '#0b0b0b',
     shadowOffset: { width: 0, height: 2 },
@@ -83,21 +108,22 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
   },
   backButton: {
-    paddingRight: 12,
-    alignSelf: 'flex-start',
-    marginTop: 10,
+    paddingRight: 16,
+    paddingVertical: 8,
+    marginRight: 4,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   backText: {
-    fontSize: 22,
+    fontSize: 24,
     color: '#3498db',
     fontWeight: 'bold',
-    lineHeight: 18,
   },
   greeting: {
     flex: 1,
     fontSize: 18,
     fontWeight: '700',
     color: '#2c3e50',
-    lineHeight: 20,
+    lineHeight: 22,
   },
 });

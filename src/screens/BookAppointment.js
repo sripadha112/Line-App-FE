@@ -36,6 +36,7 @@ export default function BookAppointment({ route, navigation }) {
   const [recentDoctors, setRecentDoctors] = useState([]); // Store recent doctors for quick access
   const [loading, setLoading] = useState(false);
   const [slotsLoading, setSlotsLoading] = useState(false);
+  const [loadingWorkplaceKey, setLoadingWorkplaceKey] = useState(null);
   const [step, setStep] = useState('search'); // 'search', 'workplaces', 'slots'
   const [noWorkplacesInfo, setNoWorkplacesInfo] = useState(null); // Info about doctors with no workplaces
   const [customSelectedDate, setCustomSelectedDate] = useState(null); // Date selected from calendar picker
@@ -55,6 +56,8 @@ export default function BookAppointment({ route, navigation }) {
 
   // Debounce timer ref for search
   const searchDebounceRef = useRef(null);
+
+  const getWorkplaceKey = (workplace) => `${workplace?.doctorId}-${workplace?.workplaceId}`;
 
   // Fetch user profile to get pincode for nearby doctors
   const fetchUserProfile = async () => {
@@ -247,6 +250,7 @@ export default function BookAppointment({ route, navigation }) {
   const selectWorkplace = async (workplace) => {
     try {
       setLoading(true);
+      setLoadingWorkplaceKey(getWorkplaceKey(workplace));
       console.log('🏥 Selected workplace:', workplace);
       console.log('👤 Doctor name:', workplace.doctorName);
       console.log('🏢 Workplace name:', workplace.workplaceName);
@@ -261,6 +265,7 @@ export default function BookAppointment({ route, navigation }) {
       Alert.alert('Error', 'Failed to fetch available slots. Please try again.');
       console.error('Error fetching slots:', error);
     } finally {
+      setLoadingWorkplaceKey(null);
       setLoading(false);
     }
   };
@@ -529,6 +534,7 @@ export default function BookAppointment({ route, navigation }) {
   // No create handler here — user can only select existing family members. Adding is in Profile.
 
   const handleWorkplaceSelect = (workplace) => {
+    if (loading || slotsLoading) return;
     selectWorkplace(workplace);
   };
 
@@ -561,6 +567,9 @@ export default function BookAppointment({ route, navigation }) {
 
   const renderWorkplaceCard = ({ item }) => (
     <View style={styles.workplaceCard}>
+      {(() => {
+        const isThisWorkplaceLoading = loading && loadingWorkplaceKey === getWorkplaceKey(item);
+        return (
       <View style={styles.cardHeader}>
         <View style={styles.doctorImagePlaceholder}>
           <Text style={styles.doctorInitial}>
@@ -595,12 +604,26 @@ export default function BookAppointment({ route, navigation }) {
           <Text style={styles.areaText}>📍 {item.address}</Text>
         </View>
         <TouchableOpacity 
-          style={styles.bookButton}
+          style={[
+            styles.bookButton,
+            (loading || slotsLoading) && styles.bookButtonDisabled,
+            isThisWorkplaceLoading && styles.bookButtonLoading
+          ]}
           onPress={() => handleWorkplaceSelect(item)}
+          disabled={loading || slotsLoading}
         >
-          <Text style={styles.bookButtonText}>Book</Text>
+          {isThisWorkplaceLoading ? (
+            <View style={styles.bookButtonLoadingContent}>
+              <ActivityIndicator size="small" color="#fff" />
+              <Text style={styles.bookButtonText}> Loading...</Text>
+            </View>
+          ) : (
+            <Text style={styles.bookButtonText}>Book</Text>
+          )}
         </TouchableOpacity>
       </View>
+        );
+      })()}
     </View>
   );
 
@@ -1488,6 +1511,17 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: 20,
     elevation: 1,
+  },
+  bookButtonDisabled: {
+    opacity: 0.7,
+  },
+  bookButtonLoading: {
+    minWidth: 96,
+  },
+  bookButtonLoadingContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   bookButtonText: {
     color: '#fff',

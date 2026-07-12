@@ -129,6 +129,7 @@ export default function UserProfile({ route, navigation }) {
 
   const sharePrescription = async (prescriptionId) => {
     try {
+      setPdfLoading(true);
       const token = await SecureStore.getItemAsync('accessToken');
       const response = await fetch(`${API_BASE_URL}/api/prescriptions/${securePathId(prescriptionId)}/pdf`, {
         headers: {
@@ -166,6 +167,8 @@ export default function UserProfile({ route, navigation }) {
     } catch (error) {
       console.error('Error sharing prescription:', error);
       Alert.alert('Error', 'Failed to share prescription');
+    } finally {
+      setPdfLoading(false);
     }
   };
 

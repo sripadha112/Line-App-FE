@@ -32,6 +32,7 @@ export default function AllBookings({ route, navigation }) {
   const [collapsedSections, setCollapsedSections] = useState({});
   const [todaySectionCollapsed, setTodaySectionCollapsed] = useState(!refresh); // Expand if coming from refresh (revisit booking)
   const [familyMembersCache, setFamilyMembersCache] = useState({}); // Cache family members by userId
+  const [actionProcessing, setActionProcessing] = useState(false);
 
   useEffect(() => {
     fetchAppointments();
@@ -169,6 +170,8 @@ export default function AllBookings({ route, navigation }) {
   };
 
   const handleComplete = async (appointment) => {
+    if (actionProcessing) return;
+
     showAlert(
       'Complete Appointment',
       'Please continue if an offline prescription has been given to the user, if not please give the prescription.',
@@ -178,16 +181,27 @@ export default function AllBookings({ route, navigation }) {
           text: 'Continue', 
           onPress: async () => {
             try {
-              setLoading(true);
+              setActionProcessing(true);
               await DoctorAPIService.completeAppointment(appointment.appointmentId);
-              showAlert('Success', 'Appointment marked as completed');
-              // Refresh the appointments list
-              await fetchAppointments();
+              showAlert(
+                'Success',
+                'Appointment marked as completed',
+                [
+                  {
+                    text: 'OK',
+                    onPress: async () => {
+                      await fetchAppointments();
+                    }
+                  }
+                ]
+              );
             } catch (error) {
               console.error('Error completing appointment:', error);
-              showAlert('Error', 'Failed to complete appointment. Please try again.');
+              showAlert('Error', 'Failed to complete appointment. Please try again.', [
+                { text: 'OK' }
+              ]);
             } finally {
-              setLoading(false);
+              setActionProcessing(false);
             }
           }
         }
@@ -197,15 +211,26 @@ export default function AllBookings({ route, navigation }) {
 
   const handleWritePrescription = (appointment) => {
     // Navigate to patient profile and prescription screen
+    const enrichedAppointment = {
+      ...appointment,
+      doctorId: appointment.doctorId || doctorId,
+      workplaceId: appointment.workplaceId || workplaceId,
+      workplaceName: appointment.workplaceName || workplaceName,
+    };
+
     console.log('📝 Navigating with doctorId:', doctorId);
-    console.log('📝 Navigating with appointment:', appointment);
+    console.log('📝 Navigating with appointment:', enrichedAppointment);
     navigation.navigate('PatientProfilePrescription', {
-      appointment: appointment,
-      doctorId: doctorId // Pass doctorId from route params
+      appointment: enrichedAppointment,
+      doctorId: doctorId, // Pass doctorId from route params
+      workplaceId: workplaceId,
+      workplaceName: workplaceName,
     });
   };
 
   const handleCancel = (appointment) => {
+    if (actionProcessing) return;
+
     // Debug: Log the appointment object to see its structure
     console.log('🔍 Appointment object for cancel:', JSON.stringify(appointment, null, 2));
     console.log('🔍 Appointment ID:', appointment.appointmentId);
@@ -221,17 +246,28 @@ export default function AllBookings({ route, navigation }) {
           style: 'destructive',
           onPress: async () => {
             try {
-              setLoading(true);
+              setActionProcessing(true);
               console.log('🚀 About to cancel appointment with ID:', appointment.appointmentId);
               await DoctorAPIService.cancelAppointment(appointment.appointmentId);
-              showAlert('Success', 'Appointment has been cancelled successfully');
-              // Refresh the appointments list
-              await fetchAppointments();
+              showAlert(
+                'Success',
+                'Appointment has been cancelled successfully',
+                [
+                  {
+                    text: 'OK',
+                    onPress: async () => {
+                      await fetchAppointments();
+                    }
+                  }
+                ]
+              );
             } catch (error) {
               console.error('Error cancelling appointment:', error);
-              showAlert('Error', 'Failed to cancel appointment. Please try again.');
+              showAlert('Error', 'Failed to cancel appointment. Please try again.', [
+                { text: 'OK' }
+              ]);
             } finally {
-              setLoading(false);
+              setActionProcessing(false);
             }
           }
         }

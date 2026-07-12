@@ -89,12 +89,22 @@ const formatTimeSlot = (startTime, endTime) => {
 };
 
 export default function RescheduleAppointment({ route, navigation }) {
-  const { userId: routeUserId, appointmentId, fromDoctorView, fromRevisit, patientData, appointment: routeAppointment } = route.params;
+  const { userId: routeUserId, appointmentId, fromDoctorView, fromRevisit, patientData, appointment: routeAppointment, doctorId: routeDoctorId, workplaceId: routeWorkplaceId } = route.params;
   
   // Ensure patient userId is preferred (doctor/workplace IDs must never be used for user endpoints)
-  const userId = routeAppointment?.patientId || routeAppointment?.userId || routeUserId;
+  const userId =
+    routeAppointment?.patientId ||
+    routeAppointment?.patient_id ||
+    routeAppointment?.userId ||
+    routeAppointment?.user_id ||
+    patientData?.userId ||
+    patientData?.id ||
+    routeUserId;
     
   console.log('🔍 RescheduleAppointment params:', { userId, appointmentId, fromRevisit, hasRouteAppointment: !!routeAppointment });
+
+  const effectiveDoctorId = routeAppointment?.doctorId || routeAppointment?.doctor_id || routeDoctorId;
+  const effectiveWorkplaceId = routeAppointment?.workplaceId || routeAppointment?.workplace_id || routeWorkplaceId;
   
   const [allAppointments, setAllAppointments] = useState([]);
   const [appointment, setAppointment] = useState(null);
@@ -121,22 +131,53 @@ export default function RescheduleAppointment({ route, navigation }) {
         if (fromDoctorView && routeAppointment) {
           // Doctor-side flow should not call user-only endpoints (avoids 403 "own account" errors)
           setLoading(true);
-          setAppointment(routeAppointment);
+          setAppointment({
+            ...routeAppointment,
+            doctorId: effectiveDoctorId,
+            workplaceId: effectiveWorkplaceId,
+          });
           setShowSlotSelection(true);
+          if (!effectiveDoctorId || !effectiveWorkplaceId) {
+            showAlert('Error', 'Doctor or workplace information missing for revisit booking. Please go back and try again.');
+            return;
+          }
           await fetchAvailableSlots(
-            routeAppointment.workplaceId,
-            routeAppointment.doctorId
+            effectiveWorkplaceId,
+            effectiveDoctorId
           );
-        } else if (appointmentId) {
-          await fetchAppointmentDetails();
         } else if (fromRevisit) {
           // In revisit mode, go directly to slot selection with the passed appointment
           if (routeAppointment) {
             setLoading(true);
-            setAppointment(routeAppointment);
+            setAppointment({
+              ...routeAppointment,
+              doctorId: effectiveDoctorId,
+              workplaceId: effectiveWorkplaceId,
+            });
             setShowSlotSelection(true);
-            await fetchAvailableSlots(routeAppointment.workplaceId, routeAppointment.doctorId);
+            if (!effectiveDoctorId || !effectiveWorkplaceId) {
+              showAlert('Error', 'Doctor or workplace information missing for revisit booking. Please go back and try again.');
+              return;
+            }
+            await fetchAvailableSlots(effectiveWorkplaceId, effectiveDoctorId);
+          } else {
+            showAlert(
+              'Error',
+              'Patient appointment details are missing. Please go back and try again.',
+              [{
+                text: 'OK',
+                onPress: () => {
+                  if (Platform.OS === 'web') {
+                    window.history.back();
+                  } else {
+                    navigation.goBack();
+                  }
+                }
+              }]
+            );
           }
+        } else if (appointmentId) {
+          await fetchAppointmentDetails();
         } else {
           // Normal mode: fetch all appointments to select from
           await fetchAllAppointments();
@@ -177,6 +218,9 @@ export default function RescheduleAppointment({ route, navigation }) {
 
   const fetchAppointmentDetails = async () => {
     try {
+      if (!userId) {
+        throw new Error('Missing patient userId');
+      }
       setLoading(true);
       // Fetch current appointment details
       const appointmentsData = await UserAPIService.fetchAllUserAppointments(userId);

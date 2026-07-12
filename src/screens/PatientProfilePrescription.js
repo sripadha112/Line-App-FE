@@ -25,7 +25,7 @@ import { encryptQueryId } from '../utils/queryParamCrypto';
 const securePathId = (id) => encodeURIComponent(encryptQueryId(id));
 
 export default function PatientProfilePrescription({ route, navigation }) {
-  const { appointment, doctorId } = route.params;
+  const { appointment, doctorId, workplaceId, workplaceName } = route.params;
   const [userProfile, setUserProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -496,16 +496,32 @@ export default function PatientProfilePrescription({ route, navigation }) {
   };
 
   const handleBookNextVisit = () => {
+    const patientUserId =
+      appointment?.patientId ||
+      appointment?.patient_id ||
+      appointment?.userId ||
+      appointment?.user_id;
+
+    const revisitAppointment = {
+      ...appointment,
+      doctorId: appointment?.doctorId || doctorId,
+      workplaceId: appointment?.workplaceId || workplaceId,
+      workplaceName: appointment?.workplaceName || workplaceName,
+    };
+
     console.log('🔄 Navigating to RescheduleAppointment with revisit context');
-    console.log('📋 Appointment data:', appointment);
-    console.log('🆔 UserId extracted:', appointment.userId || appointment.patientId);
+    console.log('📋 Appointment data:', revisitAppointment);
+    console.log('🆔 UserId extracted:', patientUserId);
     
     // Navigate to reschedule page with revisit context
     navigation.navigate('RescheduleAppointment', {
-      appointment: appointment,
+      appointment: revisitAppointment,
       appointmentId: appointment.appointmentId,
-      userId: appointment.userId || appointment.patientId,
+      userId: patientUserId,
+      fromDoctorView: true,
       fromRevisit: true, // Flag to indicate this is for booking a revisit
+      doctorId: revisitAppointment.doctorId,
+      workplaceId: revisitAppointment.workplaceId,
       patientData: userProfile // Pass patient data for context
     });
   };

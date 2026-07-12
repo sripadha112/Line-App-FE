@@ -1,5 +1,5 @@
 import React, {useEffect, useState, useRef} from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert, Modal, TextInput, ScrollView, RefreshControl, ActivityIndicator, Linking, Platform, BackHandler } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert, Modal, TextInput, ScrollView, RefreshControl, ActivityIndicator, Linking, Platform, BackHandler, Animated } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import SecureStore from '../utils/secureStorage';
 import { format } from 'date-fns';
@@ -54,7 +54,6 @@ export default function DoctorHome({ navigation, route }) {
   const [workplaceModalVisible, setWorkplaceModalVisible] = useState(false);
   const [todayScheduleExpanded, setTodayScheduleExpanded] = useState(true);
   const [profileModalVisible, setProfileModalVisible] = useState(false);
-  const [doctorProfile, setDoctorProfile] = useState(null);
   const [editMode, setEditMode] = useState(false);
   const [shiftMinutes, setShiftMinutes] = useState('');
   const [selectedCancelReason, setSelectedCancelReason] = useState('');
@@ -108,7 +107,8 @@ export default function DoctorHome({ navigation, route }) {
     isPrimary: false
   });
 
-
+  // Scroll animation for hiding/showing TopBar
+  const scrollY = useRef(new Animated.Value(0)).current;
 
   // Add a ref to track if we're already handling auth error
   const authErrorHandling = React.useRef(false);
@@ -182,7 +182,6 @@ export default function DoctorHome({ navigation, route }) {
         // PRIORITY 1: Load workplaces first (main data)
         fetchWorkplaces(doctorId).then(() => {
           // PRIORITY 2: Load profile in background (less critical)
-          fetchDoctorProfile().catch(err => console.log('Profile load error:', err));
           fetchDetailedProfile(doctorId).catch(err => console.log('Detailed profile error:', err));
         });
         
@@ -250,10 +249,8 @@ export default function DoctorHome({ navigation, route }) {
         
         // PRIORITY 2: Load profiles in background (secondary data, cached 5min)
         console.log('🟡 PRIORITY 2: Loading profiles in background...');
-        Promise.all([
-          fetchDoctorProfile().catch(err => console.log('Profile error:', err)),
-          fetchDetailedProfile(id).catch(err => console.log('Detailed profile error:', err))
-        ]).then(() => console.log('✅ Profiles loaded'));
+        fetchDetailedProfile(id).catch(err => console.log('Detailed profile error:', err))
+          .then(() => console.log('✅ Profiles loaded'));
         
         // PRIORITY 3: Load history ONLY if on history tab (lazy load)
         if (activeTab === 'history') {
@@ -376,15 +373,6 @@ export default function DoctorHome({ navigation, route }) {
     }
   };
 
-  const fetchDoctorProfile = async () => {
-    try {
-      const response = await api.get('/api/doctor/profile');
-      setDoctorProfile(response.data);
-    } catch (error) {
-      console.log('Error fetching doctor profile:', error.message);
-    }
-  };
-
   const fetchDetailedProfile = async (doctorId) => {
     try {
       setProfileLoading(true);
@@ -499,8 +487,7 @@ Dr. ${name || 'Kedulz App Doctor'}`;
 
   const checkRegistrationComplete = async () => {
     try {
-      const profile = await api.get('/api/doctor/profile');
-      // Remove the registration modal logic
+      // Registration modal logic removed - using detailed profile instead
     } catch (e) {
       console.log('registration check err', e.message);
     }
@@ -509,7 +496,6 @@ Dr. ${name || 'Kedulz App Doctor'}`;
   const updateDoctorProfile = async (updatedData) => {
     try {
       const response = await api.put('/api/doctor/profile', updatedData);
-      setDoctorProfile(response.data);
       setEditMode(false);
       showAlert('Success', 'Profile updated successfully');
     } catch (error) {
@@ -1855,12 +1841,17 @@ Dr. ${name || 'Kedulz App Doctor'}`;
       ) : (
         // Home View
         <>
-          <TopBar name={name} />
-          <ScrollView 
+          <TopBar name={name} scrollY={scrollY} />
+          <Animated.ScrollView 
             style={styles.content}
             refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-          showsVerticalScrollIndicator={false}
-        >
+            showsVerticalScrollIndicator={false}
+            scrollEventThrottle={16}
+            onScroll={Animated.event(
+              [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+              { useNativeDriver: false }
+            )}
+          >
         {/* Today's Schedule Section - Moved to Top */}
         <View style={styles.todayScheduleContainer}>
           {!todayScheduleExpanded ? (
@@ -1994,7 +1985,7 @@ Dr. ${name || 'Kedulz App Doctor'}`;
         
         {/* Bottom Spacing to prevent navigation overlap */}
         <View style={styles.bottomSpacing} />
-      </ScrollView>
+      </Animated.ScrollView>
         </>
       )}
 
@@ -2324,48 +2315,48 @@ Dr. ${name || 'Kedulz App Doctor'}`;
             
             {loading ? (
               <ActivityIndicator size="large" color="#3498db" style={styles.loader} />
-            ) : doctorProfile ? (
+            ) : detailedProfile ? (
               <ScrollView style={styles.profileContent}>
                 <View style={styles.profileSection}>
                   <Text style={styles.profileSectionTitle}>Personal Information</Text>
                   <View style={styles.profileField}>
                     <Text style={styles.profileLabel}>Full Name</Text>
-                    {editMode ? (
+                    {editingProfile ? (
                       <TextInput
                         style={styles.profileInput}
-                        value={doctorProfile.fullName}
-                        onChangeText={(text) => setDoctorProfile({...doctorProfile, fullName: text})}
+                        value={editedProfile?.fullName || ''}
+                        onChangeText={(text) => setEditedProfile({...editedProfile, fullName: text})}
                       />
                     ) : (
-                      <Text style={styles.profileValue}>{doctorProfile.fullName}</Text>
+                      <Text style={styles.profileValue}>{detailedProfile.fullName}</Text>
                     )}
                   </View>
                   <View style={styles.profileField}>
                     <Text style={styles.profileLabel}>Email</Text>
-                    <Text style={styles.profileValue}>{doctorProfile.email}</Text>
+                    <Text style={styles.profileValue}>{detailedProfile.email}</Text>
                   </View>
                   <View style={styles.profileField}>
                     <Text style={styles.profileLabel}>Mobile</Text>
-                    {editMode ? (
+                    {editingProfile ? (
                       <TextInput
                         style={styles.profileInput}
-                        value={doctorProfile.mobileNumber}
-                        onChangeText={(text) => setDoctorProfile({...doctorProfile, mobileNumber: text})}
+                        value={editedProfile?.mobileNumber || ''}
+                        onChangeText={(text) => setEditedProfile({...editedProfile, mobileNumber: text})}
                       />
                     ) : (
-                      <Text style={styles.profileValue}>{doctorProfile.mobileNumber}</Text>
+                      <Text style={styles.profileValue}>{detailedProfile.mobileNumber}</Text>
                     )}
                   </View>
                   <View style={styles.profileField}>
                     <Text style={styles.profileLabel}>Specialization</Text>
-                    {editMode ? (
+                    {editingProfile ? (
                       <TextInput
                         style={styles.profileInput}
-                        value={doctorProfile.specialization}
-                        onChangeText={(text) => setDoctorProfile({...doctorProfile, specialization: text})}
+                        value={editedProfile?.specialization || ''}
+                        onChangeText={(text) => setEditedProfile({...editedProfile, specialization: text})}
                       />
                     ) : (
-                      <Text style={styles.profileValue}>{doctorProfile.specialization}</Text>
+                      <Text style={styles.profileValue}>{detailedProfile.specialization}</Text>
                     )}
                   </View>
                 </View>
@@ -2391,10 +2382,10 @@ Dr. ${name || 'Kedulz App Doctor'}`;
                   ))}
                 </View>
                 
-                {editMode && (
+                {editingProfile && (
                   <TouchableOpacity 
                     style={styles.saveProfileBtn}
-                    onPress={() => updateDoctorProfile(doctorProfile)}
+                    onPress={() => handleSaveProfile()}
                   >
                     <Text style={styles.saveProfileBtnText}>Save Changes</Text>
                   </TouchableOpacity>

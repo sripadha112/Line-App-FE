@@ -1,7 +1,10 @@
 import React from 'react';
 import { View, TouchableOpacity, Text, StyleSheet, Linking, Alert, Share, Platform } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function BottomNavigation({ activeTab, onTabChange, onRefresh, userType = 'doctor' }) {
+  const insets = useSafeAreaInsets();
+  const safeBottomPadding = Math.max(insets.bottom, Platform.OS === 'ios' ? 6 : 4);
   const getDoctorTabs = () => [
     { id: 'appointments', icon: '🏠', label: 'Home' },
     { id: 'profile', icon: '👤', label: 'Profile' },
@@ -96,7 +99,7 @@ export default function BottomNavigation({ activeTab, onTabChange, onRefresh, us
   };
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { paddingBottom: safeBottomPadding }]}>
       {tabs.map((tab) => (
         <TouchableOpacity 
           key={tab.id}
@@ -125,9 +128,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-around',
     alignItems: 'center',
-    paddingVertical: 15,
+    paddingVertical: 10,
     paddingHorizontal: 20,
-    paddingBottom: 20, // Extra bottom padding for safe area
     elevation: 10,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: -4 },
@@ -135,13 +137,13 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     borderTopWidth: 1,
     borderTopColor: '#e0e0e0',
-    zIndex: 1000, // Ensure it's always on top
+    zIndex: 1000,
   },
   navItem: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 5,
-    paddingHorizontal: 8,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
     borderRadius: 8,
     minWidth: 60,
   },

@@ -386,18 +386,95 @@ export default function CancelDay({ route, navigation }) {
     );
   };
 
-  const formatBlockInfo = (block) => {
-    const date = new Date(block.blockDate).toLocaleDateString('en-US', {
-      weekday: 'short',
-      month: 'short',
-      day: 'numeric'
-    });
-    
-    if (block.isFullDay) {
-      return `${date} - Full Day`;
-    } else {
-      return `${date} - ${block.startTime} to ${block.endTime}`;
+  const parseApiDate = (value) => {
+    if (!value) return null;
+
+    // LocalDate as "YYYY-MM-DD"
+    if (typeof value === 'string') {
+      const ymdMatch = value.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+      if (ymdMatch) {
+        const [, y, m, d] = ymdMatch;
+        return new Date(Number(y), Number(m) - 1, Number(d));
+      }
+
+      const parsed = new Date(value);
+      return isNaN(parsed.getTime()) ? null : parsed;
     }
+
+    // LocalDate as [year, month, day]
+    if (Array.isArray(value) && value.length >= 3) {
+      const [year, month, day] = value;
+      if ([year, month, day].every(v => Number.isFinite(Number(v)))) {
+        return new Date(Number(year), Number(month) - 1, Number(day));
+      }
+    }
+
+    // LocalDate as { year, monthValue, dayOfMonth } / { year, month, day }
+    if (typeof value === 'object') {
+      const year = value.year;
+      const month = value.monthValue ?? value.month;
+      const day = value.dayOfMonth ?? value.day;
+      if ([year, month, day].every(v => Number.isFinite(Number(v)))) {
+        return new Date(Number(year), Number(month) - 1, Number(day));
+      }
+    }
+
+    return null;
+  };
+
+  const formatApiTime = (value) => {
+    if (value === null || value === undefined || value === '') return '';
+
+    // LocalTime as [hour, minute, second, nano]
+    if (Array.isArray(value) && value.length >= 2) {
+      const hour = Number(value[0]);
+      const minute = Number(value[1]);
+      if (Number.isFinite(hour) && Number.isFinite(minute)) {
+        return `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
+      }
+    }
+
+    // LocalTime as object { hour, minute }
+    if (typeof value === 'object') {
+      const hour = Number(value.hour);
+      const minute = Number(value.minute);
+      if (Number.isFinite(hour) && Number.isFinite(minute)) {
+        return `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
+      }
+    }
+
+    // String time, normalize to HH:mm (handles HH:mm and HH:mm:ss)
+    const str = String(value);
+    const match = str.match(/^(\d{1,2}):(\d{2})(?::\d{2})?$/);
+    if (match) {
+      return `${String(Number(match[1])).padStart(2, '0')}:${match[2]}`;
+    }
+
+    return str;
+  };
+
+  const formatBlockInfo = (block) => {
+    const parsedDate = parseApiDate(block.blockDate ?? block.date ?? block.blockedDate);
+    const date = parsedDate
+      ? parsedDate.toLocaleDateString('en-US', {
+          weekday: 'short',
+          month: 'short',
+          day: 'numeric'
+        })
+      : 'Date unavailable';
+
+    const isFullDay = block.isFullDay ?? block.fullDay ?? block.is_full_day;
+    if (isFullDay) {
+      return `${date} - Full Day`;
+    }
+
+    const start = formatApiTime(block.startTime ?? block.start_time);
+    const end = formatApiTime(block.endTime ?? block.end_time);
+    if (start && end) {
+      return `${date} - ${start} to ${end}`;
+    }
+
+    return `${date} - Time not specified`;
   };
 
   const renderDateOption = (option, label) => (
