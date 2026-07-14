@@ -4,6 +4,8 @@ import api from '../services/api';
 import { API_ENDPOINTS } from '../config/apiConfig';
 import SecureStore from '../utils/secureStorage';
 import UserNotificationService from '../services/userNotificationService';
+import DPDPConsentModal from '../components/DPDPConsentModal';
+import { ConsentAPIService } from '../services/doctorApiService';
 
 export default function UserRegistrationScreen({ navigation, route }) {
   const { mobile, pin } = route.params || {};
@@ -33,6 +35,7 @@ export default function UserRegistrationScreen({ navigation, route }) {
   const [loading, setLoading] = useState(false);
   const [genderDropdownVisible, setGenderDropdownVisible] = useState(false);
   const [acceptedTerms, setAcceptedTerms] = useState(false);
+  const [consentModalVisible, setConsentModalVisible] = useState(false);
   
   const GENDER_OPTIONS = ['Male', 'Female', 'Other'];
 
@@ -40,7 +43,7 @@ export default function UserRegistrationScreen({ navigation, route }) {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
-  const handleRegister = async () => {
+  const handleRegister = () => {
     // Check terms acceptance first
     if (!acceptedTerms) {
       Alert.alert('Terms Required', 'Please accept the Terms & Conditions and Privacy Policy to continue');
@@ -65,6 +68,12 @@ export default function UserRegistrationScreen({ navigation, route }) {
       }
     }
 
+    // Show DPDP consent modal before proceeding
+    setConsentModalVisible(true);
+  };
+
+  const handleConsentAccepted = async (choices) => {
+    setConsentModalVisible(false);
     setLoading(true);
     try {
       const body = {
@@ -95,6 +104,17 @@ export default function UserRegistrationScreen({ navigation, route }) {
       await SecureStore.setItemAsync('fullName', formData.fullName);
       await SecureStore.setItemAsync('role', 'USER');
       await SecureStore.setItemAsync('mobile', mobile);
+
+      // Record DPDP consents (non-blocking)
+      const registeredUserId = data.userId || data.id;
+      if (choices && registeredUserId) {
+        try {
+          await ConsentAPIService.submitConsents(registeredUserId, choices, Platform.OS, '1.0');
+          console.log('✅ DPDP Consents recorded');
+        } catch (consentErr) {
+          console.warn('⚠️ Consent recording warning (non-blocking):', consentErr);
+        }
+      }
       
       // Register FCM token for push notifications after successful registration
       console.log('🔔 Registering FCM token after user registration...');
@@ -110,7 +130,7 @@ export default function UserRegistrationScreen({ navigation, route }) {
         index: 0,
         routes: [{
           name: 'UserHome',
-          params: { userId: data.userId || data.id }
+          params: { userId: registeredUserId }
         }]
       });
     } catch (e) {
@@ -274,6 +294,14 @@ export default function UserRegistrationScreen({ navigation, route }) {
         </TouchableOpacity>
       </View>
       </ScrollView>
+
+      {/* DPDP Consent Modal – shown before registration is submitted */}
+      <DPDPConsentModal
+        visible={consentModalVisible}
+        context="registration"
+        onAccept={handleConsentAccepted}
+        onDecline={() => setConsentModalVisible(false)}
+      />
     </KeyboardAvoidingView>
   );
 }

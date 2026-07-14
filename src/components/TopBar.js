@@ -2,6 +2,8 @@ import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Animated, Platform, StatusBar } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+const HEADER_ROW_HEIGHT = 44;
+
 /**
  * TopBar Component - Compact and responsive header
  * 
@@ -32,7 +34,7 @@ export default function TopBar({ name, title, userType = 'doctor', onBack, scrol
   const insets = useSafeAreaInsets();
   const androidStatusInset = Platform.OS === 'android' ? (StatusBar.currentHeight || 0) : 0;
   const topPadding = Platform.OS === 'ios' ? insets.top + 12 : androidStatusInset + 10;
-  const expandedHeight = topPadding + 42;
+  const expandedHeight = topPadding + HEADER_ROW_HEIGHT + 8;
 
   const getGreeting = () => {
     if (userType === 'doctor') {
@@ -75,27 +77,31 @@ export default function TopBar({ name, title, userType = 'doctor', onBack, scrol
 
   return (
     <Animated.View style={[styles.topBar, animatedStyle]}>
-      {onBack && (
-        <TouchableOpacity onPress={onBack} style={styles.backButton}>
-          <Text style={styles.backText}>←</Text>
-        </TouchableOpacity>
-      )}
-      <Text 
-        style={styles.greeting} 
-        numberOfLines={1}
-        ellipsizeMode="tail"
-      >
-        {title || getGreeting()}
-      </Text>
+      <View style={styles.row}>
+        {onBack ? (
+          <TouchableOpacity onPress={onBack} style={styles.backButton} hitSlop={{ top: 8, right: 8, bottom: 8, left: 8 }}>
+            <View style={styles.backChevron} />
+          </TouchableOpacity>
+        ) : (
+          <View style={styles.sideSlot} />
+        )}
+
+        <Text
+          style={styles.greeting}
+          numberOfLines={1}
+          ellipsizeMode="tail"
+        >
+          {title || getGreeting()}
+        </Text>
+
+        <View style={styles.sideSlot} />
+      </View>
     </Animated.View>
   );
 }
 
 const styles = StyleSheet.create({
   topBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'flex-start',
     paddingHorizontal: 16,
     backgroundColor: '#fff',
     borderBottomWidth: 1,
@@ -107,23 +113,36 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
   },
+  row: {
+    height: HEADER_ROW_HEIGHT,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  sideSlot: {
+    width: 40,
+    height: 40,
+  },
   backButton: {
-    paddingRight: 16,
-    paddingVertical: 8,
-    marginRight: 4,
+    width: 40,
+    height: 40,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  backText: {
-    fontSize: 24,
-    color: '#3498db',
-    fontWeight: 'bold',
+  backChevron: {
+    width: 12,
+    height: 12,
+    borderLeftWidth: 2.5,
+    borderBottomWidth: 2.5,
+    borderColor: '#2c3e50',
+    transform: [{ rotate: '45deg' }],
+    marginLeft: 4,
   },
   greeting: {
     flex: 1,
     fontSize: 18,
     fontWeight: '700',
     color: '#2c3e50',
-    lineHeight: 22,
+    lineHeight: 24,
+    textAlign: 'center',
   },
 });

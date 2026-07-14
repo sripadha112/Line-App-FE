@@ -25,6 +25,12 @@ export default function QuickBookingQR({ route, navigation }) {
   const [showPoster, setShowPoster] = useState(false);
   const viewShotRef = useRef();
   const posterViewShotRef = useRef();
+  const posterInstructions = [
+    '1. Open Google Lens (Android) or Camera app (iOS)',
+    '2. Point your camera at the QR code above',
+    '3. Tap the notification that appears',
+    '4. Fill in your details and book appointment',
+  ];
 
   // Fetch workplaces and doctor profile when screen loads
   useFocusEffect(
@@ -191,30 +197,25 @@ export default function QuickBookingQR({ route, navigation }) {
           // Instructions heading below QR
           ctx.font = 'bold 18px Arial';
           ctx.fillStyle = '#2c3e50';
-          ctx.fillText('📱 HOW TO BOOK:', canvas.width / 2, 550);
+          ctx.textAlign = 'center';
+          ctx.fillText('HOW TO BOOK:', canvas.width / 2, 550);
           
           // Instructions below heading
           ctx.font = '15px Arial';
           ctx.fillStyle = '#2c3e50';
-          ctx.textAlign = 'center';
-          
-          const instructions = [
-            '1. 📱 Open Google Lens (Android) / Camera app (iOS)',
-            '2. 📸 Point camera at the QR code above',
-            '3. 👆 Tap the notification that appears',
-            '4. ✍️ Fill in your details and book appointment'
-          ];
+          ctx.textAlign = 'left';
           
           let yPos = 580;
-          instructions.forEach(line => {
-            ctx.fillText(line, canvas.width / 2, yPos);
+          posterInstructions.forEach(line => {
+            ctx.fillText(line, 64, yPos);
             yPos += 24;
           });
           
           // App logo and branding (no background)
           ctx.fillStyle = '#2196F3';
           ctx.font = 'bold 18px Arial';
-          ctx.fillText('🏥 kedulz - Making Healthcare Accessible', canvas.width / 2, canvas.height - 60);
+          ctx.textAlign = 'center';
+          ctx.fillText('kedulz - Making Healthcare Accessible', canvas.width / 2, canvas.height - 60);
           ctx.font = '13px Arial';
           ctx.fillStyle = '#7f8c8d';
           ctx.fillText('Visit: kedulz.com', canvas.width / 2, canvas.height - 40);
@@ -222,7 +223,7 @@ export default function QuickBookingQR({ route, navigation }) {
           // Platform availability
           ctx.font = 'bold 14px Arial';
           ctx.fillStyle = '#27ae60';
-          ctx.fillText('✅ Available on Android & Web', canvas.width / 2, canvas.height - 20);
+          ctx.fillText('Available on Android & Web', canvas.width / 2, canvas.height - 20);
           
           // Download the canvas
           canvas.toBlob((blob) => {
@@ -371,14 +372,13 @@ export default function QuickBookingQR({ route, navigation }) {
                       </View>
                       
                       {/* Instructions heading */}
-                      <Text style={styles.posterInstructionsHeading}>📱 HOW TO BOOK:</Text>
+                      <Text style={styles.posterInstructionsHeading}>HOW TO BOOK:</Text>
                       
                       {/* Instructions */}
                       <View style={styles.posterInstructions}>
-                        <Text style={styles.posterInstructionText}>1. 📱 Open Google Lens (Android) / Camera app (iOS)</Text>
-                        <Text style={styles.posterInstructionText}>2. 📸 Point camera at the QR code above</Text>
-                        <Text style={styles.posterInstructionText}>3. 👆 Tap the notification that appears</Text>
-                        <Text style={styles.posterInstructionText}>4. ✍️ Fill in your details and book appointment</Text>
+                        {posterInstructions.map((instruction) => (
+                          <Text key={instruction} style={styles.posterInstructionText}>{instruction}</Text>
+                        ))}
                       </View>
                       
                       {/* App Logo and Branding */}
@@ -392,7 +392,7 @@ export default function QuickBookingQR({ route, navigation }) {
                           <Text style={styles.posterAppNameInline}>kedulz - Making Healthcare Accessible</Text>
                         </View>
                         <Text style={styles.posterWebsite}>Visit: kedulz.com</Text>
-                        <Text style={styles.posterAvailability}>✅ Available on Android & Web</Text>
+                        <Text style={styles.posterAvailability}>Available on Android & Web</Text>
                       </View>
                     </View>
                   </ViewShot>

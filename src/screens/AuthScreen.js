@@ -731,6 +731,22 @@ export default function AuthScreen({ navigation }) {
 
   const validatePinMatch = (pin1, pin2) => pin1 === pin2 && pin1.length > 0;
 
+  const isDeletedAccountError = (error) => {
+    const status = error?.response?.status;
+    const statusText = String(error?.response?.data?.status || '').toLowerCase();
+    const message = String(
+      error?.response?.data?.message || error?.response?.data?.error || error?.message || ''
+    ).toLowerCase();
+
+    if (status === 410) return true;
+    if (statusText.includes('deleted') || statusText.includes('deactivated')) return true;
+    return (
+      message.includes('deleted') ||
+      message.includes('deactivated') ||
+      message.includes('inactive account')
+    );
+  };
+
   // ── STEP 1: Check if mobile is registered ───────────────────────────────
   const checkMobile = async () => {
     const validation = validateMobileNumber(mobile);
@@ -749,6 +765,25 @@ export default function AuthScreen({ navigation }) {
       );
 
       const { mobileExists, pinExists, userId } = res.data;
+
+      const statusText = String(res.data?.status || '').toLowerCase();
+      const accountDeleted =
+        res.data?.accountDeleted === true ||
+        statusText.includes('deleted') ||
+        statusText.includes('deactivated');
+
+      if (accountDeleted) {
+        showAlert(
+          'Account Deleted',
+          'This account was deleted. Please create a new PIN and register again.',
+          [{ text: 'Close' }]
+        );
+        setUserId(null);
+        setPin('');
+        setConfirmPin('');
+        setStep(STEP_SET_PIN);
+        return;
+      }
 
       if (!mobileExists) {
         // New user → Set PIN before registration
@@ -809,6 +844,17 @@ export default function AuthScreen({ navigation }) {
           ],
           { cancelable: false }
         );
+      } else if (isDeletedAccountError(e)) {
+        showAlert(
+          'Account Deleted',
+          'This account was deleted and cannot be used for login. Please register again.',
+          [{ text: 'Close' }],
+          { cancelable: false }
+        );
+        setUserId(null);
+        setPin('');
+        setConfirmPin('');
+        setStep(STEP_SET_PIN);
       } else if (e.response?.status === 404) {
         showAlert('Account Not Found', 'Please register again.');
         resetFlow();

@@ -3,7 +3,7 @@
     "name": "kedulz",
     "alternateNames": ["Kedulz App", "Next App", "NextApp", "Kedulz"],
     "tagline": "Book Doctor Appointments Online Instantly",
-    "description": "kedulz is a comprehensive healthcare appointment booking platform that enables patients to book doctor appointments online instantly, manage family appointments, find doctors near them, and access digital prescriptions.",
+    "description": "kedulz is a comprehensive healthcare appointment booking platform that enables patients to book doctor appointments online instantly, manage family appointments, find doctors near them, and access digital prescriptions. Sensitive medical information is encrypted at rest and in transit and processing follows DPDP-aligned consent and data-rights principles.",
     "category": "Healthcare",
     "subcategory": "Appointment Booking",
     "type": "Mobile & Web Application",
@@ -148,7 +148,7 @@
   "faq": [
     {
       "question": "What is kedulz?",
-      "answer": "kedulz is a comprehensive healthcare appointment booking platform that allows users to book doctor appointments online instantly. It helps patients find doctors near them, manage family appointments, receive reminders, and access digital prescriptions."
+      "answer": "kedulz is a comprehensive healthcare appointment booking platform that allows users to book doctor appointments online instantly. It helps patients find doctors near them, manage family appointments, receive reminders, and access digital prescriptions. Sensitive medical information is encrypted and handled with DPDP-aligned consent and privacy controls."
     },
     {
       "question": "How do I book an appointment on kedulz?",
@@ -184,7 +184,7 @@
     },
     {
       "question": "Is my medical information secure?",
-      "answer": "Yes, kedulz takes data security seriously and implements industry-standard encryption and security measures to protect your medical information."
+      "answer": "Yes. kedulz encrypts sensitive medical information at rest and in transit, and follows DPDP-aligned privacy principles including clear consent, withdrawal options, and data rights controls."
     }
   ],
   
@@ -215,10 +215,10 @@
   
   "seo": {
     "title": "kedulz - Book Doctor Appointments Online | Healthcare Appointment Booking App",
-    "metaDescription": "Book doctor appointments instantly with kedulz. Find doctors near you, manage family appointments, get reminders & access digital prescriptions. 100% Free!",
+    "metaDescription": "Book doctor appointments instantly with kedulz. Sensitive medical information is encrypted and processing follows DPDP-aligned consent and privacy principles.",
     "canonicalUrl": "https://kedulz.com",
     "ogTitle": "kedulz - Book Doctor Appointments Online",
-    "ogDescription": "Book doctor appointments online instantly. Manage family appointments, find doctors near you with kedulz.",
+    "ogDescription": "Book doctor appointments online instantly with kedulz. Sensitive medical information is encrypted and managed under DPDP-aligned privacy principles.",
     "ogImage": "https://kedulz.com/assets/Logo.jpeg"
   },
   

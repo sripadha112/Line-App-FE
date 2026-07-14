@@ -908,3 +908,78 @@ export class AuthAPIService {
     }
   }
 }
+
+// ─── DPDP Consent & Data Rights Service ───────────────────────────────────────
+export class ConsentAPIService {
+
+  /** Submit granular consent choices at registration or update */
+  static async submitConsents(userId, consents, platform = 'mobile', policyVersion = '1.0') {
+    try {
+      const body = {
+        consents,           // [{ consentType: 'MEDICAL_DATA_STORAGE', consented: true }, …]
+        appVersion: '1.0',
+        platform,
+        policyVersion,
+      };
+      const response = await api.post(`/api/user/${securePathId(userId)}/consent`, body);
+      return response.data;
+    } catch (error) {
+      console.log('Error submitting consents:', error.message);
+      throw error;
+    }
+  }
+
+  /** Get current consent status for a user */
+  static async getConsentStatus(userId) {
+    try {
+      const response = await api.get(`/api/user/${securePathId(userId)}/consent`);
+      return response.data;
+    } catch (error) {
+      console.log('Error fetching consent status:', error.message);
+      throw error;
+    }
+  }
+
+  /** Withdraw a specific consent type, or pass null/undefined to withdraw ALL */
+  static async withdrawConsent(userId, consentType = null, reason = '') {
+    try {
+      const body = { consentType, reason };
+      const response = await api.post(`/api/user/${securePathId(userId)}/consent/withdraw`, body);
+      return response.data;
+    } catch (error) {
+      console.log('Error withdrawing consent:', error.message);
+      throw error;
+    }
+  }
+
+  /** DPDP Right to Erasure – delete health/medical data only, keep account */
+  static async deleteHealthData(userId) {
+    try {
+      const response = await api.delete(`/api/user/${securePathId(userId)}/health-data`);
+      return response.data;
+    } catch (error) {
+      console.log('Error deleting health data:', error.message);
+      throw error;
+    }
+  }
+
+  /** DPDP Right to Erasure – delete entire account */
+  static async deleteUserAccount(userId) {
+    try {
+      const response = await api.delete(`/api/user/${securePathId(userId)}/account`);
+      return response.data;
+    } catch (error) {
+      console.log('Error deleting account:', error.message);
+      throw error;
+    }
+  }
+}
+
+// Consent type constants (mirrors backend)
+export const CONSENT_TYPES = {
+  MEDICAL_DATA_STORAGE:  'MEDICAL_DATA_STORAGE',
+  DIAGNOSTIC_SHARING:    'DIAGNOSTIC_SHARING',
+  PRESCRIPTION_STORAGE:  'PRESCRIPTION_STORAGE',
+  PUSH_NOTIFICATIONS:    'PUSH_NOTIFICATIONS',
+  ANALYTICS:             'ANALYTICS',
+};

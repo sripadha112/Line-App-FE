@@ -47,6 +47,7 @@ import QuickBookingQR from './src/screens/QuickBookingQR';
 import FCMTestScreen from './src/screens/FCMTestScreen';
 import TermsAndConditions from './src/screens/TermsAndConditions';
 import PrivacyPolicy from './src/screens/PrivacyPolicy';
+import DataRightsScreen from './src/screens/DataRightsScreen';
 import SecureStore from './src/utils/secureStorage';
 import { setAuthHeaderFromStore, overrideApiBaseUrl, setNavigationRef } from './src/services/api';
 import API_BASE_URL from './src/config';
@@ -264,6 +265,7 @@ export default function App() {
         <Stack.Screen name="FCMTest" component={FCMTestScreen} options={{headerShown:false, title:'Notification Test'}} />
         <Stack.Screen name="TermsAndConditions" component={TermsAndConditions} options={{headerShown:false, title:'Terms & Conditions'}} />
         <Stack.Screen name="PrivacyPolicy" component={PrivacyPolicy} options={{headerShown:false, title:'Privacy Policy'}} />
+        <Stack.Screen name="DataRights" component={DataRightsScreen} options={{headerShown:false, title:'Manage My Data'}} />
       </Stack.Navigator>
 
       {/* Debug overlay: only show in development mode */}

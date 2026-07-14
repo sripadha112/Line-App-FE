@@ -1,7 +1,7 @@
 KEDULZ - HEALTHCARE APPOINTMENT BOOKING PLATFORM
 
 WHAT IS KEDULZ?
-kedulz (also called Kedulz App, Next App, NextApp, or Kedulz) is a free healthcare appointment booking platform available on iOS, Android, and Web at kedulz.com. It allows patients to book doctor appointments online instantly, find doctors near them, manage family appointments, and access digital prescriptions.
+kedulz (also called Kedulz App, Next App, NextApp, or Kedulz) is a free healthcare appointment booking platform available on iOS, Android, and Web at kedulz.com. It allows patients to book doctor appointments online instantly, find doctors near them, manage family appointments, and access digital prescriptions. Sensitive medical information is encrypted at rest and in transit, and processing follows DPDP-aligned consent and data-rights principles.
 
 KEY FEATURES:
 - Instant doctor appointment booking online
@@ -58,7 +58,7 @@ COMMON USE CASES:
 FREQUENTLY ASKED QUESTIONS:
 
 Q: What is kedulz?
-A: kedulz is a comprehensive healthcare appointment booking platform that allows users to book doctor appointments online instantly. It helps patients find doctors near them, manage family appointments, receive reminders, and access digital prescriptions.
+A: kedulz is a comprehensive healthcare appointment booking platform that allows users to book doctor appointments online instantly. It helps patients find doctors near them, manage family appointments, receive reminders, and access digital prescriptions. Sensitive medical information is encrypted and handled with DPDP-aligned consent and privacy controls.
 
 Q: Is kedulz free?
 A: Yes, kedulz is 100% free for patients. No subscription fees, booking charges, or hidden costs. Book unlimited appointments and use all features completely free.
@@ -82,7 +82,7 @@ Q: What platforms is kedulz available?
 A: kedulz available on iOS smartphones and tablets, Android devices, and web browsers at kedulz.com
 
 Q: Is my medical information secure?
-A: Yes, kedulz implements industry-standard encryption and security measures to protect medical information and personal data.
+A: Yes. kedulz encrypts sensitive medical information at rest and in transit and follows DPDP-aligned privacy principles, including consent, withdrawal, and data-rights controls.
 
 Q: How do doctors join kedulz?
 A: Doctors register on kedulz, set up profile with specialization and availability, start accepting appointments from patients online.

@@ -1040,6 +1040,19 @@ export default function UserProfile({ route, navigation }) {
           </TouchableOpacity> */}
         </View>
 
+        {/* Data Rights & Privacy */}
+        <TouchableOpacity
+          style={styles.dataRightsButton}
+          onPress={() => navigation.navigate('DataRights')}
+        >
+          <Text style={styles.dataRightsIcon}>🛡️</Text>
+          <View style={styles.dataRightsContent}>
+            <Text style={styles.dataRightsTitle}>Manage My Data</Text>
+            <Text style={styles.dataRightsSubtitle}>Consent preferences · Delete health data · DPDP rights</Text>
+          </View>
+          <Text style={styles.dataRightsArrow}>→</Text>
+        </TouchableOpacity>
+
         {/* Logout Button */}
         <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
           <Text style={styles.logoutButtonText}>🚪 Logout</Text>
@@ -1380,11 +1393,26 @@ const styles = StyleSheet.create({
   logoutButton: {
     backgroundColor: '#e74c3c',
     borderRadius: 12,
-    padding: 12, // Reduced from 16
-    marginBottom: 20, // Reduced from 30
+    padding: 12,
+    marginBottom: 20,
     alignItems: 'center',
-    marginTop: 15, // Reduced from 20
+    marginTop: 15,
   },
+  dataRightsButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#EBF5FB',
+    borderRadius: 12,
+    padding: 14,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#2980B9',
+  },
+  dataRightsIcon: { fontSize: 22, marginRight: 10 },
+  dataRightsContent: { flex: 1 },
+  dataRightsTitle: { fontSize: 15, fontWeight: '700', color: '#1a5276' },
+  dataRightsSubtitle: { fontSize: 12, color: '#2980B9', marginTop: 2 },
+  dataRightsArrow: { fontSize: 16, color: '#2980B9', marginLeft: 8 },
   logoutButtonText: {
     fontSize: 15, // Reduced from 16
     color: '#fff',
