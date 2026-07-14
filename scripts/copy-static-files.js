@@ -153,9 +153,17 @@ if (fs.existsSync(seoHtmlPath) && fs.existsSync(expoHtmlPath)) {
     const seoHeadMatch = seoHtml.match(/<head>([\s\S]*?)<\/head>/i);
     const seoHeadContent = seoHeadMatch ? seoHeadMatch[1] : '';
     
-    // Extract only the hidden SEO content div from body
-    const seoBodyMatch = seoHtml.match(/<!-- SEO Content[\s\S]*?<\/div>\s*\n\s*<!-- App bundle/i);
-    const seoBodyContent = seoBodyMatch ? seoBodyMatch[0].replace(/<!-- App bundle.*$/, '').trim() : '';
+    // Extract ALL custom body content between SEO marker and app bundle marker
+    // (includes hidden SEO block + visible sections like Gallery/About/Contact)
+    const seoStartMarker = '<!-- SEO Content';
+    const seoEndMarker = '<!-- App bundle will be injected here -->';
+    const seoStartIndex = seoHtml.indexOf(seoStartMarker);
+    const seoEndIndex = seoHtml.indexOf(seoEndMarker);
+
+    let seoBodyContent = '';
+    if (seoStartIndex !== -1 && seoEndIndex !== -1 && seoEndIndex > seoStartIndex) {
+      seoBodyContent = seoHtml.slice(seoStartIndex, seoEndIndex).trim();
+    }
     
     // Get Expo's body opening and script tags
     const expoBodyMatch = expoHtml.match(/<body>([\s\S]*?)<script/i);
