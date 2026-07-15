@@ -8,7 +8,7 @@
     "subcategory": "Appointment Booking",
     "type": "Mobile & Web Application",
     "website": "https://kedulz.com",
-    "email": "contact.kedulz@gmail.com",
+    "email": "contact@kedulz.com",
     "version": "1.0.0",
     "pricing": "Free for patients",
     "platforms": ["iOS", "Android", "Web"],
@@ -232,7 +232,7 @@
   },
   
   "contact": {
-    "email": "contact.kedulz@gmail.com",
+    "email": "contact@kedulz.com",
     "website": "https://kedulz.com",
     "supportType": "Email Support"
   }

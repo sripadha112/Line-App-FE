@@ -89,7 +89,7 @@ A: Doctors register on kedulz, set up profile with specialization and availabili
 
 KEDULZ CONTACT:
 Website: https://kedulz.com
-Email: contact.kedulz@gmail.com
+Email: contact@kedulz.com
 Available Platforms: iOS, Android, Web
 
 KEDULZ KEYWORDS:

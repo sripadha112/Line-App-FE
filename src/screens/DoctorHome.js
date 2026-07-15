@@ -437,13 +437,13 @@ export default function DoctorHome({ navigation, route }) {
   const contactDevelopers = () => {
     showAlert(
       'Contact Developers',
-      'This will open your email app to send feedback to our development team at contact.kedulz@gmail.com. Do you want to continue?',
+      'This will open your email app to send feedback to our development team at support@kedulz.com. Do you want to continue?',
       [
         { text: 'Cancel', style: 'cancel' },
         {
           text: 'Open Email',
           onPress: () => {
-            const email = 'contact.kedulz@gmail.com';
+            const email = 'support@kedulz.com';
             const subject = 'Feedback from Kedulz App Doctor';
             const body = `Hello Kedulz App Developers,
 
