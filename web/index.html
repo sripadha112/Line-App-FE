@@ -247,7 +247,11 @@
     /* Mobile responsive adjustments */
     @media only screen and (max-width: 768px) {
       body {
+        overflow: hidden;
+      }
+      #root {
         overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
       }
     }
   </style>
@@ -400,6 +404,7 @@
     <p><strong>Keywords:</strong> kedulz, next app, nextapp, Kedulz, appointment booking, book doctor appointment, healthcare app, medical appointments, online booking, doctor near me, appointment scheduling app, health appointment booking, find doctors online</p>
   </div>
   
+  <div id="landing-content">
   <!-- Gallery Section -->
   <section id="gallery" style="
     padding: 60px 20px;
@@ -885,6 +890,29 @@
     });
   </script>
   
+  </div><!-- end #landing-content -->
+
+  <!-- Hide landing content when React app loads -->
+  <script>
+    (function() {
+      var rootEl = document.getElementById('root');
+      if (!rootEl) return;
+      var observer = new MutationObserver(function() {
+        var loadingContainer = rootEl.querySelector('.loading-container');
+        if (!loadingContainer) {
+          var landingContent = document.getElementById('landing-content');
+          if (landingContent) {
+            landingContent.style.display = 'none';
+          }
+          // Prevent body from scrolling beyond the app
+          document.body.style.overflow = 'hidden';
+          observer.disconnect();
+        }
+      });
+      observer.observe(rootEl, { childList: true, subtree: false });
+    })();
+  </script>
+
   <!-- App bundle will be injected here -->
 </body>
 </html>
