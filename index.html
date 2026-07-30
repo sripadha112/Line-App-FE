@@ -2,19 +2,19 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta httpEquiv="X-UA-Compatible" content="IE=edge" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
   <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
   
   <!-- Force HTTPS -->
   <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests" />
   
   <!-- Primary Meta Tags -->
-  <title>kedulz (Kedulz App) - #1 Appointment Booking App | Book Doctor Appointments Online</title>
-  <meta name="title" content="kedulz (Kedulz App) - #1 Appointment Booking App | Book Doctor Appointments Online" />
-  <meta name="description" content="kedulz - Best Appointment Booking App to book doctor appointments online instantly. Find doctors near you, manage family appointments, appointment scheduling, reminders & digital prescriptions. #1 Healthcare Appointment Booking Platform. 100% Free!" />
+  <title>Kedulz | Book Doctor Appointments Online</title>
+  <meta name="title" content="Kedulz | Book Doctor Appointments Online" />
+  <meta name="description" content="Kedulz is a healthcare appointment booking app to book doctor appointments online, manage family bookings, and get reminders with digital prescriptions." />
   
   <!-- Keywords for Search Engines -->
-  <meta name="keywords" content="kedulz, Kedulz app, kedulz, kedulz, nextapp, next app, Kedulz, nxt app, neet app, appointment booking app, appointments booking app, appointment booking, book appointment, doctor appointment booking, doctor appointment, booking app, appointment scheduling app, appointment scheduler, healthcare app, medical appointments, book doctor online, book doctor appointment online, find doctors, doctor near me, doctors near me, find doctor near me, online appointment booking, online doctor appointment, healthcare booking, patient portal, medical booking system, clinic appointments, hospital booking, health appointment app, appointment management app, schedule doctor visit, medical consultation booking, healthcare platform, medical appointment app, doctor booking app, online medical appointment, healthcare appointment system, patient appointment app, clinic booking app, hospital appointment booking, medical scheduling app, doctor finder app, health booking app" />
+  <meta name="keywords" content="kedulz, Kedulz app, doctor appointment booking, book doctor online, online appointment booking, healthcare appointment app, family appointment management" />
   <meta name="author" content="kedulz" />
   <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
   <meta name="language" content="English" />
@@ -28,8 +28,8 @@
   <meta property="og:type" content="website" />
   <meta property="og:url" content="https://kedulz.com/" />
   <meta property="og:site_name" content="kedulz" />
-  <meta property="og:title" content="kedulz (Kedulz App / NextApp) - #1 Appointment Booking App | Book Doctor Appointments Online" />
-  <meta property="og:description" content="kedulz (Kedulz App, NextApp) - Best appointment booking app. Book doctor appointments online instantly, find doctors near you, appointment scheduling, family appointments management. #1 healthcare booking platform." />
+  <meta property="og:title" content="Kedulz | Book Doctor Appointments Online" />
+  <meta property="og:description" content="Book doctor appointments online with Kedulz. Find doctors near you, manage family appointments, and get timely reminders." />
   <meta property="og:image" content="https://kedulz.com/assets/Logo.jpeg" />
   <meta property="og:image:width" content="1200" />
   <meta property="og:image:height" content="630" />
@@ -39,8 +39,8 @@
   <!-- Twitter Card -->
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:url" content="https://kedulz.com/" />
-  <meta name="twitter:title" content="kedulz - Book Doctor Appointments Online" />
-  <meta name="twitter:description" content="Book doctor appointments online instantly. Manage family appointments, find doctors near you with kedulz." />
+  <meta name="twitter:title" content="Kedulz | Book Doctor Appointments Online" />
+  <meta name="twitter:description" content="Book doctor appointments online with Kedulz. Find doctors near you and manage family appointments." />
   <meta name="twitter:image" content="https://kedulz.com/assets/Logo.jpeg" />
   <meta name="twitter:site" content="@kedulz" />
   <meta name="twitter:creator" content="@kedulz" />
@@ -93,24 +93,19 @@
   {
     "@context": "https://schema.org",
     "@type": "WebApplication",
+    "@id": "https://kedulz.com/#webapp",
     "name": "kedulz",
-    "alternateName": ["Kedulz App", "Next App", "NextApp", "Kedulz"],
+    "alternateName": ["Kedulz App", "Kedulz"],
     "url": "https://kedulz.com",
     "logo": "https://kedulz.com/assets/Logo.jpeg",
     "description": "kedulz is your trusted healthcare appointment booking platform. Book doctor appointments online instantly, manage family appointments, and find doctors near you.",
     "applicationCategory": "HealthApplication",
+    "inLanguage": "en",
     "operatingSystem": "Web, Android, iOS",
     "offers": {
       "@type": "Offer",
       "price": "0",
       "priceCurrency": "USD"
-    },
-    "aggregateRating": {
-      "@type": "AggregateRating",
-      "ratingValue": "4.8",
-      "ratingCount": "1250",
-      "bestRating": "5",
-      "worstRating": "1"
     },
     "featureList": [
       "Book Doctor Appointments Online",
@@ -122,12 +117,7 @@
     ],
     "screenshot": "https://kedulz.com/assets/Logo.jpeg",
     "publisher": {
-      "@type": "Organization",
-      "name": "kedulz",
-      "logo": {
-        "@type": "ImageObject",
-        "url": "https://kedulz.com/assets/Logo.jpeg"
-      }
+      "@id": "https://kedulz.com/#organization"
     }
   }
   </script>
@@ -137,7 +127,9 @@
   {
     "@context": "https://schema.org",
     "@type": "Organization",
-    "name": "kedulz",
+    "@id": "https://kedulz.com/#organization",
+    "name": "Kedulz",
+    "legalName": "Kedulz",
     "url": "https://kedulz.com",
     "logo": "https://kedulz.com/assets/Logo.jpeg",
     "sameAs": [
@@ -151,6 +143,22 @@
       "contactType": "Customer Service",
       "email": "support@kedulz.com"
     }
+  }
+  </script>
+
+  <!-- Website Schema -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    "@id": "https://kedulz.com/#website",
+    "url": "https://kedulz.com/",
+    "name": "Kedulz",
+    "alternateName": "kedulz",
+    "publisher": {
+      "@id": "https://kedulz.com/#organization"
+    },
+    "inLanguage": "en"
   }
   </script>
   
@@ -283,7 +291,7 @@
     <!-- The root element for your Expo app. -->
     <div id="root"></div>
   <!-- SEO Content (hidden but readable by search engines and AI crawlers) -->
-  <div style="display: none;" id="seo-content" role="article" itemscope itemtype="https://schema.org/WebApplication">
+  <div id="seo-content" role="article" itemscope itemtype="https://schema.org/WebApplication" style="max-width: 1000px; margin: 0 auto; padding: 40px 20px 20px; color: #1f2937; background: #f8fbff; border-bottom: 1px solid #e5edf7;">
     <header>
       <h1 itemprop="name">Book Doctor Appointments Online with kedulz</h1>
       <h2 itemprop="description">Your Trusted Healthcare Appointment Booking Platform</h2>
@@ -385,7 +393,7 @@
       <h3>Download kedulz Today</h3>
     <p>Join thousands of users who trust kedulz for their healthcare appointment needs. Download our app or use our website to start booking doctor appointments online today. Experience the future of healthcare appointment booking with kedulz - your health, your schedule, your way.</p>
     
-    <p><strong>Keywords:</strong> kedulz, next app, nextapp, Kedulz, appointment booking, book doctor appointment, healthcare app, medical appointments, online booking, doctor near me, appointment scheduling app, health appointment booking, find doctors online</p>
+    <p><strong>Brand note:</strong> Kedulz is the official brand name and website at https://kedulz.com.</p>
   </div>
   
   <div id="landing-content">
