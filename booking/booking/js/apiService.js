@@ -63,15 +63,18 @@ class APIService {
     async registerUser(userDetails) {
         try {
             const endpoint = API_CONFIG.ENDPOINTS.REGISTER_USER;
+            const fallbackPin = String(userDetails.phone || '').slice(-4) || '1234';
             const userData = {
                 mobileNumber: userDetails.phone,
                 fullName: userDetails.name,
                 email: userDetails.email || '',
+                gender: userDetails.gender || 'Other',
                 address: '',
                 city: userDetails.city,
                 state: '',
                 pincode: '',
-                country: ''
+                country: '',
+                pin: fallbackPin
             };
 
             const url = `${this.baseURL}${endpoint}`;
@@ -120,15 +123,15 @@ class APIService {
     async bookAppointment(userId, appointmentData, userDetails) {
         try {
             const bookingData = {
+                userId: parseInt(userId, 10),
                 doctorId: appointmentData.doctorId,
                 workplaceId: appointmentData.workplaceId,
-                requestedTime: appointmentData.requestedTime,
+                appointmentDate: appointmentData.appointmentDate,
                 slot: appointmentData.slot,
                 notes: appointmentData.notes || `Booking via QuickBooking. Notes: ${userDetails.notes || 'None'}`
             };
 
-            const encryptedUserId = window.QueryParamCrypto.encryptQueryId(userId);
-            const endpoint = API_CONFIG.ENDPOINTS.BOOK_APPOINTMENT.replace('{userId}', encodeURIComponent(encryptedUserId));
+            const endpoint = API_CONFIG.ENDPOINTS.QUICK_BOOK_APPOINTMENT;
             const response = await this.fetchAPI(endpoint, {
                 method: 'POST',
                 body: JSON.stringify(bookingData)
@@ -138,6 +141,26 @@ class APIService {
         } catch (error) {
             throw new Error('Failed to book appointment: ' + error.message);
         }
+    }
+
+    /**
+     * Validate if mobile is already registered (used for existing user quick flow)
+     */
+    async checkMobile(mobileNumber) {
+        const endpoint = API_CONFIG.ENDPOINTS.CHECK_MOBILE;
+        const response = await this.fetchAPI(endpoint, {
+            method: 'POST',
+            body: JSON.stringify({ mobileNumber })
+        });
+        return response;
+    }
+
+    /**
+     * Fetch user profile by mobile number for confirmation display
+     */
+    async getUserByMobile(mobileNumber) {
+        const endpoint = API_CONFIG.ENDPOINTS.USER_BY_MOBILE.replace('{mobile}', encodeURIComponent(mobileNumber));
+        return this.fetchAPI(endpoint);
     }
 }
 

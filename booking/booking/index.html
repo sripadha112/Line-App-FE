@@ -43,8 +43,47 @@
                 <button onclick="location.reload()" class="btn btn-primary">Try Again</button>
             </div>
 
+            <!-- Step 0: Choose User Type -->
+            <div id="userTypeScreen" class="screen hidden">
+                <div class="screen-header">
+                    <h2 class="screen-title">👋 Welcome</h2>
+                    <p class="screen-subtitle">Choose how you want to continue</p>
+                </div>
+
+                <div class="form">
+                    <button id="newUserBtn" type="button" class="btn btn-primary btn-block" style="margin-bottom: 12px;">
+                        New User
+                    </button>
+                    <button id="existingUserBtn" type="button" class="btn btn-secondary btn-block">
+                        Existing User
+                    </button>
+                </div>
+            </div>
+
+            <!-- Step 0b: Existing User Mobile Validation -->
+            <div id="existingUserScreen" class="screen hidden">
+                <button id="backToUserTypeBtn" class="btn-back">← Back</button>
+
+                <div class="screen-header">
+                    <h2 class="screen-title">📱 Existing User</h2>
+                    <p class="screen-subtitle">Enter your registered mobile number</p>
+                </div>
+
+                <form id="existingUserForm" class="form">
+                    <div class="form-group">
+                        <label for="existingUserPhone" class="form-label">Mobile Number <span class="required">*</span></label>
+                        <input type="tel" id="existingUserPhone" name="existingUserPhone" class="form-input" placeholder="Enter 10-digit mobile number" pattern="[0-9]{10}" maxlength="10" required>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary btn-block">
+                        Continue to View Available Slots →
+                    </button>
+                </form>
+            </div>
+
             <!-- Step 1: User Details Form -->
             <div id="userDetailsScreen" class="screen hidden">
+                <button id="backToUserTypeFromNewBtn" class="btn-back">← Back</button>
                 <div class="screen-header">
                     <h2 class="screen-title">📝 Your Details</h2>
                     <p class="screen-subtitle">Please fill in your information to book an appointment</p>

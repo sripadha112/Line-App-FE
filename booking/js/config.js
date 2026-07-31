@@ -5,7 +5,10 @@ const API_CONFIG = {
     ENDPOINTS: {
         AVAILABLE_SLOTS: '/user/available-slots',
         BOOK_APPOINTMENT: '/user/{userId}/appointments/book',
-        REGISTER_USER: '/register/user'
+        QUICK_BOOK_APPOINTMENT: '/user/appointments/book',
+        REGISTER_USER: '/register/user',
+        CHECK_MOBILE: '/auth/check-mobile',
+        USER_BY_MOBILE: '/user/mobile/{mobile}'
     }
 };
 
