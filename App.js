@@ -48,6 +48,12 @@ import FCMTestScreen from './src/screens/FCMTestScreen';
 import TermsAndConditions from './src/screens/TermsAndConditions';
 import PrivacyPolicy from './src/screens/PrivacyPolicy';
 import DataRightsScreen from './src/screens/DataRightsScreen';
+import SuccessScreen from './src/screens/SuccessScreen';
+import FailureScreen from './src/screens/FailureScreen';
+import NotFoundScreen from './src/screens/NotFoundScreen';
+import ConnectivityIssueScreen from './src/screens/ConnectivityIssueScreen';
+import SlowNetworkScreen from './src/screens/SlowNetworkScreen';
+import InternalServerErrorScreen from './src/screens/InternalServerErrorScreen';
 import SecureStore from './src/utils/secureStorage';
 import { setAuthHeaderFromStore, overrideApiBaseUrl, setNavigationRef } from './src/services/api';
 import API_BASE_URL from './src/config';
@@ -117,6 +123,12 @@ const linking = {
       FCMTest: 'fcm-test',
       TermsAndConditions: 'terms',
       PrivacyPolicy: 'privacy',
+      SuccessStatus: 'status/success',
+      FailureStatus: 'status/failure',
+      ConnectivityIssue: 'status/connectivity',
+      SlowNetwork: 'status/slow-network',
+      InternalServerError: 'status/server-error',
+      NotFound: '*',
     },
   },
 };
@@ -266,6 +278,12 @@ export default function App() {
         <Stack.Screen name="TermsAndConditions" component={TermsAndConditions} options={{headerShown:false, title:'Terms & Conditions'}} />
         <Stack.Screen name="PrivacyPolicy" component={PrivacyPolicy} options={{headerShown:false, title:'Privacy Policy'}} />
         <Stack.Screen name="DataRights" component={DataRightsScreen} options={{headerShown:false, title:'Manage My Data'}} />
+        <Stack.Screen name="SuccessStatus" component={SuccessScreen} options={{headerShown:false, title:'Success'}} />
+        <Stack.Screen name="FailureStatus" component={FailureScreen} options={{headerShown:false, title:'Failure'}} />
+        <Stack.Screen name="ConnectivityIssue" component={ConnectivityIssueScreen} options={{headerShown:false, title:'Connectivity Issue'}} />
+        <Stack.Screen name="SlowNetwork" component={SlowNetworkScreen} options={{headerShown:false, title:'Slow Network'}} />
+        <Stack.Screen name="InternalServerError" component={InternalServerErrorScreen} options={{headerShown:false, title:'Internal Server Error'}} />
+        <Stack.Screen name="NotFound" component={NotFoundScreen} options={{headerShown:false, title:'404 Not Found'}} />
       </Stack.Navigator>
 
       {/* Debug overlay: only show in development mode */}

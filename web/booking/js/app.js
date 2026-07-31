@@ -11,6 +11,7 @@ let appState = {
     workplaceInfo: null,
     userDetails: null,
     userId: null, // Store registered user ID
+    userFlowType: null,
     selectedDate: null,
     selectedSlot: null,
     allSlotsData: {},
@@ -63,7 +64,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     // Populate clinic info from URL parameters
     populateClinicInfo();
-    showScreen('userDetailsScreen');
+    showScreen('userTypeScreen');
     
     // Setup event listeners
     setupEventListeners();
@@ -85,6 +86,39 @@ document.addEventListener('DOMContentLoaded', async () => {
  * Setup event listeners
  */
 function setupEventListeners() {
+    // User type selectors
+    const newUserBtn = document.getElementById('newUserBtn');
+    const existingUserBtn = document.getElementById('existingUserBtn');
+    const backToUserTypeBtn = document.getElementById('backToUserTypeBtn');
+    const backToUserTypeFromNewBtn = document.getElementById('backToUserTypeFromNewBtn');
+    const existingUserForm = document.getElementById('existingUserForm');
+
+    if (newUserBtn) {
+        newUserBtn.addEventListener('click', () => {
+            appState.userFlowType = 'new';
+            showScreen('userDetailsScreen');
+        });
+    }
+
+    if (existingUserBtn) {
+        existingUserBtn.addEventListener('click', () => {
+            appState.userFlowType = 'existing';
+            showScreen('existingUserScreen');
+        });
+    }
+
+    if (backToUserTypeBtn) {
+        backToUserTypeBtn.addEventListener('click', () => showScreen('userTypeScreen'));
+    }
+
+    if (backToUserTypeFromNewBtn) {
+        backToUserTypeFromNewBtn.addEventListener('click', () => showScreen('userTypeScreen'));
+    }
+
+    if (existingUserForm) {
+        existingUserForm.addEventListener('submit', handleExistingUserSubmit);
+    }
+
     // User details form
     const userForm = document.getElementById('userDetailsForm');
     if (userForm) {
@@ -98,6 +132,13 @@ function setupEventListeners() {
             e.target.value = e.target.value.replace(/[^0-9]/g, '').slice(0, 10);
         });
     }
+
+    const existingPhoneInput = document.getElementById('existingUserPhone');
+    if (existingPhoneInput) {
+        existingPhoneInput.addEventListener('input', (e) => {
+            e.target.value = e.target.value.replace(/[^0-9]/g, '').slice(0, 10);
+        });
+    }
     
     // Date navigation
     const prevDateBtn = document.getElementById('prevDateBtn');
@@ -108,13 +149,87 @@ function setupEventListeners() {
     // Back to user details button
     const backToUserDetailsBtn = document.getElementById('backToUserDetailsBtn');
     if (backToUserDetailsBtn) {
-        backToUserDetailsBtn.addEventListener('click', () => showScreen('userDetailsScreen'));
+        backToUserDetailsBtn.addEventListener('click', () => {
+            if (appState.userFlowType === 'existing') {
+                showScreen('existingUserScreen');
+            } else {
+                showScreen('userDetailsScreen');
+            }
+        });
     }
     
     // Confirmation button
     const confirmBookingBtn = document.getElementById('confirmBookingBtn');
     if (confirmBookingBtn) {
         confirmBookingBtn.addEventListener('click', handleConfirmBooking);
+    }
+}
+
+/**
+ * Handle existing user flow (mobile validation)
+ */
+async function handleExistingUserSubmit(e) {
+    e.preventDefault();
+
+    const formData = new FormData(e.target);
+    const phone = String(formData.get('existingUserPhone') || '').trim();
+
+    if (!VALIDATION.PHONE_PATTERN.test(phone)) {
+        alert('Please enter a valid 10-digit mobile number');
+        return;
+    }
+
+    const submitBtn = e.target.querySelector('button[type="submit"]');
+    const originalBtnText = submitBtn.innerHTML;
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<div class="btn-spinner"></div> Validating...';
+
+    try {
+        const mobileCheck = await apiService.checkMobile(phone);
+
+        if (!mobileCheck.mobileExists || !mobileCheck.userId) {
+            const wantsRegister = window.confirm('This mobile number is not registered. Do you want to continue as a new user?');
+            if (wantsRegister) {
+                const newUserPhone = document.getElementById('userPhone');
+                if (newUserPhone) {
+                    newUserPhone.value = phone;
+                }
+                appState.userFlowType = 'new';
+                showScreen('userDetailsScreen');
+            }
+            return;
+        }
+
+        appState.userId = mobileCheck.userId;
+        appState.userFlowType = 'existing';
+
+        let existingName = 'Existing User';
+        let existingCity = '';
+        try {
+            const profile = await apiService.getUserByMobile(phone);
+            existingName = profile?.fullName || existingName;
+            existingCity = profile?.city || '';
+        } catch (profileError) {
+            console.warn('Could not fetch existing user profile by mobile:', profileError.message);
+        }
+
+        appState.userDetails = {
+            name: existingName,
+            phone,
+            email: '',
+            age: null,
+            gender: '',
+            city: existingCity,
+            notes: '',
+        };
+
+        await loadAvailableSlots();
+    } catch (error) {
+        console.error('❌ Existing user validation error:', error);
+        alert('Failed to validate mobile number: ' + error.message);
+    } finally {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = originalBtnText;
     }
 }
 
@@ -176,6 +291,7 @@ async function handleUserDetailsSubmit(e) {
     
     // Save to state
     appState.userDetails = userDetails;
+    appState.userFlowType = 'new';
     
     
     
@@ -544,9 +660,9 @@ function showConfirmationScreen() {
         <p><strong>Name:</strong> ${user.name}</p>
         <p><strong>Phone:</strong> ${user.phone}</p>
         ${user.email ? `<p><strong>Email:</strong> ${user.email}</p>` : ''}
-        <p><strong>Age:</strong> ${user.age} years</p>
-        <p><strong>Gender:</strong> ${user.gender}</p>
-        <p><strong>City:</strong> ${user.city}</p>
+        ${user.age ? `<p><strong>Age:</strong> ${user.age} years</p>` : ''}
+        ${user.gender ? `<p><strong>Gender:</strong> ${user.gender}</p>` : ''}
+        ${user.city ? `<p><strong>City:</strong> ${user.city}</p>` : ''}
         ${user.notes ? `<p><strong>Notes:</strong> ${user.notes}</p>` : ''}
     `;
     
@@ -586,7 +702,7 @@ async function handleConfirmBooking() {
         const appointmentData = {
             doctorId: appState.doctorId,
             workplaceId: appState.workplaceId,
-            requestedTime: new Date(appState.selectedSlot.date).toISOString(),
+            appointmentDate: appState.selectedSlot.date,
             slot: appState.selectedSlot.time,
             notes: appState.userDetails.notes
         };

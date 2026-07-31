@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Alert, KeyboardAvoidingView, Platform, Modal, Linking } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Alert, KeyboardAvoidingView, Platform, Modal, Linking, ActionSheetIOS } from 'react-native';
 import api from '../services/api';
 import { API_ENDPOINTS } from '../config/apiConfig';
 import SecureStore from '../utils/secureStorage';
@@ -156,6 +156,77 @@ export default function DoctorRegistrationScreen({ navigation, route }) {
   };
 
   const toggleDropdown = (type, index = null, timeType = null, timeField = null) => {
+    if (Platform.OS === 'ios') {
+      if (type === 'specialization') {
+        ActionSheetIOS.showActionSheetWithOptions(
+          {
+            options: [...SPECIALIZATIONS, 'Cancel'],
+            cancelButtonIndex: SPECIALIZATIONS.length,
+            title: 'Select Specialization',
+          },
+          (buttonIndex) => {
+            if (buttonIndex >= 0 && buttonIndex < SPECIALIZATIONS.length) {
+              selectOption('specialization', SPECIALIZATIONS[buttonIndex]);
+            }
+          }
+        );
+        return;
+      }
+
+      if (type === 'designation') {
+        ActionSheetIOS.showActionSheetWithOptions(
+          {
+            options: [...DESIGNATIONS, 'Cancel'],
+            cancelButtonIndex: DESIGNATIONS.length,
+            title: 'Select Designation',
+          },
+          (buttonIndex) => {
+            if (buttonIndex >= 0 && buttonIndex < DESIGNATIONS.length) {
+              selectOption('designation', DESIGNATIONS[buttonIndex]);
+            }
+          }
+        );
+        return;
+      }
+
+      if (type === 'workplaceType' && index !== null) {
+        ActionSheetIOS.showActionSheetWithOptions(
+          {
+            options: [...WORKPLACE_TYPES, 'Cancel'],
+            cancelButtonIndex: WORKPLACE_TYPES.length,
+            title: 'Select Workplace Type',
+          },
+          (buttonIndex) => {
+            if (buttonIndex >= 0 && buttonIndex < WORKPLACE_TYPES.length) {
+              selectOption('workplaceType', WORKPLACE_TYPES[buttonIndex], index);
+            }
+          }
+        );
+        return;
+      }
+
+      if (type === 'timeDropdown' && index !== null && timeType && timeField) {
+        const values = timeField === 'hour' ? HOUR_OPTIONS : MINUTE_OPTIONS;
+        const labels = values.map(value =>
+          timeField === 'minute' ? String(value).padStart(2, '0') : String(value).padStart(2, '0')
+        );
+
+        ActionSheetIOS.showActionSheetWithOptions(
+          {
+            options: [...labels, 'Cancel'],
+            cancelButtonIndex: labels.length,
+            title: 'Select Time',
+          },
+          (buttonIndex) => {
+            if (buttonIndex >= 0 && buttonIndex < values.length) {
+              selectOption('timeDropdown', values[buttonIndex], index, timeType, timeField);
+            }
+          }
+        );
+        return;
+      }
+    }
+
     if (type === 'workplaceType' && index !== null) {
       setDropdownVisible(prev => ({
         ...prev,

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Alert, KeyboardAvoidingView, Platform, Linking } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Alert, KeyboardAvoidingView, Platform, Linking, ActionSheetIOS } from 'react-native';
 import api from '../services/api';
 import { API_ENDPOINTS } from '../config/apiConfig';
 import SecureStore from '../utils/secureStorage';
@@ -41,6 +41,26 @@ export default function UserRegistrationScreen({ navigation, route }) {
 
   const handleInputChange = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const openGenderSelector = () => {
+    if (Platform.OS === 'ios') {
+      ActionSheetIOS.showActionSheetWithOptions(
+        {
+          options: [...GENDER_OPTIONS, 'Cancel'],
+          cancelButtonIndex: GENDER_OPTIONS.length,
+          title: 'Select Gender',
+        },
+        (buttonIndex) => {
+          if (buttonIndex >= 0 && buttonIndex < GENDER_OPTIONS.length) {
+            handleInputChange('gender', GENDER_OPTIONS[buttonIndex]);
+          }
+        }
+      );
+      return;
+    }
+
+    setGenderDropdownVisible(!genderDropdownVisible);
   };
 
   const handleRegister = () => {
@@ -183,14 +203,14 @@ export default function UserRegistrationScreen({ navigation, route }) {
           <Text style={styles.label}>Gender *</Text>
           <TouchableOpacity 
             style={styles.dropdown}
-            onPress={() => setGenderDropdownVisible(!genderDropdownVisible)}
+            onPress={openGenderSelector}
           >
             <Text style={formData.gender ? styles.dropdownText : styles.dropdownPlaceholder}>
               {formData.gender || 'Select gender'}
             </Text>
             <Text style={styles.dropdownArrow}>▼</Text>
           </TouchableOpacity>
-          {genderDropdownVisible && (
+          {Platform.OS !== 'ios' && genderDropdownVisible && (
             <View style={styles.dropdownList}>
               {GENDER_OPTIONS.map((option) => (
                 <TouchableOpacity

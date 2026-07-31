@@ -48,35 +48,25 @@ export default function TopBar({ name, title, userType = 'doctor', onBack, scrol
   // Animated header that collapses on scroll down (no visible blank top padding)
   const animatedStyle = scrollY
     ? {
-        height: scrollY.interpolate({
-          inputRange: [0, 90],
-          outputRange: [expandedHeight, 0],
-          extrapolate: 'clamp',
-        }),
+        transform: [
+          {
+            translateY: scrollY.interpolate({
+              inputRange: [0, 90],
+              outputRange: [0, -expandedHeight],
+              extrapolate: 'clamp',
+            }),
+          },
+        ],
         opacity: scrollY.interpolate({
           inputRange: [0, 70, 90],
           outputRange: [1, 0.2, 0],
           extrapolate: 'clamp',
         }),
-        paddingTop: scrollY.interpolate({
-          inputRange: [0, 90],
-          outputRange: [topPadding, 0],
-          extrapolate: 'clamp',
-        }),
-        paddingBottom: scrollY.interpolate({
-          inputRange: [0, 90],
-          outputRange: [10, 0],
-          extrapolate: 'clamp',
-        }),
       }
-    : {
-        height: expandedHeight,
-        paddingTop: topPadding,
-        paddingBottom: 10,
-      };
+    : {};
 
   return (
-    <Animated.View style={[styles.topBar, animatedStyle]}>
+    <Animated.View style={[styles.topBar, { height: expandedHeight, paddingTop: topPadding, paddingBottom: 10 }, animatedStyle]}>
       <View style={styles.row}>
         {onBack ? (
           <TouchableOpacity onPress={onBack} style={styles.backButton} hitSlop={{ top: 8, right: 8, bottom: 8, left: 8 }}>

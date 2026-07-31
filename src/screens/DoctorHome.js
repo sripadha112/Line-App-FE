@@ -1,6 +1,7 @@
 import React, {useEffect, useState, useRef} from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert, Modal, TextInput, ScrollView, RefreshControl, ActivityIndicator, Linking, Platform, BackHandler, Animated } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert, Modal, TextInput, ScrollView, RefreshControl, ActivityIndicator, Linking, Platform, BackHandler, ActionSheetIOS } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import SecureStore from '../utils/secureStorage';
 import { format } from 'date-fns';
 import { showAlert, showPrompt } from '../utils/alertUtils';
@@ -36,6 +37,9 @@ const DOCTOR_CANCEL_REASONS = [
 ];
 
 export default function DoctorHome({ navigation, route }) {
+  const insets = useSafeAreaInsets();
+  const profileBottomPadding = 92 + Math.max(insets.bottom, Platform.OS === 'ios' ? 10 : 6);
+  const homeTopPadding = Math.max(insets.top, Platform.OS === 'ios' ? 14 : 10) + 8;
   const initialTab = route?.params?.initialTab || 'appointments';
   const [appointments, setAppointments] = useState([]);
   const [historyAppointments, setHistoryAppointments] = useState([]);
@@ -69,11 +73,12 @@ export default function DoctorHome({ navigation, route }) {
   const [loading, setLoading] = useState(false);
   const [todayStats, setTodayStats] = useState({ total: 0, completed: 0, upcoming: 0 });
   const [isAdmin, setIsAdmin] = useState(false);
+  const [homeViewportHeight, setHomeViewportHeight] = useState(0);
   
   // Refs for cancel reason modal
   const cancelModalScrollRef = useRef(null);
   const customCancelReasonInputRef = useRef(null);
-  
+
   // Profile related states
   const [detailedProfile, setDetailedProfile] = useState(null);
   const [editingProfile, setEditingProfile] = useState(false);
@@ -106,9 +111,6 @@ export default function DoctorHome({ navigation, route }) {
     checkingDurationMinutes: 15,
     isPrimary: false
   });
-
-  // Scroll animation for hiding/showing TopBar
-  const scrollY = useRef(new Animated.Value(0)).current;
 
   // Add a ref to track if we're already handling auth error
   const authErrorHandling = React.useRef(false);
@@ -180,9 +182,9 @@ export default function DoctorHome({ navigation, route }) {
       console.log('DoctorHome screen focused - refreshing data...');
       if (doctorId) {
         // PRIORITY 1: Load workplaces first (main data)
-        fetchWorkplaces(doctorId).then(() => {
+        fetchWorkplaces(doctorId, { silent: true }).then(() => {
           // PRIORITY 2: Load profile in background (less critical)
-          fetchDetailedProfile(doctorId).catch(err => console.log('Detailed profile error:', err));
+          fetchDetailedProfile(doctorId, { silent: true }).catch(err => console.log('Detailed profile error:', err));
         });
         
         // PRIORITY 3: Load history ONLY when history tab is active
@@ -337,9 +339,12 @@ export default function DoctorHome({ navigation, route }) {
     }
   };
 
-  const fetchWorkplaces = async (id) => {
+  const fetchWorkplaces = async (id, options = {}) => {
+    const shouldShowLoader = !options.silent || workplaces.length === 0;
     try {
-      setWorkplacesLoading(true);
+      if (shouldShowLoader) {
+        setWorkplacesLoading(true);
+      }
       const data = await DoctorAPIService.fetchWorkplacesWithCounts(id);
       // console.log('Workplaces with appointment counts:', data);
       setWorkplaces(data);
@@ -351,7 +356,9 @@ export default function DoctorHome({ navigation, route }) {
       }
       setWorkplaces([]);
     } finally {
-      setWorkplacesLoading(false);
+      if (shouldShowLoader) {
+        setWorkplacesLoading(false);
+      }
     }
   };
 
@@ -373,9 +380,12 @@ export default function DoctorHome({ navigation, route }) {
     }
   };
 
-  const fetchDetailedProfile = async (doctorId) => {
+  const fetchDetailedProfile = async (doctorId, options = {}) => {
+    const shouldShowLoader = !options.silent || !detailedProfile;
     try {
-      setProfileLoading(true);
+      if (shouldShowLoader) {
+        setProfileLoading(true);
+      }
       const profile = await DoctorAPIService.fetchDetailedDoctorProfile(doctorId);
       setDetailedProfile(profile);
       setEditedProfile({ ...profile }); // Initialize edited profile
@@ -386,7 +396,9 @@ export default function DoctorHome({ navigation, route }) {
         return;
       }
     } finally {
-      setProfileLoading(false);
+      if (shouldShowLoader) {
+        setProfileLoading(false);
+      }
     }
   };
 
@@ -1060,6 +1072,35 @@ Dr. ${name || 'Kedulz App Doctor'}`;
 
   // Toggle dropdown visibility for time inputs
   const toggleTimeDropdown = (timeType, timeField) => {
+    if (Platform.OS === 'ios') {
+      const values = (timeType === 'duration' && timeField === 'minutes')
+        ? [5, 10, 15, 20, 30, 45, 60]
+        : (timeField === 'hour' ? HOUR_OPTIONS : MINUTE_OPTIONS);
+
+      const labels = values.map((value) => {
+        if (timeType === 'duration' && timeField === 'minutes') {
+          return `${value} minutes`;
+        }
+        return timeField === 'minute' || timeField === 'minutes'
+          ? String(value).padStart(2, '0')
+          : String(value);
+      });
+
+      ActionSheetIOS.showActionSheetWithOptions(
+        {
+          options: [...labels, 'Cancel'],
+          cancelButtonIndex: labels.length,
+          title: 'Select Value',
+        },
+        (buttonIndex) => {
+          if (buttonIndex >= 0 && buttonIndex < values.length) {
+            handleTimeSelection(timeType, timeField, values[buttonIndex]);
+          }
+        }
+      );
+      return;
+    }
+
     const key = `${timeType}_${timeField}`;
     setTimeDropdownVisible(prev => ({
       ...prev,
@@ -1069,6 +1110,35 @@ Dr. ${name || 'Kedulz App Doctor'}`;
 
   // Toggle dropdown visibility for new workplace time inputs
   const toggleTimeDropdownForNew = (timeType, timeField) => {
+    if (Platform.OS === 'ios') {
+      const values = (timeType === 'duration' && timeField === 'minutes')
+        ? [5, 10, 15, 20, 30, 45, 60]
+        : (timeField === 'hour' ? HOUR_OPTIONS : MINUTE_OPTIONS);
+
+      const labels = values.map((value) => {
+        if (timeType === 'duration' && timeField === 'minutes') {
+          return `${value} minutes`;
+        }
+        return timeField === 'minute' || timeField === 'minutes'
+          ? String(value).padStart(2, '0')
+          : String(value);
+      });
+
+      ActionSheetIOS.showActionSheetWithOptions(
+        {
+          options: [...labels, 'Cancel'],
+          cancelButtonIndex: labels.length,
+          title: 'Select Value',
+        },
+        (buttonIndex) => {
+          if (buttonIndex >= 0 && buttonIndex < values.length) {
+            handleTimeSelectionForNew(timeType, timeField, values[buttonIndex]);
+          }
+        }
+      );
+      return;
+    }
+
     const key = `${timeType}_${timeField}`;
     setNewWorkplaceTimeDropdownVisible(prev => ({
       ...prev,
@@ -1494,6 +1564,7 @@ Dr. ${name || 'Kedulz App Doctor'}`;
           ) : (
             <ScrollView 
               style={styles.profileContainer}
+              contentContainerStyle={[styles.profileContentContainer, { paddingBottom: profileBottomPadding }]}
               showsVerticalScrollIndicator={false}
               refreshControl={<RefreshControl refreshing={profileLoading} onRefresh={() => fetchDetailedProfile(doctorId)} />}
             >
@@ -1833,25 +1904,29 @@ Dr. ${name || 'Kedulz App Doctor'}`;
             </View>
           )}
           
-          {/* Bottom Spacing for Profile */}
-          <View style={styles.bottomSpacing} />
             </ScrollView>
           )}
         </>
       ) : (
         // Home View
         <>
-          <TopBar name={name} scrollY={scrollY} />
-          <Animated.ScrollView 
+          <ScrollView 
             style={styles.content}
+            contentContainerStyle={{ minHeight: homeViewportHeight + 56, paddingTop: homeTopPadding, paddingBottom: 12 }}
             refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
             showsVerticalScrollIndicator={false}
-            scrollEventThrottle={16}
-            onScroll={Animated.event(
-              [{ nativeEvent: { contentOffset: { y: scrollY } } }],
-              { useNativeDriver: false }
-            )}
+            overScrollMode="never"
+            bounces={false}
+            alwaysBounceVertical={false}
+            onLayout={(event) => setHomeViewportHeight(event.nativeEvent.layout.height)}
           >
+        {/* Welcome Section */}
+        <View style={styles.welcomeSection}>
+          <Text style={styles.welcomeTitle}>
+            {name ? `Hello, Dr. ${name}! 👋` : 'Hello, Doctor! 👋'}
+          </Text>
+        </View>
+
         {/* Today's Schedule Section - Moved to Top */}
         <View style={styles.todayScheduleContainer}>
           {!todayScheduleExpanded ? (
@@ -1985,7 +2060,7 @@ Dr. ${name || 'Kedulz App Doctor'}`;
         
         {/* Bottom Spacing to prevent navigation overlap */}
         <View style={styles.bottomSpacing} />
-      </Animated.ScrollView>
+      </ScrollView>
         </>
       )}
 
@@ -3415,6 +3490,18 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
   },
+  welcomeSection: {
+    backgroundColor: '#fff',
+    paddingHorizontal: 20,
+    paddingVertical: 18,
+    marginBottom: 10,
+  },
+  welcomeTitle: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#2c3e50',
+    marginBottom: 5,
+  },
   statsContainer: {
     padding: 20,
   },
@@ -4639,6 +4726,9 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#f8f9fa',
     padding: 16,
+  },
+  profileContentContainer: {
+    paddingBottom: 0,
   },
   profileHeader: {
     marginBottom: 20,

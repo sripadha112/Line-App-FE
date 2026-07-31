@@ -1,5 +1,5 @@
 import { API_ENDPOINTS } from '../config/apiConfig';
-import api from './api';
+import api, { setAuthHeaderFromStore } from './api';
 import { format, startOfDay, endOfDay, addDays } from 'date-fns';
 import { encryptQueryId } from '../utils/queryParamCrypto';
 
@@ -485,6 +485,26 @@ export class UserAPIService {
       return response.data;
     } catch (error) {
       console.log('Error creating family member:', error.message);
+      throw error;
+    }
+  }
+
+  static async deleteFamilyMember(userId, memberId) {
+    try {
+      const numericUserId = parseInt(userId, 10);
+      const numericMemberId = parseInt(memberId, 10);
+      if (isNaN(numericUserId)) throw new Error('Invalid userId');
+      if (isNaN(numericMemberId)) throw new Error('Invalid memberId');
+
+      // Ensure Authorization header exists even after app refresh/reload.
+      await setAuthHeaderFromStore();
+
+      const response = await api.delete(
+        `/api/user/${securePathId(numericUserId)}/family-members/${securePathId(numericMemberId)}`
+      );
+      return response.data;
+    } catch (error) {
+      console.log('Error deleting family member:', error.message);
       throw error;
     }
   }

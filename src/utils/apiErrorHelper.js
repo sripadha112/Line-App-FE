@@ -104,8 +104,8 @@ export class APIErrorHelper {
       
       case 500:
         return {
-          title: 'Server Error',
-          message: 'An error occurred on the server. Please try again later.',
+          title: 'Network Connectivity Issue',
+          message: 'Network connectivity issue. Please check your internet connection and try again.',
           canRetry: true,
           isTemporary: true,
         };

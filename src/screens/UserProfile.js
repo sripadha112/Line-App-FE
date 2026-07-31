@@ -10,7 +10,7 @@ import {
   ActivityIndicator,
   Platform,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { useFocusEffect } from '@react-navigation/native';
 import SecureStore from '../utils/secureStorage';
@@ -27,6 +27,8 @@ const securePathId = (id) => encodeURIComponent(encryptQueryId(id));
 
 export default function UserProfile({ route, navigation }) {
   const { userId } = route.params;
+  const insets = useSafeAreaInsets();
+  const bottomNavOffset = 78 + Math.max(insets.bottom, Platform.OS === 'ios' ? 6 : 4);
   
   const [userDetails, setUserDetails] = useState(null);
   const [appointmentsData, setAppointmentsData] = useState(null);
@@ -533,6 +535,7 @@ export default function UserProfile({ route, navigation }) {
       <View style={styles.container}>
         <ScrollView 
           style={styles.content}
+          contentContainerStyle={[styles.contentContainer, { paddingBottom: bottomNavOffset + 40 }]}
           refreshControl={
             <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
           }
@@ -1058,8 +1061,6 @@ export default function UserProfile({ route, navigation }) {
           <Text style={styles.logoutButtonText}>🚪 Logout</Text>
         </TouchableOpacity>
 
-        {/* Bottom Spacing */}
-        <View style={styles.bottomSpacing} />
       </ScrollView>
       
       <BottomNavigation 
@@ -1107,6 +1108,9 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 15, // Reduced from 20
     paddingTop: 20, // Reduced from 30
+  },
+  contentContainer: {
+    paddingBottom: 0,
   },
   loadingContainer: {
     flex: 1,
@@ -1394,7 +1398,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#e74c3c',
     borderRadius: 12,
     padding: 12,
-    marginBottom: 20,
+    marginBottom: 0,
     alignItems: 'center',
     marginTop: 15,
   },
@@ -1417,9 +1421,6 @@ const styles = StyleSheet.create({
     fontSize: 15, // Reduced from 16
     color: '#fff',
     fontWeight: '600',
-  },
-  bottomSpacing: {
-    height: 100, // Reduced from 120
   },
   modalOverlay: {
     position: 'absolute',

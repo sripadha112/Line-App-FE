@@ -9,6 +9,9 @@ import {
   Linking,
   Modal,
   TextInput,
+  Alert,
+  ActionSheetIOS,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
@@ -207,6 +210,85 @@ export default function UserHome({ route, navigation }) {
       familyMemberId: selectedMember?.id,
       familyMemberName: selectedMember?.name
     });
+  };
+
+  const openRelationshipSelector = () => {
+    if (Platform.OS === 'ios') {
+      const options = [...relationshipOptions, 'Cancel'];
+      ActionSheetIOS.showActionSheetWithOptions(
+        {
+          options,
+          cancelButtonIndex: options.length - 1,
+          title: 'Select Relationship',
+        },
+        (buttonIndex) => {
+          if (buttonIndex >= 0 && buttonIndex < relationshipOptions.length) {
+            setNewMemberRelationship(relationshipOptions[buttonIndex]);
+          }
+        }
+      );
+      return;
+    }
+
+    setShowRelationshipPicker(true);
+  };
+
+  const openGenderSelector = () => {
+    if (Platform.OS === 'ios') {
+      const options = [...genderOptions, 'Cancel'];
+      ActionSheetIOS.showActionSheetWithOptions(
+        {
+          options,
+          cancelButtonIndex: options.length - 1,
+          title: 'Select Gender',
+        },
+        (buttonIndex) => {
+          if (buttonIndex >= 0 && buttonIndex < genderOptions.length) {
+            setNewMemberGender(genderOptions[buttonIndex]);
+          }
+        }
+      );
+      return;
+    }
+
+    setShowGenderPicker(true);
+  };
+
+  const handleDeleteMember = () => {
+    if (!selectedMember?.id) {
+      showAlert('Error', 'Unable to delete this family member. Please try again.');
+      return;
+    }
+
+    showAlert(
+      'Delete Family Member',
+      `Are you sure you want to delete ${selectedMember?.name || 'this family member'}?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              console.log('🗑️ Deleting family member:', selectedMember.id);
+              await UserAPIService.deleteFamilyMember(userId, selectedMember.id);
+              console.log('✅ Family member deleted:', selectedMember.id);
+              setShowViewMemberModal(false);
+              setSelectedMember(null);
+              await fetchFamilyMembers();
+              showAlert('Success', 'Family member was removed successfully.');
+            } catch (error) {
+              APIErrorHelper.logError('UserHome.handleDeleteMember', error);
+              const errorInfo = APIErrorHelper.getUserFriendlyMessage(error);
+              showAlert(
+                errorInfo.title || 'Delete Failed',
+                errorInfo.message || 'Failed to delete family member.'
+              );
+            }
+          }
+        }
+      ]
+    );
   };
 
   const onRefresh = React.useCallback(async () => {
@@ -557,7 +639,7 @@ ${userProfile?.fullName || 'Kedulz App User'}`;
               <Text style={styles.inputLabel}>Relationship</Text>
               <TouchableOpacity 
                 style={styles.input}
-                onPress={() => setShowRelationshipPicker(true)}
+                onPress={openRelationshipSelector}
               >
                 <Text style={newMemberRelationship ? styles.inputText : styles.placeholderText}>
                   {newMemberRelationship || 'Select relationship'}
@@ -567,7 +649,7 @@ ${userProfile?.fullName || 'Kedulz App User'}`;
               <Text style={styles.inputLabel}>Gender</Text>
               <TouchableOpacity 
                 style={styles.input}
-                onPress={() => setShowGenderPicker(true)}
+                onPress={openGenderSelector}
               >
                 <Text style={newMemberGender ? styles.inputText : styles.placeholderText}>
                   {newMemberGender || 'Select gender'}
@@ -606,7 +688,7 @@ ${userProfile?.fullName || 'Kedulz App User'}`;
       
       {/* Gender Picker Modal */}
       <Modal
-        visible={showGenderPicker}
+        visible={Platform.OS !== 'ios' && showGenderPicker}
         transparent
         animationType="fade"
         onRequestClose={() => setShowGenderPicker(false)}
@@ -636,7 +718,7 @@ ${userProfile?.fullName || 'Kedulz App User'}`;
       
       {/* Relationship Picker Modal */}
       <Modal
-        visible={showRelationshipPicker}
+        visible={Platform.OS !== 'ios' && showRelationshipPicker}
         transparent
         animationType="fade"
         onRequestClose={() => setShowRelationshipPicker(false)}
@@ -718,6 +800,12 @@ ${userProfile?.fullName || 'Kedulz App User'}`;
             </View>
             
             <View style={styles.modalFooter}>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.deleteButton]}
+                onPress={handleDeleteMember}
+              >
+                <Text style={styles.deleteButtonText}>Delete</Text>
+              </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.modalButton, styles.bookButton]}
                 onPress={handleBookForMember}
@@ -1130,10 +1218,21 @@ const styles = StyleSheet.create({
     backgroundColor: '#27ae60',
     flex: 1,
   },
+  deleteButton: {
+    backgroundColor: '#ef5350',
+    flex: 1,
+  },
   bookButtonText: {
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',
+    textAlign: 'center',
+  },
+  deleteButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+    textAlign: 'center',
   },
   memberDetailRow: {
     flexDirection: 'row',

@@ -6,6 +6,22 @@ import API_BASE_URL from '../config';
 // Navigation ref for programmatic navigation
 let navigationRef = null;
 let isRedirecting = false; // Flag to prevent multiple redirections
+let lastStatusNavigationTime = 0;
+
+function navigateToStatusScreen(screenName, params = {}) {
+  if (!navigationRef || typeof navigationRef.navigate !== 'function') {
+    return;
+  }
+
+  const now = Date.now();
+  // Throttle status navigation to avoid rapid route churn on multiple failed calls.
+  if (now - lastStatusNavigationTime < 3000) {
+    return;
+  }
+
+  lastStatusNavigationTime = now;
+  navigationRef.navigate(screenName, params);
+}
 
 // Function to set navigation reference
 export function setNavigationRef(ref) {
@@ -174,6 +190,35 @@ api.interceptors.response.use((res) => {
       }
     }
   } catch (e) {}
+
+  if (err.response?.status !== 401) {
+    const status = err.response?.status;
+    const responseMessage = err.response?.data?.message;
+
+    if (!err.response) {
+      if (err.code === 'ECONNABORTED' || err.code === 'ETIMEDOUT') {
+        navigateToStatusScreen('SlowNetwork', {
+          message: 'The request is taking longer than expected. Please try again.',
+        });
+      } else {
+        navigateToStatusScreen('ConnectivityIssue', {
+          message: 'Unable to connect to the server. Check your internet connection and try again.',
+        });
+      }
+    } else if (status === 404) {
+      navigateToStatusScreen('NotFound', {
+        message: responseMessage || 'The requested resource was not found.',
+      });
+    } else if (status >= 500) {
+      navigateToStatusScreen('ConnectivityIssue', {
+        message: responseMessage || 'Network connectivity issue. Please check your internet and try again.',
+      });
+    } else if (status >= 400) {
+      navigateToStatusScreen('FailureStatus', {
+        message: responseMessage || 'The request could not be completed. Please try again.',
+      });
+    }
+  }
 
   // rethrow so existing try/catch in screens work as before
   return Promise.reject(err);
