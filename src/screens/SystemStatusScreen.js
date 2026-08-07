@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import API_BASE_URL from '../config';
 
 const VARIANTS = {
   success: {
@@ -41,6 +42,10 @@ const VARIANTS = {
   },
 };
 
+const AUTO_RECOVERY_VARIANTS = new Set(['connectivity', 'slowNetwork', 'serverError']);
+const RECOVERY_CHECK_INTERVAL_MS = 5000;
+const RECOVERY_CHECK_TIMEOUT_MS = 8000;
+
 export default function SystemStatusScreen({ route, navigation }) {
   const {
     variant = 'failure',
@@ -52,6 +57,7 @@ export default function SystemStatusScreen({ route, navigation }) {
   } = route?.params || {};
 
   const variantConfig = VARIANTS[variant] || VARIANTS.failure;
+  const [isCheckingRecovery, setIsCheckingRecovery] = useState(AUTO_RECOVERY_VARIANTS.has(variant));
 
   const handlePrimaryAction = () => {
     if (returnRoute) {
@@ -67,6 +73,62 @@ export default function SystemStatusScreen({ route, navigation }) {
     navigation.navigate('Landing');
   };
 
+  useEffect(() => {
+    if (!AUTO_RECOVERY_VARIANTS.has(variant)) {
+      return undefined;
+    }
+
+    let isMounted = true;
+    let isChecking = false;
+    let timeoutId = null;
+
+    const checkRecovery = async () => {
+      if (isChecking || !API_BASE_URL) {
+        return;
+      }
+
+      isChecking = true;
+      setIsCheckingRecovery(true);
+
+      const controller = new AbortController();
+      timeoutId = setTimeout(() => controller.abort(), RECOVERY_CHECK_TIMEOUT_MS);
+
+      try {
+        const response = await fetch(`${API_BASE_URL}/health`, {
+          method: 'GET',
+          signal: controller.signal,
+          headers: {
+            Accept: 'application/json',
+          },
+        });
+
+        if (response.ok && isMounted) {
+          handlePrimaryAction();
+        }
+      } catch (error) {
+        // Stay on the status screen until a health check succeeds.
+      } finally {
+        clearTimeout(timeoutId);
+        timeoutId = null;
+        isChecking = false;
+        if (isMounted) {
+          setIsCheckingRecovery(false);
+        }
+      }
+    };
+
+    checkRecovery();
+    const intervalId = setInterval(checkRecovery, RECOVERY_CHECK_INTERVAL_MS);
+
+    return () => {
+      isMounted = false;
+      clearInterval(intervalId);
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+    };
+  }, [variant, returnRoute, returnParams, navigation]);
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
@@ -76,6 +138,11 @@ export default function SystemStatusScreen({ route, navigation }) {
 
         <Text style={styles.title}>{title || variantConfig.title}</Text>
         <Text style={styles.message}>{message || variantConfig.message}</Text>
+        {AUTO_RECOVERY_VARIANTS.has(variant) && (
+          <Text style={styles.recoveryText}>
+            {isCheckingRecovery ? 'Checking connection...' : 'Waiting for connection to recover...'}
+          </Text>
+        )}
 
         <TouchableOpacity style={[styles.primaryButton, { backgroundColor: variantConfig.color }]} onPress={handlePrimaryAction}>
           <Text style={styles.primaryButtonText}>{primaryButtonText}</Text>
@@ -126,6 +193,12 @@ const styles = StyleSheet.create({
     color: '#4b5563',
     textAlign: 'center',
     lineHeight: 24,
+    marginBottom: 12,
+  },
+  recoveryText: {
+    fontSize: 14,
+    color: '#64748b',
+    textAlign: 'center',
     marginBottom: 28,
   },
   primaryButton: {
