@@ -40,6 +40,29 @@ const REVISIT_REASONS = [
   'Other'
 ];
 
+const APP_TIME_ZONE = 'Asia/Kolkata';
+
+const getAppDateString = (date = new Date()) => {
+  const parts = new Intl.DateTimeFormat('en-GB', {
+    timeZone: APP_TIME_ZONE,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(date);
+
+  const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+  return `${values.year}-${values.month}-${values.day}`;
+};
+
+const addDays = (date, days) => new Date(date.getTime() + days * 24 * 60 * 60 * 1000);
+
+const formatAppDate = (dateString, options) => (
+  new Date(`${dateString}T00:00:00+05:30`).toLocaleDateString('en-US', {
+    timeZone: APP_TIME_ZONE,
+    ...options,
+  })
+);
+
 // Helper function to format time slot in "09:00AM - 09:30AM" format
 const formatTimeSlot = (startTime, endTime) => {
   // Check if both times are provided
@@ -293,17 +316,15 @@ export default function RescheduleAppointment({ route, navigation }) {
       
       // Store all slots data and process dates
       const currentAppointmentSlot = appointment?.slot;
-      const now = new Date();
+      const today = getAppDateString();
       const processedSlotsByDate = {};
       const dates = [];
       
       Object.entries(slotsData.slotsByDate).forEach(([date, timeSlots]) => {
-        // Create a Date object for this slot to check if it's in the future
         const [datePart] = date.split('T'); // Handle ISO dates
-        const slotDate = new Date(datePart + 'T12:00:00'); // Use noon to avoid timezone issues
         
-        // Only include future dates
-        if (slotDate >= new Date(now.getFullYear(), now.getMonth(), now.getDate())) {
+        // Only include dates from today onwards in the app timezone.
+        if (datePart >= today) {
           const dateSlots = [];
           
           // Process timeSlots (could be empty array)
