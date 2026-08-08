@@ -18,29 +18,6 @@ import BottomNavigation from '../components/BottomNavigation';
 import DatePicker from '../components/DatePicker';
 import { SkeletonDoctorSearch, SkeletonTimeSlotSelection } from '../components/skeletons';
 
-const APP_TIME_ZONE = 'Asia/Kolkata';
-
-const getAppDateString = (date = new Date()) => {
-  const parts = new Intl.DateTimeFormat('en-GB', {
-    timeZone: APP_TIME_ZONE,
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).formatToParts(date);
-
-  const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
-  return `${values.year}-${values.month}-${values.day}`;
-};
-
-const addDays = (date, days) => new Date(date.getTime() + days * 24 * 60 * 60 * 1000);
-
-const formatAppDate = (dateString, options) => (
-  new Date(`${dateString}T00:00:00+05:30`).toLocaleDateString('en-US', {
-    timeZone: APP_TIME_ZONE,
-    ...options,
-  })
-);
-
 export default function BookAppointment({ route, navigation }) {
   const { userId, familyMemberId, familyMemberName } = route.params;
   
@@ -325,15 +302,17 @@ export default function BookAppointment({ route, navigation }) {
       }
       
       // Process slots data and group by date
-      const today = getAppDateString();
+      const now = new Date();
       const processedSlotsByDate = {};
       const dates = [];
       
       Object.entries(slotsData.slotsByDate).forEach(([date, timeSlots]) => {
+        // Create a Date object for this slot to check if it's in the future
         const [datePart] = date.split('T'); // Handle ISO dates
+        const slotDate = new Date(datePart + 'T12:00:00'); // Use noon to avoid timezone issues
         
-        // Only include dates from today onwards in the app timezone.
-        if (datePart >= today) {
+        // Only include future dates
+        if (slotDate >= new Date(now.getFullYear(), now.getMonth(), now.getDate())) {
           // Check if this date is blocked (full day) - handle both isFullDay and fullDay from Jackson
           const blockInfo = blockedDatesData[date];
           const isBlockedFullDay = blockInfo?.isFullDay || blockInfo?.fullDay;
@@ -367,7 +346,8 @@ export default function BookAppointment({ route, navigation }) {
         const isFullDayBlocked = blockInfo.isFullDay || blockInfo.fullDay;
         if (isFullDayBlocked && !dates.includes(date)) {
           const [datePart] = date.split('T');
-          if (datePart >= today) {
+          const slotDate = new Date(datePart + 'T12:00:00');
+          if (slotDate >= new Date(now.getFullYear(), now.getMonth(), now.getDate())) {
             processedSlotsByDate[date] = [];
             dates.push(date);
           }
@@ -403,7 +383,7 @@ export default function BookAppointment({ route, navigation }) {
   };
 
   const confirmAndBookAppointment = (slot) => {
-    const appointmentDate = selectedDate ? formatAppDate(selectedDate, {
+    const appointmentDate = selectedDate ? new Date(selectedDate).toLocaleDateString('en-US', {
       weekday: 'long',
       year: 'numeric',
       month: 'long', 
@@ -448,7 +428,7 @@ export default function BookAppointment({ route, navigation }) {
       const appointmentData = {
         doctorId: selectedWorkplace.doctorId,
         workplaceId: selectedWorkplace.workplaceId,
-        requestedTime: `${selectedDate}T00:00:00+05:30`,
+        requestedTime: new Date(selectedDate).toISOString(), // Convert selected date to ISO format
         slot: slot.slotTime,
         notes: 'Booked via mobile app'
       };
@@ -862,12 +842,12 @@ export default function BookAppointment({ route, navigation }) {
                 onDateSelect={handleDatePickerSelect}
                 title="Select Appointment Date"
                 buttonTitle={customSelectedDate ? null : "Select specific date or use default (next 3 days)"}
-                minDate={getAppDateString()}
-                maxDate={getAppDateString(addDays(new Date(), 30))} // 30 days from now
+                minDate={new Date().toISOString().split('T')[0]}
+                maxDate={new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]} // 30 days from now
               />
               {customSelectedDate && (
                 <Text style={styles.selectedDateInfo}>
-                  📅 Showing slots for: {formatAppDate(customSelectedDate, {
+                  📅 Showing slots for: {new Date(customSelectedDate).toLocaleDateString('en-US', {
                     weekday: 'long',
                     year: 'numeric',
                     month: 'long',
@@ -903,10 +883,10 @@ export default function BookAppointment({ route, navigation }) {
                 
                 <View style={styles.dateInfo}>
                   <Text style={styles.currentDate}>
-                    {selectedDate && formatAppDate(selectedDate, {
+                    {selectedDate && new Date(selectedDate).toLocaleDateString('en-US', {
                       weekday: 'short',
                       year: 'numeric',
-                      month: 'short',
+                      month: 'short', 
                       day: 'numeric'
                     })}
                   </Text>
@@ -960,7 +940,7 @@ export default function BookAppointment({ route, navigation }) {
                 <Text style={styles.noSlotsTitle}>No Available Slots</Text>
                 <Text style={styles.noSlotsSubtitle}>
                   {customSelectedDate 
-                    ? `No slots available for ${formatAppDate(customSelectedDate, { weekday: 'long', month: 'long', day: 'numeric' })}. Please select a different date.`
+                    ? `No slots available for ${new Date(customSelectedDate).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}. Please select a different date.`
                     : 'There are currently no available slots for booking at this workplace. Please try again later or select a different workplace.'
                   }
                 </Text>
@@ -971,10 +951,10 @@ export default function BookAppointment({ route, navigation }) {
                 {customSelectedDate && (
                   <View style={styles.customDateDisplay}>
                     <Text style={styles.customDateText}>
-                      {selectedDate && formatAppDate(selectedDate, {
+                      {selectedDate && new Date(selectedDate).toLocaleDateString('en-US', {
                         weekday: 'short',
                         year: 'numeric',
-                        month: 'short',
+                        month: 'short', 
                         day: 'numeric'
                       })}
                     </Text>
