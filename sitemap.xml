@@ -70,6 +70,24 @@
     <priority>0.7</priority>
     <mobile:mobile/>
   </url>
+
+  <!-- Delete Account Instructions -->
+  <url>
+    <loc>https://kedulz.com/delete-account/</loc>
+    <lastmod>2026-08-10</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+    <mobile:mobile/>
+  </url>
+
+  <!-- Delete Data Instructions -->
+  <url>
+    <loc>https://kedulz.com/delete-data/</loc>
+    <lastmod>2026-08-10</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+    <mobile:mobile/>
+  </url>
   
   <!-- Add more pages as your site grows -->
   
