@@ -15,7 +15,9 @@ const filesToCopy = [
 // Directories to copy
 const dirsToCopy = [
   '.well-known',
-  'booking'
+  'booking',
+  'delete-account',
+  'delete-data'
 ];
 
 const webDir = path.join(__dirname, '..', 'web');

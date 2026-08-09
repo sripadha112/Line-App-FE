@@ -14,6 +14,8 @@
   RewriteRule ^privacy-policy/?$ privacy-policy.html [L]
   RewriteRule ^terms-and-conditions/?$ terms-and-conditions.html [L]
   RewriteRule ^terms/?$ terms-and-conditions.html [L]
+  RewriteRule ^delete-account/?$ delete-account/index.html [L]
+  RewriteRule ^delete-data/?$ delete-data/index.html [L]
   
   # Don't rewrite files or directories
   RewriteCond %{REQUEST_FILENAME} !-f
