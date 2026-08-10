@@ -2,7 +2,7 @@
   "expo": {
     "name": "kedulz",
     "slug": "kedulz",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "orientation": "portrait",
     "icon": "./assets/ios/iTunesArtwork@3x.png",
     "userInterfaceStyle": "light",
@@ -23,6 +23,7 @@
       }
     },
     "android": {
+      "versionCode": 2,
       "adaptiveIcon": {
         "foregroundImage": "./assets/android/ic_launcher-web.png",
         "backgroundColor": "#ffffff"
