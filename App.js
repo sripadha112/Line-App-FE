@@ -64,6 +64,52 @@ import WarmupService from './src/services/warmupService';
 import { decryptQueryId, encryptQueryId } from './src/utils/queryParamCrypto';
 
 const Stack = createNativeStackNavigator();
+const NOTIFICATION_INIT_TIMEOUT_MS = 8000;
+
+const formatErrorMessage = (error) => {
+  if (!error) return 'Unknown error';
+  if (typeof error === 'string') return error;
+  return error.message || JSON.stringify(error);
+};
+
+function CrashFallbackScreen({ title, message }) {
+  return (
+    <SafeAreaProvider>
+      <View style={styles.crashContainer}>
+        <View style={styles.crashCard}>
+          <Text style={styles.crashTitle}>{title}</Text>
+          <Text style={styles.crashBody}>
+            The app hit an unexpected error during startup. Please close and reopen the app.
+          </Text>
+          <Text selectable style={styles.crashDetails}>Details: {message}</Text>
+        </View>
+      </View>
+    </SafeAreaProvider>
+  );
+}
+
+class AppErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, errorMessage: '' };
+  }
+
+  static getDerivedStateFromError(error) {
+    return { hasError: true, errorMessage: formatErrorMessage(error) };
+  }
+
+  componentDidCatch(error, errorInfo) {
+    console.error('AppErrorBoundary caught an error:', error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return <CrashFallbackScreen title="Unexpected App Error" message={this.state.errorMessage} />;
+    }
+
+    return this.props.children;
+  }
+}
 
 const encryptedRouteIdKeys = [
   'userId',
@@ -138,8 +184,27 @@ export default function App() {
   const [debugVisible, setDebugVisible] = useState(false);
   const [manualUrl, setManualUrl] = useState('');
   const [resolvedBase, setResolvedBase] = useState(API_BASE_URL || '');
+  const [globalError, setGlobalError] = useState('');
   const navigationRef = React.useRef();
   const [isReady, setIsReady] = useState(false);
+
+  const initializeNotificationsInBackground = async () => {
+    try {
+      const notificationPromise = UserNotificationService.registerUserForNotifications();
+      const timeoutPromise = new Promise((resolve) => {
+        setTimeout(() => resolve({ success: false, message: 'Notification init timed out' }), NOTIFICATION_INIT_TIMEOUT_MS);
+      });
+
+      const notificationResult = await Promise.race([notificationPromise, timeoutPromise]);
+      if (notificationResult?.success) {
+        console.log('✅ [App] User notifications initialized successfully');
+      } else {
+        console.log('ℹ️ [App] User notifications:', notificationResult?.message || 'Initialization skipped');
+      }
+    } catch (error) {
+      console.error('❌ [App] Notification initialization error:', error);
+    }
+  };
 
   useEffect(() => {
     (async () => {
@@ -162,26 +227,17 @@ export default function App() {
         if (navigationRef.current) {
           setNavigationRef(navigationRef.current);
         }
-      
-        // Initialize User Notification Service (only for users, not doctors)
-        try {
-          console.log('🔔 [App] Initializing User Notification Service...');
-          const notificationResult = await UserNotificationService.registerUserForNotifications();
-          if (notificationResult.success) {
-            console.log('✅ [App] User notifications initialized successfully');
-          } else {
-            console.log('ℹ️ [App] User notifications:', notificationResult.message);
-          }
-        } catch (error) {
-          console.error('❌ [App] Notification initialization error:', error);
-        }
-      
+
         if (token && role) {
           setInitialRoute(role === 'DOCTOR' ? 'DoctorHome' : 'UserHome');
         } else {
           // Show Landing page for web, Auth for mobile
           setInitialRoute(Platform.OS === 'web' ? 'Landing' : 'Auth');
         }
+
+        // Never block startup on notification initialization.
+        // In some production/store environments this can be slow or unavailable.
+        initializeNotificationsInBackground();
       } catch (error) {
         console.error('Error initializing app:', error);
         setInitialRoute(Platform.OS === 'web' ? 'Landing' : 'Auth');
@@ -189,6 +245,31 @@ export default function App() {
         setIsReady(true);
       }
     })();
+  }, []);
+
+  useEffect(() => {
+    const errorUtils = global?.ErrorUtils;
+    if (!errorUtils || typeof errorUtils.getGlobalHandler !== 'function' || typeof errorUtils.setGlobalHandler !== 'function') {
+      return undefined;
+    }
+
+    const previousHandler = errorUtils.getGlobalHandler();
+    const nextHandler = (error, isFatal) => {
+      const prefix = isFatal ? 'Fatal JS error' : 'JS error';
+      const errorMessage = `${prefix}: ${formatErrorMessage(error)}`;
+      console.error('[GlobalErrorHandler]', errorMessage);
+      setGlobalError(errorMessage);
+
+      if (typeof previousHandler === 'function') {
+        previousHandler(error, isFatal);
+      }
+    };
+
+    errorUtils.setGlobalHandler(nextHandler);
+
+    return () => {
+      errorUtils.setGlobalHandler(previousHandler);
+    };
   }, []);
 
   // Apply manual override and reflect in UI
@@ -218,9 +299,14 @@ export default function App() {
     );
   }
 
+  if (globalError) {
+    return <CrashFallbackScreen title="Startup Error" message={globalError} />;
+  }
+
   return (
-    <SafeAreaProvider>
-      <NavigationContainer 
+    <AppErrorBoundary>
+      <SafeAreaProvider>
+        <NavigationContainer 
         ref={navigationRef}
         linking={Platform.OS === 'web' ? linking : undefined}
         fallback={<View style={{flex:1,justifyContent:'center',alignItems:'center'}}><ActivityIndicator/></View>}
@@ -309,8 +395,9 @@ export default function App() {
           </TouchableOpacity>
         </>
       )}
-      </NavigationContainer>
-    </SafeAreaProvider>
+        </NavigationContainer>
+      </SafeAreaProvider>
+    </AppErrorBoundary>
   );
 }
 
@@ -318,6 +405,11 @@ const styles = StyleSheet.create({
   debugButton:{position:'absolute',right:14,bottom:20,backgroundColor:'#111',padding:10,borderRadius:24,elevation:4},
   modalBackdrop:{flex:1,backgroundColor:'rgba(0,0,0,0.4)',justifyContent:'center',alignItems:'center'},
   modalCard:{width:'90%',backgroundColor:'#fff',padding:16,borderRadius:8,elevation:6},
-  input:{borderWidth:1,borderColor:'#ddd',padding:8,borderRadius:6,marginBottom:12}
+  input:{borderWidth:1,borderColor:'#ddd',padding:8,borderRadius:6,marginBottom:12},
+  crashContainer:{flex:1,justifyContent:'center',alignItems:'center',padding:20,backgroundColor:'#f5f7fb'},
+  crashCard:{width:'100%',maxWidth:520,backgroundColor:'#fff',padding:20,borderRadius:12,borderWidth:1,borderColor:'#e7eaf1'},
+  crashTitle:{fontSize:22,fontWeight:'700',color:'#c62828',marginBottom:10},
+  crashBody:{fontSize:15,color:'#334155',marginBottom:10},
+  crashDetails:{fontSize:13,color:'#475569'}
 });
 
