@@ -732,7 +732,6 @@ async function handleConfirmBooking() {
  */
 function showSuccessScreen(bookingResult) {
     const successDetails = document.getElementById('successDetails');
-    const manageBookingsLink = document.getElementById('manageBookingsLink');
     
     const doctor = appState.doctorInfo;
     const workplace = appState.workplaceInfo;
@@ -764,11 +763,6 @@ function showSuccessScreen(bookingResult) {
             📱 Please save your appointment details. You will receive a confirmation SMS on ${user.phone}
         </div>
     `;
-    
-    // Keep the website CTA aligned with the live booking portal.
-    if (manageBookingsLink) {
-        manageBookingsLink.href = APP_DOWNLOAD_LINKS.DEFAULT;
-    }
     
     showScreen('successScreen');
 }

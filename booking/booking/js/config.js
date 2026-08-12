@@ -12,13 +12,6 @@ const API_CONFIG = {
     }
 };
 
-// App Download Links
-const APP_DOWNLOAD_LINKS = {
-    DEFAULT: 'https://kedulz.com/download', 
-    ANDROID: 'https://play.google.com/store/apps/details?id=com.quickbooking',
-    IOS: 'https://apps.apple.com/app/quickbooking/id123456789'
-};
-
 // Date formatting options
 const DATE_FORMAT_OPTIONS = {
     SHORT: { year: 'numeric', month: 'short', day: 'numeric' },
@@ -37,5 +30,5 @@ const VALIDATION = {
 
 // Export for use in other files
 if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { API_CONFIG, APP_DOWNLOAD_LINKS, DATE_FORMAT_OPTIONS, VALIDATION };
+    module.exports = { API_CONFIG, DATE_FORMAT_OPTIONS, VALIDATION };
 }
