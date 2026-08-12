@@ -732,7 +732,7 @@ async function handleConfirmBooking() {
  */
 function showSuccessScreen(bookingResult) {
     const successDetails = document.getElementById('successDetails');
-    const downloadLink = document.getElementById('downloadAppLink');
+    const manageBookingsLink = document.getElementById('manageBookingsLink');
     
     const doctor = appState.doctorInfo;
     const workplace = appState.workplaceInfo;
@@ -765,8 +765,10 @@ function showSuccessScreen(bookingResult) {
         </div>
     `;
     
-    // Set download link
-    downloadLink.href = APP_DOWNLOAD_LINKS.DEFAULT;
+    // Keep the website CTA aligned with the live booking portal.
+    if (manageBookingsLink) {
+        manageBookingsLink.href = APP_DOWNLOAD_LINKS.DEFAULT;
+    }
     
     showScreen('successScreen');
 }
