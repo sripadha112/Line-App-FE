@@ -23,7 +23,6 @@
       }
     },
     "android": {
-      "versionCode": 2,
       "adaptiveIcon": {
         "foregroundImage": "./assets/android/ic_launcher-web.png",
         "backgroundColor": "#ffffff"
