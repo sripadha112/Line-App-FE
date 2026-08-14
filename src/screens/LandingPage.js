@@ -6,6 +6,7 @@ import {
   StyleSheet, 
   ScrollView, 
   Platform,
+  Linking,
   Animated,
   Dimensions,
   PanResponder,
@@ -18,6 +19,14 @@ export default function LandingPage({ navigation }) {
   const [activeFeature, setActiveFeature] = useState(0);
   const [activeGallery, setActiveGallery] = useState(0);
   const [windowWidth, setWindowWidth] = useState(Dimensions.get('window').width);
+
+  const openSocialLink = async (url) => {
+    try {
+      await Linking.openURL(url);
+    } catch (error) {
+      console.warn('Failed to open social link:', error);
+    }
+  };
   
   // Create animated values for gallery transitions with proper initial values
   const galleryAnimations = useRef(
@@ -515,18 +524,34 @@ export default function LandingPage({ navigation }) {
             <View style={styles.footerSocial}>
               <Text style={styles.footerSocialText}>Follow Us:</Text>
               <View style={styles.footerSocialIcons}>
-                <View style={styles.footerSocialIcon}>
+                <TouchableOpacity
+                  style={styles.footerSocialIcon}
+                  onPress={() => openSocialLink('https://www.facebook.com/profile.php?id=61593009220915')}
+                  activeOpacity={0.8}
+                >
                   <Text style={styles.footerSocialIconText}>f</Text>
-                </View>
-                <View style={styles.footerSocialIcon}>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.footerSocialIcon}
+                  onPress={() => openSocialLink('https://x.com/Kedulzhealth')}
+                  activeOpacity={0.8}
+                >
                   <Text style={styles.footerSocialIconText}>𝕏</Text>
-                </View>
-                <View style={styles.footerSocialIcon}>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.footerSocialIcon}
+                  onPress={() => openSocialLink('https://www.instagram.com/kedulzindia/')}
+                  activeOpacity={0.8}
+                >
                   <Text style={styles.footerSocialIconText}>📷</Text>
-                </View>
-                <View style={styles.footerSocialIcon}>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.footerSocialIcon}
+                  onPress={() => openSocialLink('https://www.linkedin.com/company/kedulz')}
+                  activeOpacity={0.8}
+                >
                   <Text style={styles.footerSocialIconText}>in</Text>
-                </View>
+                </TouchableOpacity>
               </View>
             </View>
           </View>
