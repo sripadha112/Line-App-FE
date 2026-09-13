@@ -66,7 +66,7 @@ export default function PrescriptionEditor({
     setEditingMedicine({
       medicineId: medicine.id,
       medicineName: medicine.medicineName,
-      composition: `${medicine.composition1 || ''}${medicine.composition2 ? ', ' + medicine.composition2 : ''}`,
+      composition: `${medicine.composition1 || ''}${medicine.composition1 ? ', ' + medicine.composition1 : ''}`,
       manufacturer: medicine.manufacturer,
       frequency: {
         morning: false,

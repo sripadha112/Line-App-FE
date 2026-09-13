@@ -129,8 +129,8 @@ export default function MedicineSearchModal({ visible, onClose, onSelectMedicine
       onPress={() => handleSelectMedicine(item)}
     >
       <Text style={styles.medicineName}>{item.medicineName}</Text>
-      {item.composition2 && (
-        <Text style={styles.compositionHighlight}>{item.composition2}</Text>
+      {item.composition1 && (
+        <Text style={styles.compositionHighlight}>{item.composition1}</Text>
       )}
       {item.packSize && (
         <Text style={styles.packSize}>{item.packSize}</Text>
