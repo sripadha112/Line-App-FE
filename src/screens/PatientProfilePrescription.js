@@ -24,8 +24,24 @@ import { encryptQueryId } from '../utils/queryParamCrypto';
 
 const securePathId = (id) => encodeURIComponent(encryptQueryId(id));
 
+const normalizeId = (value) => {
+  if (value === undefined || value === null) return null;
+  const text = String(value).trim();
+  if (!text || text.toLowerCase() === 'undefined' || text.toLowerCase() === 'null') {
+    return null;
+  }
+  return value;
+};
+
 export default function PatientProfilePrescription({ route, navigation }) {
-  const { appointment, doctorId, workplaceId, workplaceName } = route.params;
+  const {
+    appointment,
+    doctorId,
+    workplaceId,
+    workplaceName,
+    patientId: routePatientId,
+    appointmentId: routeAppointmentId,
+  } = route?.params || {};
   const [userProfile, setUserProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -52,11 +68,25 @@ export default function PatientProfilePrescription({ route, navigation }) {
     console.log('🏥 PatientProfilePrescription loaded');
     console.log('🏥 Doctor ID from route params:', doctorId);
     console.log('🏥 Appointment data:', appointment);
-    console.log('🏥 User ID from appointment:', appointment.userId || appointment.patientId);
+    console.log('🏥 User ID from appointment:', appointment?.userId || appointment?.patientId || routePatientId);
     fetchUserProfile();
     getDoctorName();
     fetchPrescriptions();
   }, []);
+
+  const getPatientIdFromContext = () => {
+    return normalizeId(
+      appointment?.userId ||
+      appointment?.patientId ||
+      appointment?.user_id ||
+      appointment?.patient_id ||
+      routePatientId
+    );
+  };
+
+  const getAppointmentIdFromContext = () => {
+    return normalizeId(appointment?.appointmentId || appointment?.id || routeAppointmentId);
+  };
 
   const getDoctorName = async () => {
     try {
@@ -80,7 +110,7 @@ export default function PatientProfilePrescription({ route, navigation }) {
 
   const fetchPrescriptions = async () => {
     try {
-      const userId = appointment.userId || appointment.patientId;
+      const userId = getPatientIdFromContext();
       if (!userId) return;
       
       const token = await SecureStore.getItemAsync('accessToken');
@@ -278,7 +308,7 @@ export default function PatientProfilePrescription({ route, navigation }) {
   const fetchUserProfile = async () => {
     try {
       setLoading(true);
-      const userId = appointment.userId || appointment.patientId;
+      const userId = getPatientIdFromContext();
       if (!userId) {
         showAlert('Error', 'Patient ID not found');
         navigation.goBack();
@@ -366,6 +396,61 @@ export default function PatientProfilePrescription({ route, navigation }) {
     return formattedData;
   };
 
+  const getConsolidatedEditedData = () => {
+    // Include explicit edits and unsaved section temp values.
+    const pendingSectionEdits = Object.values(sectionTempValues || {}).reduce((acc, sectionData) => {
+      if (sectionData && typeof sectionData === 'object') {
+        return { ...acc, ...sectionData };
+      }
+      return acc;
+    }, {});
+
+    return formatDataForAPI({
+      ...editedFields,
+      ...pendingSectionEdits,
+    });
+  };
+
+  const clearEditState = () => {
+    setEditedFields({});
+    setSectionTempValues({});
+    setEditingSections({});
+    setActiveFields({});
+  };
+
+  const handleSavePatientData = async () => {
+    try {
+      setSaving(true);
+
+      const userId = getPatientIdFromContext();
+      if (!userId) {
+        showAlert('Error', 'Patient ID not found');
+        return;
+      }
+
+      const updateData = getConsolidatedEditedData();
+      if (Object.keys(updateData).length === 0) {
+        showAlert('No Changes', 'There are no new patient data changes to save.');
+        return;
+      }
+
+      await DoctorAPIService.updateUserProfile(userId, updateData);
+
+      setUserProfile(prev => ({
+        ...prev,
+        ...updateData,
+      }));
+      clearEditState();
+
+      showAlert('Success', 'Patient data saved successfully.');
+    } catch (error) {
+      console.error('Error saving patient data:', error);
+      showAlert('Error', 'Failed to save patient data. Please try again.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const handleSaveAndComplete = async () => {
     // Check if prescription was added in the Prescription Management section
     if (!prescriptionAddedInSession) {
@@ -408,23 +493,28 @@ export default function PatientProfilePrescription({ route, navigation }) {
   const completeAppointmentWithoutPrescription = async () => {
     try {
       setSaving(true);
+      const appointmentId = getAppointmentIdFromContext();
+      if (!appointmentId) {
+        showAlert('Error', 'Appointment ID not found');
+        return;
+      }
       
       // Prepare update data and format arrays properly
-      const updateData = formatDataForAPI({
-        ...editedFields
-      });
+      const updateData = getConsolidatedEditedData();
 
       console.log('Completing appointment without digital prescription (offline prescription given)');
       console.log('Complete update data being sent to API:', JSON.stringify(updateData, null, 2));
 
       // Update profile if there are any edited fields
       if (Object.keys(updateData).length > 0) {
-        const userId = appointment.userId || appointment.patientId;
+        const userId = getPatientIdFromContext();
         await DoctorAPIService.updateUserProfile(userId, updateData);
+        setUserProfile(prev => ({ ...prev, ...updateData }));
+        clearEditState();
       }
 
       // Complete appointment
-      await DoctorAPIService.completeAppointment(appointment.appointmentId);
+      await DoctorAPIService.completeAppointment(appointmentId);
 
       showAlert(
         'Success',
@@ -453,23 +543,28 @@ export default function PatientProfilePrescription({ route, navigation }) {
   const completeAppointment = async () => {
     try {
       setSaving(true);
+      const appointmentId = getAppointmentIdFromContext();
+      if (!appointmentId) {
+        showAlert('Error', 'Appointment ID not found');
+        return;
+      }
       
       // Prepare update data and format arrays properly
-      const updateData = formatDataForAPI({
-        ...editedFields
-      });
+      const updateData = getConsolidatedEditedData();
 
       console.log('Doctor Name:', doctorName);
       console.log('Complete update data being sent to API:', JSON.stringify(updateData, null, 2));
 
       // Update profile if there are any edited fields
       if (Object.keys(updateData).length > 0) {
-        const userId = appointment.userId || appointment.patientId;
+        const userId = getPatientIdFromContext();
         await DoctorAPIService.updateUserProfile(userId, updateData);
+        setUserProfile(prev => ({ ...prev, ...updateData }));
+        clearEditState();
       }
 
       // Complete appointment
-      await DoctorAPIService.completeAppointment(appointment.appointmentId);
+      await DoctorAPIService.completeAppointment(appointmentId);
 
       showAlert(
         'Success',
@@ -503,7 +598,7 @@ export default function PatientProfilePrescription({ route, navigation }) {
       appointment?.user_id;
 
     const revisitAppointment = {
-      ...appointment,
+      ...(appointment || {}),
       doctorId: appointment?.doctorId || doctorId,
       workplaceId: appointment?.workplaceId || workplaceId,
       workplaceName: appointment?.workplaceName || workplaceName,
@@ -516,7 +611,7 @@ export default function PatientProfilePrescription({ route, navigation }) {
     // Navigate to reschedule page with revisit context
     navigation.navigate('RescheduleAppointment', {
       appointment: revisitAppointment,
-      appointmentId: appointment.appointmentId,
+      appointmentId: getAppointmentIdFromContext(),
       userId: patientUserId,
       fromDoctorView: true,
       fromRevisit: true, // Flag to indicate this is for booking a revisit
@@ -1084,6 +1179,19 @@ export default function PatientProfilePrescription({ route, navigation }) {
 
         {/* Action Buttons */}
         <View style={styles.actionButtonsContainer}>
+          {/* Save Patient Data Button */}
+          <TouchableOpacity
+            style={[styles.savePatientDataButton, saving && styles.buttonDisabled]}
+            onPress={handleSavePatientData}
+            disabled={saving}
+          >
+            {saving ? (
+              <ActivityIndicator size="small" color="#fff" />
+            ) : (
+              <Text style={styles.savePatientDataButtonText}>Save Patient Data</Text>
+            )}
+          </TouchableOpacity>
+
           {/* Book Next Visit Button */}
           <TouchableOpacity
             style={[styles.bookVisitButton, saving && styles.buttonDisabled]}
@@ -1165,9 +1273,9 @@ export default function PatientProfilePrescription({ route, navigation }) {
             onBack={() => setShowPrescriptionEditor(false)}
           />
           <PrescriptionEditor
-            userId={appointment.userId || appointment.patientId}
+            userId={getPatientIdFromContext()}
             doctorId={doctorId}
-            appointmentId={appointment.id || appointment.appointmentId}
+            appointmentId={getAppointmentIdFromContext()}
             prescriptionId={selectedPrescription?.id}
             onSave={handleSavePrescription}
             onCancel={() => setShowPrescriptionEditor(false)}
@@ -1518,6 +1626,18 @@ const styles = StyleSheet.create({
   actionButtonsContainer: {
     marginTop: 20,
     marginBottom: 40,
+  },
+  savePatientDataButton: {
+    backgroundColor: '#16a085',
+    borderRadius: 10,
+    paddingVertical: 14,
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  savePatientDataButtonText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#fff',
   },
   bookVisitButton: {
     backgroundColor: '#3498db',
