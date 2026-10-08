@@ -176,7 +176,56 @@ api.interceptors.response.use((res) => {
   activeRequests--;
   const originalRequest = err.config;
   
-  // Check if we should retry
+  // ── Handle token expiration (401 Unauthorized) ──────────────────────────
+  if (err.response?.status === 401) {
+    console.log('[api] 401 Unauthorized - Token expired or invalid');
+    
+    // Clear stored authentication data
+    try {
+      await SecureStore.deleteItemAsync('accessToken');
+      await SecureStore.deleteItemAsync('userId');
+      await SecureStore.deleteItemAsync('fullName');
+      await SecureStore.deleteItemAsync('userRole');
+      await SecureStore.deleteItemAsync('role');
+      await SecureStore.deleteItemAsync('mobile');
+      
+      // Remove auth header
+      delete api.defaults.headers.common['Authorization'];
+      
+      console.log('[api] Cleared stored credentials due to 401 error');
+      
+      // Navigate to Auth screen if navigation ref is available
+      if (navigationRef && navigationRef.reset && !isRedirecting) {
+        isRedirecting = true;
+        console.log('[api] Redirecting to login due to expired token');
+        
+        // Navigate immediately without alert to avoid blocking
+        setTimeout(() => {
+          try {
+            navigationRef.reset({
+              index: 0,
+              routes: [{ name: 'Auth' }],
+            });
+            console.log('[api] ✅ Navigation to Auth screen successful');
+          } catch (navError) {
+            console.error('[api] Navigation error:', navError);
+          }
+          
+          // Reset flag after a delay to allow for potential race conditions
+          setTimeout(() => {
+            isRedirecting = false;
+          }, 3000);
+        }, 100);
+      }
+    } catch (clearError) {
+      console.log('[api] Error clearing credentials:', clearError);
+    }
+    
+    // Don't retry on 401
+    return Promise.reject(err);
+  }
+  
+  // ── Check if we should retry other errors ──────────────────────────────
   const isRetryable = 
     !err.response || // Network errors
     err.code === 'ECONNABORTED' || // Timeout
@@ -213,58 +262,6 @@ api.interceptors.response.use((res) => {
       status: err.response?.status,
       data: err.response?.data,
     });
-
-    // Handle token invalidation
-    if (err.response?.status === 401) {
-      console.log('[api] 401 Unauthorized - Token expired or invalid');
-      
-      // Clear stored authentication data
-      try {
-        await SecureStore.deleteItemAsync('accessToken');
-        await SecureStore.deleteItemAsync('userId');
-        await SecureStore.deleteItemAsync('fullName');
-        await SecureStore.deleteItemAsync('userRole');
-        await SecureStore.deleteItemAsync('role');
-        
-        // Remove auth header
-        delete api.defaults.headers.common['Authorization'];
-        
-        console.log('[api] Cleared stored credentials due to 401 error');
-        
-        // Navigate to Auth screen if navigation ref is available (with debounce)
-        if (navigationRef && navigationRef.reset && !isRedirecting) {
-          isRedirecting = true;
-          console.log('[api] Redirecting to login due to expired token');
-          
-          // Show alert and redirect to login
-          Alert.alert(
-            'Session Expired',
-            'Your session has expired. Please log in again.',
-            [
-              {
-                text: 'OK',
-                onPress: () => {
-                  navigationRef.reset({
-                    index: 0,
-                    routes: [{ name: 'Auth' }],
-                  });
-                  // Reset flag after navigation
-                  setTimeout(() => {
-                    isRedirecting = false;
-                  }, 2000);
-                }
-              }
-            ],
-            { cancelable: false }
-          );
-        }
-        
-        // Add a flag to the error to indicate auth was cleared
-        err.authCleared = true;
-      } catch (clearError) {
-        console.log('[api] Error clearing credentials:', clearError);
-      }
-    }
   } catch (e) {}
 
   scheduleStatusForApiProblem(err);
@@ -293,14 +290,55 @@ export async function clearAuthData() {
     await SecureStore.deleteItemAsync('fullName');
     await SecureStore.deleteItemAsync('userRole');
     await SecureStore.deleteItemAsync('role');
+    await SecureStore.deleteItemAsync('mobile');
     
     // Remove auth header
     delete api.defaults.headers.common['Authorization'];
     
-    console.log('[api] Authentication data cleared');
+    console.log('[api] ✅ Authentication data cleared');
     return true;
   } catch (error) {
-    console.log('[api] Error clearing auth data:', error);
+    console.log('[api] ❌ Error clearing auth data:', error);
+    return false;
+  }
+}
+
+// Programmatic logout function - to be called from screens or services
+export async function performLogout(reason = 'User initiated logout') {
+  console.log(`[api] 🔄 Performing logout: ${reason}`);
+  
+  try {
+    // Clear auth data
+    await clearAuthData();
+    
+    // Navigate to Auth screen if navigation ref is available
+    if (navigationRef && navigationRef.reset) {
+      isRedirecting = true;
+      console.log('[api] 🔄 Redirecting to Auth screen...');
+      
+      setTimeout(() => {
+        try {
+          navigationRef.reset({
+            index: 0,
+            routes: [{ name: 'Auth' }],
+          });
+          console.log('[api] ✅ Logout navigation successful');
+        } catch (navError) {
+          console.error('[api] ❌ Logout navigation error:', navError);
+        }
+        
+        // Reset flag after a delay
+        setTimeout(() => {
+          isRedirecting = false;
+        }, 2000);
+      }, 100);
+    } else {
+      console.warn('[api] ⚠️ Navigation ref not available for logout');
+    }
+    
+    return true;
+  } catch (error) {
+    console.error('[api] ❌ Logout error:', error);
     return false;
   }
 }

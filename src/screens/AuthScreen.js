@@ -645,13 +645,13 @@
 //     fontStyle: 'italic',
 //   },
 // });
-
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
   ScrollView, KeyboardAvoidingView, Platform, ActivityIndicator,
   Animated, Easing
 } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import api from '../services/api';
 import SecureStore from '../utils/secureStorage';
 import { API_ENDPOINTS } from '../config/apiConfig';
@@ -664,6 +664,7 @@ const STEP_MOBILE = 'mobile';
 const STEP_LOGIN_PIN = 'login_pin';
 const STEP_SET_PIN = 'set_pin';
 const STEP_CREATE_PIN = 'create_pin';
+const STEP_FORGOT_PIN = 'forgot_pin';
 
 // ── Design tokens ────────────────────────────────────────────────────────
 const COLORS = {
@@ -705,9 +706,23 @@ export default function AuthScreen({ navigation }) {
   const [loading, setLoading] = useState(false);
   const [userId, setUserId] = useState(null);
   const [fadeAnim] = useState(new Animated.Value(0));
+  const renderCountRef = useRef(0);
+
+  // ── Log screen focus/blur ──
+  useFocusEffect(
+    React.useCallback(() => {
+      console.log('[AuthScreen] Screen focused - mobile:', mobile, 'step:', step);
+      return () => {
+        console.log('[AuthScreen] Screen blurred - mobile:', mobile, 'step:', step);
+      };
+    }, [mobile, step])
+  );
 
   // ── Trigger fade animation when step changes ──
-  React.useEffect(() => {
+  useEffect(() => {
+    renderCountRef.current++;
+    console.log(`[AuthScreen] Render #${renderCountRef.current} - Step changed to:`, step);
+    
     fadeAnim.setValue(0);
     Animated.timing(fadeAnim, {
       toValue: 1,
@@ -716,6 +731,21 @@ export default function AuthScreen({ navigation }) {
       useNativeDriver: true,
     }).start();
   }, [step, fadeAnim]);
+
+  // ── Log mobile state changes for debugging ──
+  useEffect(() => {
+    if (mobile.length > 0) {
+      console.log('[AuthScreen] Mobile changed to:', mobile, '- step:', step);
+    }
+  }, [mobile]);
+
+  // ── Component lifecycle logging ──
+  useEffect(() => {
+    console.log('[AuthScreen] Component mounted');
+    return () => {
+      console.log('[AuthScreen] Component unmounting - mobile state:', mobile, 'step:', step);
+    };
+  }, []);
 
   // ── Validation ────────────────────────────────────────────────────────
   const validateMobileNumber = (number) => {
@@ -749,9 +779,11 @@ export default function AuthScreen({ navigation }) {
 
   // ── STEP 1: Check if mobile is registered ───────────────────────────────
   const checkMobile = async () => {
+    console.log('[AuthScreen] checkMobile called with mobile:', mobile);
     const validation = validateMobileNumber(mobile);
 
     if (!validation.isValid) {
+      console.warn('[AuthScreen] Mobile validation failed:', validation.message);
       showAlert('Invalid Mobile', validation.message);
       return;
     }
@@ -759,12 +791,14 @@ export default function AuthScreen({ navigation }) {
     setLoading(true);
 
     try {
+      console.log('[AuthScreen] Calling CHECK_MOBILE API with mobile:', mobile);
       const res = await api.post(
         API_ENDPOINTS.AUTH.CHECK_MOBILE,
         { mobileNumber: mobile }
       );
 
       const { mobileExists, pinExists, userId } = res.data;
+      console.log('[AuthScreen] CHECK_MOBILE response:', {mobileExists, pinExists, userId});
 
       const statusText = String(res.data?.status || '').toLowerCase();
       const accountDeleted =
@@ -933,6 +967,91 @@ export default function AuthScreen({ navigation }) {
     navigation.navigate('RoleSelection', { mobile, pin });
   };
 
+  // ── STEP 3: Forgot PIN - Reset PIN for existing user ──────────────────────
+  const resetForgottenPin = async () => {
+    if (!validatePin(pin)) {
+      showAlert('Invalid PIN', 'PIN must be 4-6 digits');
+      return;
+    }
+
+    if (!validatePinMatch(pin, confirmPin)) {
+      showAlert('PIN Mismatch', 'PINs do not match');
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const encryptedPin = encryptQueryValue(pin);
+
+      if (!encryptedPin) {
+        showAlert('Error', 'Failed to encrypt PIN');
+        setLoading(false);
+        return;
+      }
+
+      let resetSuccess = false;
+      let lastError = null;
+
+      // Try primary endpoint first (new dedicated reset-pin endpoint)
+      try {
+        console.log('[AuthScreen] Attempting to reset PIN using /api/auth/reset-pin');
+        const res = await api.post(API_ENDPOINTS.AUTH.RESET_PIN, {
+          mobileNumber: mobile,
+          newPin: encryptedPin,
+        });
+        resetSuccess = true;
+        console.log('[AuthScreen] ✅ PIN reset successful via reset-pin endpoint');
+      } catch (primaryError) {
+        lastError = primaryError;
+        console.warn('[AuthScreen] reset-pin endpoint failed, trying fallback...', primaryError.message);
+
+        // Fallback: Try using setpin endpoint with body instead of query params
+        try {
+          console.log('[AuthScreen] Attempting fallback using /api/auth/setpin with body');
+          const res = await api.put(API_ENDPOINTS.AUTH.SET_PIN, {
+            mobileNumber: mobile,
+            pin: encryptedPin,
+          });
+          resetSuccess = true;
+          console.log('[AuthScreen] ✅ PIN reset successful via setpin endpoint (fallback)');
+        } catch (fallbackError) {
+          lastError = fallbackError;
+          console.error('[AuthScreen] Both endpoints failed:', {
+            primaryError: primaryError.message,
+            fallbackError: fallbackError.message,
+          });
+        }
+      }
+
+      if (resetSuccess) {
+        showAlert('Success', 'PIN has been reset successfully. Please log in with your new PIN.', [
+          {
+            text: 'OK',
+            onPress: () => {
+              setPin('');
+              setConfirmPin('');
+              setStep(STEP_LOGIN_PIN);
+            }
+          }
+        ]);
+      } else {
+        // Both attempts failed
+        const errorMsg = lastError?.response?.data?.message 
+          || lastError?.response?.data?.error
+          || lastError?.message 
+          || 'Failed to reset PIN';
+        showAlert('Error', errorMsg);
+      }
+    } catch (e) {
+      console.error('[AuthScreen] Unexpected error during PIN reset:', e);
+      const errorMsg = e.response?.data?.message || e.message || 'An unexpected error occurred';
+      showAlert('Error', errorMsg);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // ── Shared success handler ────────────────────────────────────────────────
   const handleAuthSuccess = async (data) => {
     const token = data.accessToken || data.token;
@@ -994,12 +1113,15 @@ export default function AuthScreen({ navigation }) {
         {step === STEP_LOGIN_PIN && 'Enter your PIN to continue'}
         {step === STEP_SET_PIN && 'Create a secure PIN for your new account'}
         {step === STEP_CREATE_PIN && 'Set up your PIN to complete registration'}
+        {step === STEP_FORGOT_PIN && 'Create a new PIN for your account'}
       </Text>
     </View>
   );
 
   // ── UI: Mobile Input ────────────────────────────────────────────────────
-  const renderMobileInput = () => (
+  const renderMobileInput = () => {
+    console.log('[AuthScreen] renderMobileInput called - mobile value:', mobile);
+    return (
     <View style={styles.inputGroup}>
       <Text style={styles.label}>Mobile Number</Text>
       <View style={styles.phoneRow}>
@@ -1037,7 +1159,8 @@ export default function AuthScreen({ navigation }) {
         </View>
       )}
     </View>
-  );
+    );
+  };
 
   // ── UI: PIN Input ──────────────────────────────────────────────────────
   const renderPinInputs = ({ showConfirm = false }) => (
@@ -1172,6 +1295,17 @@ export default function AuthScreen({ navigation }) {
                 disabled: !validatePin(pin),
               })}
 
+              <TouchableOpacity 
+                onPress={() => {
+                  setPin('');
+                  setConfirmPin('');
+                  setStep(STEP_FORGOT_PIN);
+                }}
+                style={styles.forgotPinLink}
+              >
+                <Text style={styles.forgotPinText}>Forgot your PIN?</Text>
+              </TouchableOpacity>
+
               {renderButton({
                 onPress: resetFlow,
                 text: 'Use Different Number',
@@ -1227,6 +1361,32 @@ export default function AuthScreen({ navigation }) {
               {renderButton({
                 onPress: resetFlow,
                 text: 'Use Different Number',
+                variant: 'secondary',
+              })}
+            </>
+          )}
+
+          {/* STEP: Forgot PIN - Reset existing PIN */}
+          {step === STEP_FORGOT_PIN && (
+            <>
+              <View style={styles.infoBox}>
+                <Text style={styles.infoIcon}>🔑</Text>
+                <Text style={styles.infoText}>
+                  Create a new PIN to replace your old PIN
+                </Text>
+              </View>
+
+              {renderPinInputs({ showConfirm: true })}
+
+              {renderButton({
+                onPress: resetForgottenPin,
+                text: 'Reset PIN',
+                disabled: !validatePin(pin) || !validatePinMatch(pin, confirmPin),
+              })}
+
+              {renderButton({
+                onPress: () => setStep(STEP_LOGIN_PIN),
+                text: 'Back to Login',
                 variant: 'secondary',
               })}
             </>
@@ -1434,6 +1594,19 @@ const styles = StyleSheet.create({
   },
   buttonText_secondary: {
     color: COLORS.primary,
+  },
+
+  // ── Forgot PIN Link ─────────────────────────────────────────────────────
+  forgotPinLink: {
+    alignItems: 'center',
+    marginVertical: SPACING.md,
+    padding: SPACING.sm,
+  },
+  forgotPinText: {
+    color: COLORS.primary,
+    fontSize: 14,
+    fontWeight: '600',
+    textDecorationLine: 'underline',
   },
 
   // ── Footer ──────────────────────────────────────────────────────────────

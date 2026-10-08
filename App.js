@@ -61,6 +61,7 @@ import { ActivityIndicator, View, Modal, Text, TextInput, Button, TouchableOpaci
 import fcmService from './src/services/fcmService';
 import UserNotificationService from './src/services/userNotificationService';
 import WarmupService from './src/services/warmupService';
+import SessionService from './src/services/sessionService';
 import { decryptQueryId, encryptQueryId } from './src/utils/queryParamCrypto';
 
 const Stack = createNativeStackNavigator();
@@ -229,8 +230,16 @@ export default function App() {
         }
 
         if (token && role) {
+          // User is logged in - start session checks
+          console.log('✅ [App] User logged in, starting session checks');
+          SessionService.reinitializeSession(false); // Start session validation
+          
           setInitialRoute(role === 'DOCTOR' ? 'DoctorHome' : 'UserHome');
         } else {
+          // User not logged in
+          console.log('ℹ️ [App] User not logged in, stopping session checks');
+          SessionService.stopSessionCheck();
+          
           // Show Landing page for web, Auth for mobile
           setInitialRoute(Platform.OS === 'web' ? 'Landing' : 'Auth');
         }
@@ -240,6 +249,7 @@ export default function App() {
         initializeNotificationsInBackground();
       } catch (error) {
         console.error('Error initializing app:', error);
+        SessionService.stopSessionCheck();
         setInitialRoute(Platform.OS === 'web' ? 'Landing' : 'Auth');
       } finally {
         setIsReady(true);
@@ -269,6 +279,14 @@ export default function App() {
 
     return () => {
       errorUtils.setGlobalHandler(previousHandler);
+    };
+  }, []);
+
+  // Cleanup session checks on app unmount
+  useEffect(() => {
+    return () => {
+      console.log('[App] App unmounting, stopping session checks...');
+      SessionService.stopSessionCheck();
     };
   }, []);
 

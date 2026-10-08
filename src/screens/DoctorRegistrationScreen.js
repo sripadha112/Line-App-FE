@@ -402,12 +402,14 @@ export default function DoctorRegistrationScreen({ navigation, route }) {
     <KeyboardAvoidingView 
       style={styles.container} 
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 100 : 0}
     >
       <ScrollView 
         style={styles.scrollView} 
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
+        scrollEventThrottle={16}
       >
       <View style={styles.header}>
         <Text style={styles.title}>Doctor Registration</Text>
@@ -1078,7 +1080,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    paddingBottom: 50,
+    paddingBottom: 100, // Increased padding to allow button to scroll completely above keyboard
   },
   header: {
     padding: 20,
@@ -1142,6 +1144,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     borderWidth: 1,
     borderColor: '#e9ecef',
+    overflow: 'hidden', // Fix for curved display devices to prevent text overflow
   },
   textArea: {
     height: 80,
@@ -1161,6 +1164,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    overflow: 'hidden', // Fix for curved display devices
   },
   dropdownText: {
     fontSize: 16,
@@ -1310,6 +1314,7 @@ const styles = StyleSheet.create({
     padding: 15,
     alignItems: 'center',
     marginTop: 20,
+    marginBottom: 20, // Add margin bottom for curved display devices
   },
   disabledButton: {
     backgroundColor: '#95a5a6',

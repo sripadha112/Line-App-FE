@@ -49,6 +49,10 @@ export default function UserHome({ route, navigation }) {
   const [showGenderPicker, setShowGenderPicker] = useState(false);
   const [showRelationshipPicker, setShowRelationshipPicker] = useState(false);
   
+  // Service unavailable tooltip state
+  const [showServiceTooltip, setShowServiceTooltip] = useState(false);
+  const [serviceTooltipTimeout, setServiceTooltipTimeout] = useState(null);
+  
   const genderOptions = ['Male', 'Female', 'Other'];
   const relationshipOptions = ['Father', 'Mother', 'Son', 'Daughter', 'Brother', 'Sister', 'Spouse', 'Grandfather', 'Grandmother', 'Other'];
 
@@ -351,6 +355,24 @@ export default function UserHome({ route, navigation }) {
     navigation.navigate('CancelAppointment', { userId, appointmentId });
   };
 
+  // ── Handler for unavailable services ──────────────────────────────────
+  const handleUnavailableService = () => {
+    // Clear any existing timeout
+    if (serviceTooltipTimeout) {
+      clearTimeout(serviceTooltipTimeout);
+    }
+    
+    // Show tooltip
+    setShowServiceTooltip(true);
+    
+    // Auto-hide after 3.5 seconds
+    const timeout = setTimeout(() => {
+      setShowServiceTooltip(false);
+    }, 1000);
+    
+    setServiceTooltipTimeout(timeout);
+  };
+
   const contactDevelopers = () => {
     showAlert(
       'Contact Developers',
@@ -545,7 +567,10 @@ ${userProfile?.fullName || 'Kedulz App User'}`;
           <Text style={styles.sectionTitle}>Services</Text>
           
           <View style={styles.servicesList}>
-            <TouchableOpacity style={styles.serviceCard}>
+            <TouchableOpacity 
+              style={styles.serviceCard}
+              onPress={handleUnavailableService}
+            >
               <Text style={styles.serviceIcon}>🩺</Text>
               <View style={styles.serviceInfo}>
                 <Text style={styles.serviceTitle}>General Consultation</Text>
@@ -556,7 +581,10 @@ ${userProfile?.fullName || 'Kedulz App User'}`;
               <Text style={styles.serviceArrow}>→</Text>
             </TouchableOpacity>
             
-            <TouchableOpacity style={styles.serviceCard}>
+            <TouchableOpacity 
+              style={styles.serviceCard}
+              onPress={handleUnavailableService}
+            >
               <Text style={styles.serviceIcon}>🏥</Text>
               <View style={styles.serviceInfo}>
                 <Text style={styles.serviceTitle}>Specialist Care</Text>
@@ -567,7 +595,10 @@ ${userProfile?.fullName || 'Kedulz App User'}`;
               <Text style={styles.serviceArrow}>→</Text>
             </TouchableOpacity>
             
-            <TouchableOpacity style={styles.serviceCard}>
+            <TouchableOpacity 
+              style={styles.serviceCard}
+              onPress={handleUnavailableService}
+            >
               <Text style={styles.serviceIcon}>🔬</Text>
               <View style={styles.serviceInfo}>
                 <Text style={styles.serviceTitle}>Lab Tests</Text>
@@ -601,6 +632,15 @@ ${userProfile?.fullName || 'Kedulz App User'}`;
         {/* Bottom Spacing for Navigation */}
         <View style={styles.bottomSpacing} />
       </ScrollView>
+      
+      {/* Service Unavailable Tooltip */}
+      {showServiceTooltip && (
+        <View style={styles.tooltipContainer}>
+          <View style={styles.tooltip}>
+            <Text style={styles.tooltipText}>⚠️ This service is not available now</Text>
+          </View>
+        </View>
+      )}
       
       {/* Add Family Member Modal */}
       <Modal
@@ -1284,5 +1324,32 @@ const styles = StyleSheet.create({
   pickerOptionText: {
     fontSize: 16,
     color: '#2c3e50',
+  },
+  // Tooltip styles
+  tooltipContainer: {
+    position: 'absolute',
+    bottom: 100,
+    left: 20,
+    right: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 999,
+  },
+  tooltip: {
+    backgroundColor: '#ff6b6b',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  tooltipText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
+    textAlign: 'center',
   },
 });

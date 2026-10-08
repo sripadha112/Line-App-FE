@@ -164,12 +164,14 @@ export default function UserRegistrationScreen({ navigation, route }) {
     <KeyboardAvoidingView 
       style={styles.container} 
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 100 : 0}
     >
       <ScrollView 
         style={styles.scrollView} 
         contentContainerStyle={styles.contentContainer}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
+        scrollEventThrottle={16}
       >
       <View style={styles.header}>
         <Text style={styles.title}>User Registration</Text>
@@ -336,7 +338,7 @@ const styles = StyleSheet.create({
   },
   contentContainer: {
     padding: 20,
-    paddingBottom: 50,
+    paddingBottom: 100, // Increased padding to allow button to scroll completely above keyboard
   },
   header: {
     alignItems: 'center',
@@ -379,6 +381,7 @@ const styles = StyleSheet.create({
     padding: 16,
     fontSize: 16,
     backgroundColor: '#fff',
+    overflow: 'hidden', // Fix for curved display devices to prevent text overflow
   },
   disabledInput: {
     backgroundColor: '#f8f9fa',
@@ -394,6 +397,7 @@ const styles = StyleSheet.create({
     padding: 18,
     alignItems: 'center',
     marginTop: 20,
+    marginBottom: 20, // Add margin bottom for curved display devices
   },
   disabledButton: {
     backgroundColor: '#bdc3c7',
@@ -456,6 +460,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    overflow: 'hidden', // Fix for curved display devices
   },
   dropdownText: {
     fontSize: 16,
@@ -480,6 +485,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
+    overflow: 'hidden', // Fix for curved display devices
   },
   dropdownItem: {
     padding: 16,

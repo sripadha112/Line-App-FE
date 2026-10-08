@@ -10,6 +10,7 @@ export const API_ENDPOINTS = {
     VERIFY_MOBILE: '/api/auth/verify-mobile',  // POST - Direct mobile verification (MVP)
     CHECK_MOBILE: '/api/auth/check-mobile',
     SET_PIN: '/api/auth/setpin',
+    RESET_PIN: '/api/auth/reset-pin',           // POST - Reset PIN for forgot PIN flow
     REGISTER: '/api/auth/register',
     LOGIN: '/api/auth/login',
   },
