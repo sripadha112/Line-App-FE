@@ -1,8 +1,20 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { disableSessionChecks, enableSessionChecks } from '../services/sessionService';
 
 export default function RoleSelectionScreen({ navigation, route }) {
   const { mobile, pin } = route.params || {};
+
+  // Disable session checks during registration to prevent unexpected logouts
+  useEffect(() => {
+    console.log('[RoleSelectionScreen] Disabling session checks during registration');
+    disableSessionChecks();
+    
+    return () => {
+      console.log('[RoleSelectionScreen] Re-enabling session checks after registration');
+      enableSessionChecks();
+    };
+  }, []);
 
   const handleRoleSelect = (role) => {
     if (role === 'DOCTOR') {

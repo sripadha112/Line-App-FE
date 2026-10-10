@@ -11,6 +11,7 @@ const SESSION_CHECK_INTERVAL_MS = 60000; // Check every 60 seconds
 const TOKEN_EXPIRY_WARNING_MS = 300000; // 5 minutes before expiry, show warning
 let sessionCheckInterval = null;
 let sessionCheckGeneration = 0;
+let sessionCheckDisabled = false; // Flag to temporarily disable session checks (e.g., during registration)
 
 /**
  * Checks if the current session is valid by verifying stored token
@@ -153,6 +154,12 @@ export function startSessionCheck(validateOnServer = false) {
       return;
     }
     
+    // Skip validation if session checks are temporarily disabled (e.g., during registration)
+    if (sessionCheckDisabled) {
+      console.log('[sessionService] ⏭️ Session checks disabled, skipping validation');
+      return;
+    }
+    
     try {
       const isValid = await isSessionValid();
       
@@ -222,6 +229,23 @@ export function reinitializeSession(validateOnServer = false) {
   console.log('[sessionService] ✅ Session reinitialized');
 }
 
+/**
+ * Temporarily disable session validation checks
+ * Useful during registration flow to prevent unexpected logouts
+ */
+export function disableSessionChecks() {
+  console.log('[sessionService] 🔒 Session checks disabled');
+  sessionCheckDisabled = true;
+}
+
+/**
+ * Re-enable session validation checks
+ */
+export function enableSessionChecks() {
+  console.log('[sessionService] 🔓 Session checks enabled');
+  sessionCheckDisabled = false;
+}
+
 export default {
   isSessionValid,
   getSessionToken,
@@ -233,4 +257,6 @@ export default {
   stopSessionCheck,
   terminateSession,
   reinitializeSession,
+  disableSessionChecks,
+  enableSessionChecks,
 };

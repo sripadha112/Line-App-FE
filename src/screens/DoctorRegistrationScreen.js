@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Alert, KeyboardAvoidingView, Platform, Modal, Linking, ActionSheetIOS } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import api from '../services/api';
 import { API_ENDPOINTS } from '../config/apiConfig';
 import SecureStore from '../utils/secureStorage';
+import { disableSessionChecks, enableSessionChecks } from '../services/sessionService';
 
 // Helper function to convert time object to string format for Java LocalTime
 const formatTimeForAPI = (timeObj) => {
@@ -47,23 +49,42 @@ const MINUTE_OPTIONS = Array.from({ length: 60 }, (_, i) => i);
 
 export default function DoctorRegistrationScreen({ navigation, route }) {
   const { mobile, pin } = route.params || {};
+  const [paramsReceived] = useState(() => !!(route.params?.mobile && route.params?.pin));
   
-  // Add error handling for missing parameters using useEffect
+  // Only redirect if params were never received (not passed from previous screen)
+  // Don't redirect if params are lost due to navigation reset (allows registration to continue)
   useEffect(() => {
-    if (!mobile || !pin) {
+    if (!paramsReceived && route.name === 'DoctorRegistration') {
+      // Only redirect if this screen was accessed without params from auth flow
+      console.warn('[DoctorRegistrationScreen] No params received, redirecting to Auth');
       navigation.replace('Auth');
     }
-  }, [mobile, pin, navigation]);
+  }, [paramsReceived, navigation, route.name]);
 
-  // Early return if mobile is missing (prevents rendering until navigation completes)
-  if (!mobile || !pin) {
+  // Disable session checks during registration to prevent unexpected logouts
+  useEffect(() => {
+    console.log('[DoctorRegistrationScreen] Disabling session checks during registration');
+    disableSessionChecks();
+    
+    return () => {
+      console.log('[DoctorRegistrationScreen] Re-enabling session checks after registration');
+      enableSessionChecks();
+    };
+  }, []);
+
+  // If we don't have params but they were received before, continue rendering
+  // This allows the registration to persist through navigation resets
+  const effectiveMobile = mobile || route.params?.mobile;
+  const effectivePin = pin || route.params?.pin;
+  
+  if (!paramsReceived && !effectiveMobile) {
     return null;
   }
 
   const [formData, setFormData] = useState({
     fullName: '',
     email: '',
-    mobileNumber: mobile,
+    mobileNumber: effectiveMobile,
     address: '',
     city: '',
     state: '',
@@ -399,11 +420,12 @@ export default function DoctorRegistrationScreen({ navigation, route }) {
   };
 
   return (
-    <KeyboardAvoidingView 
-      style={styles.container} 
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 100 : 0}
-    >
+    <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
+      <KeyboardAvoidingView 
+        style={styles.keyboardAvoidingView} 
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 100 : 0}
+      >
       <ScrollView 
         style={styles.scrollView} 
         contentContainerStyle={styles.scrollContent}
@@ -1067,7 +1089,8 @@ export default function DoctorRegistrationScreen({ navigation, route }) {
         </TouchableOpacity>
       </View>
       </ScrollView>
-    </KeyboardAvoidingView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 
@@ -1075,6 +1098,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f8f9fa',
+  },
+  keyboardAvoidingView: {
+    flex: 1,
   },
   scrollView: {
     flex: 1,
